@@ -1,9 +1,0 @@
-[PC_KVM]
-    comment: Shutdown VM01
-    virsh shutdown --domain VM01 --mode acpi
-    sleep 5
-
-    comment: delete VM01 and remove storage
-    virsh undefine --domain VM01 --remove-all-storage
-    sleep 3
-

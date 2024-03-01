@@ -1,5 +1,0 @@
-945210     testcase_v1/v700/fortivm/scripts/945210.txt         "Verify b-license can be validated"
-827306     testcase_v1/v700/fortivm/scripts/827306.txt       "Verify fndn license can be validated"
-827280     testcase_v1/v700/fortivm/scripts/827280.txt       "Verify 10 firewall policy"
-827281     testcase_v1/v700/fortivm/scripts/827281.txt       "Verify firewall address limit 10"
-850561     testcase_v1/v700/fortivm/scripts/850561.txt       "Verify offline license can be validated"
