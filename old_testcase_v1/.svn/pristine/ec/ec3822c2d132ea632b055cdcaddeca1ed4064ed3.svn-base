@@ -1,0 +1,27 @@
+# 973320
+# Verify new deploy vm has 15-day ev license
+# admin, pass: admin, ip 10.6.30.200
+
+[PC_KVM]
+    date
+    date -d "+15 days" | awk '{print $3}'
+    setvar -e "(?n)^([A-Z][a-z]{2,2})" -to month
+    date -d "+15 days" | awk '{print $2}'
+    setvar -e "(?n)^(\\d{1,2})" -to day
+    date -d "+15 days" | awk '{print $4}'
+    setvar -e "(?n)^(\\d{4,4})" -to year
+
+
+[FVM_B]
+
+    get sys status | grep Serial-Number
+    expect -e "FGVMEV" -for 973320 -t 5
+
+    get system status | grep License
+    expect -e "Valid" -for 973320 -t 5
+
+    diagnose debug vm-print-license
+    expect -e "Evaluation license expires: ... {$month} {$day} .* {$year}" -for 973320 -t 5
+
+    report 973320
+

@@ -1,0 +1,27 @@
+# 730419: Verify IPS DB default is extended
+##################################################
+comment Verify IPS DB default is extended
+[FGT_A]
+get system status | grep 'Serial-Number' -A 3
+setvar -e "(?n)Serial-Number: (FG[\d\w]+)" -to sn
+    diagnose debug enable
+    diagnose debug flow
+    config ips global
+        unset database
+    end
+    get system status
+    clearbuff
+    expect -e "Operation Mode:.*NAT" -for 730419 -t 3
+    report 730419
+    sleep 1
+    config ips global
+        unset database
+    end
+    get system status | grep 'Serial-Number' -A 3
+    setvar -e "(?n)Serial-Number: (FG.*)" -to sn
+    get system status | grep 'Serial-Number' -A 3
+    varexpect -v {$sn} -for 888212 -t 5
+
+
+
+

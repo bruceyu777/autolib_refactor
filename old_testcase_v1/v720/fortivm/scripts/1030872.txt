@@ -1,0 +1,226 @@
+# 1030872：Verify FGT download permanent trial license from forticare 
+# 1030876: Verify only 1 cpu is active if deploy more than 1 cpu with trial license
+# 1 CPU/2G MEM, Default VDom = 2 
+################################################################
+[PC_KVM]
+    # reduce test VM memory size to 2G
+    virsh shutdown FVM_A
+    sleep 10
+
+    virsh setmaxmem FVM_A 2G --config
+    virsh setmem FVM_A 2G --config
+
+    virsh dominfo FVM_A | grep memory
+    expect -e  "KiB" -for 1030872 -t 5
+
+    virsh dominfo FVM_A | grep "CPU(s)"
+    expect -e "4" -for 1030876 -t 5
+
+    virsh start FVM_A
+    #virsh --connect qemu:///system start FVM_A
+    sleep 30 
+    
+
+[FVM_A]
+    ### 1030872.txt ###
+    comment: Verify download permanent trial license from forticare
+
+    #workaround to avoid admin cannot login FGT after factoryreset2
+    config system global
+        set admintimeout 60
+    end
+
+
+    forcelogin
+    #remove license
+    execute factoryreset2    
+    
+    # config forticare account
+    exe vm-license-options account-id fosvmqa@gmail.com
+    exe vm-license-options account-password Fosvmqa123!
+
+    exe vm-license-options show
+    expect -e "Account ID: fosvmqa@gmail.com" -for 1030872 -t 5
+    expect -e "Government: no" -for 1030872 -t 5
+
+    exe vm-license
+    y
+    sleep 10
+    expect -e "VM license install succeeded" -for 1030872 -t 10 
+    sleep 30
+    forcelogin
+    sleep 5	
+    get system status | grep 'Serial-Number' -A 10 
+    expect -e "FGVMEV" -for 1030872 -t 5
+    expect -e "License Status: Valid" -for 1030872 -t 5
+    expect -e "1 CPU/1 allowed" -for 1030876 -t 5
+
+    #trial license default dns protocol cleartext
+    show full sys dns | grep protocol -B 2
+    expect -e "96.45.45.45" -for 1008609 -t 5
+    expect -e "protocol cleartext" -for 1008609 -t 5
+
+
+    report 1030872
+    report 1030876
+    report 1008609
+
+######################################################
+# 1030880: trial license supports 3 policyies
+# 1030881: trial license supports 3 interfaces
+# 1030882: trial license supports 3 routes
+# 1030883: trial license support only LENC 
+# 1030884: trial license has no expireation date
+######################################################
+
+
+[FVM_A]
+    comment 1030880: verify trial license supports 3 policyies
+ 
+    get system status
+    expect -e "FGVMEV" -for 1030880 -t 5
+	
+    config firewall policy
+    	    purge
+	    y
+    end
+	
+    config firewall policy
+     edit 1
+        set name "1"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+    edit 2
+	set name "2"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+    edit 3
+        set name "3"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+      edit 4
+        set name "4"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+      next
+    end
+   
+    show firewall policy 3
+    expect -e "edit 3"  -t 5 -for 1030880
+	
+    show firewall policy
+    expect -e "edit 4" -fail match -t 5 -for 1030880
+
+    report 1030880
+
+    # 1030881: trial license support 3 interfaces
+    config system interface
+        edit "vlan4"
+            set vdom "root"
+            set ip 4.4.4.200 255.255.255.0
+            set allowaccess ping
+            set interface FVM_A:PORT2
+            set vlanid 4
+        next
+    end
+
+    show system interface | grep port -c
+    expect -e "3" -t 5 -for 1030881
+
+    show system interface 
+    expect -e "vlan4" -fail match -t 5 -for 1030881
+    report 1030881
+
+    #1030882: trial license supports 3 routes
+    config router static
+      purge
+      y
+      edit 1
+          set gateway 10.6.30.254
+          set device FVM_A:PORT1
+      next
+      edit 2
+          set dst 1.1.1.0 255.255.255.0
+          set gateway 10.6.30.111
+          set device FVM_A:PORT1
+      next
+      edit 3
+          set dst 2.2.2.0 255.255.255.0
+          set gateway 10.6.30.111
+          set device FVM_A:PORT1
+      next
+      edit 4
+          set dst 3.3.3.0 255.255.255.0
+          set gateway 10.6.30.111
+          set device FVM_A:PORT1
+      next
+    end
+
+    show router static
+    expect -e "edit 3" -t 5 -for 1030882
+
+    show router static
+    expect -e "edit 4" -fail match -t 5 -for 1030882
+
+    report 1030882
+
+    #1030883" trial license in LENC mode
+    # only cleartext protocol dns setting in LENC mode
+    show full system dns | grep protocol
+    expect -e "cleartext" -t 5 -for 1030883
+
+    show full system central-management | grep enc-algorithm
+    expect -e "low" -t 5 -for 1030883
+
+    report 1030883
+
+    #1030884: trial license has no expiration date
+    diagnose hardware sysinfo vm full
+    expect -e "expire"  -fail match -t 5 -for 1030884
+
+    diagnose debug vm-print-license
+    expect -e "expire"  -fail match -t 5 -for 1030884
+
+    get sys status
+    expect -e "expire"  -fail match -t 5 -for 1030884
+
+    report 1030884
+
+#[PC_KVM]
+    # restore test VM memory size to 6G
+    virsh shutdown FVM_A
+    sleep 10
+
+    virsh setmaxmem FVM_A 6G --config
+    virsh setmem FVM_A 6G --config
+
+    virsh start FVM_A
+    sleep 30
+

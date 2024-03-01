@@ -1,0 +1,24 @@
+######## FORTIVM auto test #########
+#- setup FGTVM -
+
+#- S-Series License -#
+911059     testcase/trunk/fortivm/scripts/911059.txt	  "Verify S04 license can be validated"
+1015662	   testcase/trunk/fortivm/scripts/1015662.txt	   "Verify S01 license"
+1015663    testcase/trunk/fortivm/scripts/1015663.txt      "Verify S02 license"
+1015664    testcase/trunk/fortivm/scripts/1005664.txt      "Verify S08 license"
+1015665    testcase/trunk/fortivm/scripts/1015665.txt      "Verify S16 license"
+1015666    testcase/trunk/fortivm/scripts/1015666.txt      "Verify S32 license"
+1015667    testcase/trunk/fortivm/scripts/1015667.txt      "Verify SUL license"
+1016492    testcase/trunk/fortivm/scripts/1016492.txt      "Verify reboot activate all CPU after loading S04 license"
+927039     testcase/trunk/fortivm/scripts/927039.txt       "Verify s-license validate when anycast disable"
+#959903     testcase/trunk/fortivm/scripts/959903.txt       "Verify policy and utm(webfilter) work with valid s-license"
+911060     testcase/trunk/fortivm/scripts/911060.txt       "Verify s02 lic load to vm with 4 vcpu"
+1015668     testcase/trunk/fortivm/scripts/1015668.txt       "Verify s08 lic load to vm with 4 vcpu"
+#911061     testcase/trunk/fortivm/scripts/911061.txt       "Verify s-series support stackable vdom license"
+911067     testcase/trunk/fortivm/scripts/911067.txt       "Verify s-series has an expiration data"
+911062     testcase/trunk/fortivm/scripts/911062.txt        "Verify upload new v-license with differnt bundle"
+911063     testcase/trunk/fortivm/scripts/911063.txt       "Verify upload new s-license with different bundle"
+#950594     testcase/trunk/fortivm/scripts/950594.txt       "Verify s-series supports vdom upgrade"
+#986360     testcase/trunk/fortivm/scripts/986360.txt        "VerifysysObjID for s-license is 80021"
+
+

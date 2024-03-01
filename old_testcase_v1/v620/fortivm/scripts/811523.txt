@@ -1,0 +1,38 @@
+# Attack Definition:
+# regular db: /data/etc/ips.rules
+# extended db" /data/etc/ips.et.rules
+############## 811523 #######################
+[FVM_A]
+	comment 811523:Busy:Verify attack definition can be upgraded from cli via exec update-ips
+
+# remove attack definition
+#<if FGT_A:Image eq deb>
+    sysctl rm /data/etc/ips.et.rules -f 
+#<elif FGT_A:Image eq out>
+    fnsysctl rm /data/etc/ips.et.rules -f
+    admin
+    FVM_A:Password
+#<fi>
+sleep 2
+diag autoupdate versions | grep 'Attack Extended Definitions' -A 6
+expect -e "Version: 0.00000" -for 811523 -t 10
+
+comment 811523:Busy:check upgrade from FDS  
+
+
+#exe update won't update if last update within 5 minutes
+#clear cache to make sure exe update-av work
+diag test application updated 4
+setvar -e "expiry-time=(\\d{1,2})" -to time
+#<if time eq 20>
+    diag test application updated 4
+#    expect -e "expiry-time=0" -for 811521 -t 5
+#<fi>
+
+sleep 5
+exec update-ips
+sleep 120
+diag autoupdate version | grep 'Attack Extended Definitions' -A 6
+expect -e "Result: Updates Installed" -for 811523 -t 10
+
+report 811523

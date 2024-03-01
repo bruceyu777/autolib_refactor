@@ -1,0 +1,66 @@
+# vm need to have vdom license
+# vm-27: U8UJE-70SM5-BIOJB-N[FGVMSLTM20002384]
+############## 954323 ##################
+
+[FVM_A]
+    comment 954323:Busy:Verify create long name vdom in FGTVM 
+
+    exe log delete-all
+    y
+
+#    exe upd-vd-license U8UJE-70SM5-BIOJB-N
+
+    config system global
+        set vdom-mode multi-vdom
+    end
+    y
+
+[FVM_A]
+    admin
+    admin
+    config global
+        config system global
+            set long-vdom-name enable
+        end
+    end
+    
+    config vdom
+    edit vdom1
+    next
+
+    sleep 2
+    
+    edit longvdom1234567890
+    y
+    end
+
+    sleep 3
+    clean_buffer
+    get system status | grep 'domains'
+    expect -e "3 in NAT mode" -for 954323 -t 5
+
+    config vdom
+    edit root
+    
+    exe log filter category event
+    exe log filter field action add-vdom
+    exe log display
+    expect -e "Virtual domain longvdom1234567890 is added" -f 954323 -t 10
+
+    end
+
+    config vdom
+    delete vdom1
+    sleep 2
+    delete longvdom1234567890
+    sleep 3
+    end
+
+    config global
+    config system global
+        set long-vdom-name disable
+        set vdom-mode no-vdom
+    end
+    y
+
+    report 954323

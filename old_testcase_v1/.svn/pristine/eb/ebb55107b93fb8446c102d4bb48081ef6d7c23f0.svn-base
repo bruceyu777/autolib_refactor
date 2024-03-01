@@ -1,0 +1,79 @@
+
+############## 811536 ##################
+[FVM_A]
+	comment 811536:Busy:Verify the firewall can create a ICMP based custom service when config policy
+	
+       config firewall service custom
+            edit "myown811536"
+                set protocol TCP/UDP
+                set tcp-portrange 80-80:1-65535 23-23:1-65535
+            next
+            edit "myicmp811536"
+                set protocol ICMP
+                set icmptype 8
+            next
+        end
+
+config system interface
+        edit "FVM_A:PORT2"
+            set vdom "root"
+            set ip FVM_A:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "FVM_A:PORT3"
+            set vdom "root"
+            set mode static
+            set ip FVM_A:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+end
+
+config firewall policy
+    edit 811536
+        set name "811536"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT3"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set nat enable
+    	set service myicmp811536
+	set logtraffic all
+    next
+end
+
+show firewall policy
+
+diag sys session clear
+  
+sleep 5
+
+[PC_02]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+    sleep 10
+
+    route -n
+    ping -c 3 FVM_A:PC_05
+    expect -e "64 bytes from" -for 811536 -t 5
+
+[FVM_A]
+	
+
+    config firewall policy
+      purge
+      y
+    end
+
+
+    config firewall service custom
+   	del "myown811536"
+	del myicmp811536
+    end
+	
+	 
+   report 811536

@@ -1,0 +1,110 @@
+# 943007：Verify ipv6 traffic pass/block base on  policy 
+# 
+# 
+##################################################################
+
+[FVM_A]
+    ### 943007.txt ###
+    comments: Verify ipv6 firewall policy work
+    setlicense -t 04G -for SN -to lic
+
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Valid" -for 943007 -t 5
+
+    config system interface
+        edit "FVM_A:PORT2"
+            config ipv6
+                set ip6-mode static
+                set ip6-address FVM_A:IPV6_PORT2/64
+            end
+        next
+        edit "FVM_A:PORT3"
+            config ipv6
+                set ip6-mode static
+                set ip6-address FVM_A:IPV6_PORT3/64
+            end
+        next
+    end
+
+    config firewall policy
+        purge
+        y
+        edit 943007
+            set name "943007"
+            set srcintf "FVM_A:PORT2"
+            set dstintf "FVM_A:PORT3"
+            set srcaddr6 "all"
+            set dstaddr6 "all"
+            set action deny
+            set schedule "always"
+            set service "ALL_ICMP6"
+            set logtraffic all
+            set nat enable
+        next
+    end
+
+    sleep 10
+    diag sys session6 clear
+    exe log delete-all
+    y
+
+[PC_05]
+    ip -6 addr add 2000:172:16:200::55/64 dev eth1
+    sleep 3
+
+[PC_01]
+    ip -6 addr add 2000:10:1:100::11/64 dev eth1
+    route -A inet6 add 2000:172:16:200::/64 gw FVM_A:IPV6_PORT2
+    sleep 3
+
+    ping6 -c 5 PC_05:IPV6_ETH1
+    expect -e "64 bytes from" -fail match -for 943007 -t 5
+
+
+[FVM_A]
+    diagnose sys session6 clear
+
+    exe log filter device memory 
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log filter field action deny
+    exe log display
+    expect -e "policyid=943007" -for 943007 -t 5
+
+    config firewall policy
+        edit 943007
+            set action accept
+            set nat enable
+            set logtraffic all
+        next
+    end
+
+    diag sys session6 clear
+    sleep 5
+
+[PC_01]
+
+    ping6 -c 5 PC_05:IPV6_ETH1
+    expect -e "64 bytes from" -for 943007 -t 10
+
+    route -A inet6 del 2000:172:16:200::/64 gw FVM_A:IPV6_PORT2
+
+[FVM_A]
+    diag sys session6 clear
+    sleep 2
+    exe log filter device disk
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log filter field action accept
+    exe log filter field proto 58
+    exe log display
+    expect -e "policyid=943007" -for 943007 -t 5
+
+
+    config firewall policy
+     purge
+       y
+    end
+
+    report 943007
+   

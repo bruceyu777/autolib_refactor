@@ -1,0 +1,68 @@
+
+############## 811526 ##################
+[FVM_A]
+	comment 811526:Busy:Verify the firewall can process an incoming VIP traffic when enable NAT in policy
+
+config system interface
+        edit "port2"
+            set vdom "root"
+            set ip 10.1.100.200 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "port3"
+            set vdom "root"
+            set mode static
+            set ip 172.16.200.200 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+end
+
+config firewall vip
+    edit "811526"
+        set extip FVM_A:VIP_IPV4
+        set extintf "FVM_A:PORT2"
+        set mappedip FVM_A:PC_05
+    next
+end
+
+config firewall policy
+    edit 811526
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT3"        
+    	set srcaddr "all"
+        set dstaddr "811526"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+	set nat enable
+    next
+end
+
+[PC_01]
+    ping  FVM_A:VIP_IPV4 -c 10
+    expect -e "64 bytes from" -for 811526 -t 5
+
+[FVM_A]
+    diag sys session filter proto 1
+    diag sys session list 
+    expect -e "dir=org act=snat 10.1.100.11:\d\d\d\d\d->172.16.200.55:8(172.16.200.200" -for 811526 -t 5
+    #diag sniffer packet FVM_A:PORT3 icmp 1 4
+    #sleep 1
+    #expect -e "FVM_A:PC_05" -for 811526 -t 5
+    #ctrl_c
+
+
+[FVM_A]
+
+        config firewall policy
+          purge
+	   y
+	end
+
+
+	config firewall vip
+		purge
+		y
+	end
+
+ 	report 811526

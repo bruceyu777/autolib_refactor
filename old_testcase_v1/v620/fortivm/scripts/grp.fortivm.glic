@@ -1,0 +1,63 @@
+######## FORTIVM auto test #########
+
+#- General License -
+993589     testcase_v1/v620/fortivm/scripts/993589.txt       "Verify VM00 license can import into FGTVM"
+1016627	   testcase_v1/v620/fortivm/scripts/1016627.txt      "Verify VM01 license can import into FGTVM"
+1016626    testcase_v1/v620/fortivm/scripts/1016626.txt      "Verify VM02 license can import into FGTVM"
+#1016625    testcase_v1/v620/fortivm/scripts/1016625.txt      "Verify VM04 license can import into FGTVM"
+704212     testcase_v1/v620/fortivm/scripts/704212.txt       "Verify VM08 license can import into FGTVM"
+812410     testcase_v1/v620/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"
+960181     testcase_v1/v620/fortivm/scripts/960181.txt       "Verify VM32 license able to import into FGTVM"
+960184     testcase_v1/v620/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"
+#812442     testcase_v1/v620/fortivm/scripts/812442.txt       "Verify VMUL CPU no limitation"
+871711     testcase_v1/v620/fortivm/scripts/871711.txt       "Verify VM02 license can work on VM configured 4 vCPU"
+#1006317    testcase_v1/v620/fortivm/scripts/1006317.txt      "Verify validate VM license via FMG"
+#730419     testcase_v1/v620/fortivm/scripts/730419.txt       "Verify VM IPS DB default to extended if mem larger than 1024MB"
+906824     testcase_v1/v620/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"
+#797355     testcase_v1/v620/fortivm/scripts/797355.txt       "Verify Fortinet_SSL CN matching VM SN"
+888212     testcase_v1/v620/fortivm/scripts/888212.txt       "Verify Fortinet_Factory CN matching VM SN"
+893973     testcase_v1/v620/fortivm/scripts/893973.txt       "Verify update-server-location default usa"
+#973364     testcase_v1/v620/fortivm/scripts/973364.txt       "Verify license status change event log"
+711282     testcase_v1/v620/fortivm/scripts/711282.txt       "Verify vm status warning when unable to contact FGD"
+#986333     testcase_v1/v620/fortivm/scripts/986333.txt       "Verify MIB file contain object ID for vm license"
+#986360     testcase_v1/v620/fortivm/scripts/986360.txt       "Verify FGT can return correct sysObjID with valid license"
+#986461     testcase_v1/v620/fortivm/scripts/986461.txt       "Verify sysObjID of VM model returned when license is invalid"
+961817     testcase_v1/v620/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"
+808043     testcase_v1/v620/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"
+866426     testcase_v1/v620/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"
+
+#- Vdom License for G-
+#760927     testcase_v1/v620/fortivm/scripts/760927.txt       "Verify VM08 license support stackable vdom lic"
+#812961      testcase_v1/v620/fortivm/scripts/812961.txt      "Verify VM16 license support stackable vdom lic"
+#812970      testcase_v1/v620/fortivm/scripts/812970.txt      "Verify VM32 license support stackable vdom lic"
+#812971      testcase_v1/v620/fortivm/scripts/812971.txt      "Verify VMUL license support stackable vdom lic"
+#859097      testcase_v1/v620/fortivm/scripts/859097.txt      "Verify cannot add stackable vdom lic when VM reaches its maximum vdoms"
+#877977      testcase_v1/v620/fortivm/scripts/877977.txt      "Verify VM with non-vdom lic can set to split-vdom"
+
+#- v-series License -
+704213     testcase_v1/v620/fortivm/scripts/704213.txt         "Verify v-series 04 license can be validated"
+1015703     testcase_v1/v620/fortivm/scripts/1015703.txt            "Verify v-series 01 license can be validated"
+1015704     testcase_v1/v620/fortivm/scripts/1015704.txt            "Verify v-series 02 license can be validated"
+1015705     testcase_v1/v620/fortivm/scripts/1015705.txt            "Verify v-series 08 license can be validated"
+1015706     testcase_v1/v620/fortivm/scripts/1015706.txt            "Verify v-series 16 license can be validated"
+1015707     testcase_v1/v620/fortivm/scripts/1015707.txt            "Verify v-series 32 license can be validated"
+1015708     testcase_v1/v620/fortivm/scripts/1015708.txt            "Verify v-series UL license can be validated"
+927038     testcase_v1/v620/fortivm/scripts/927038.txt       "Verify v-license validate when anycast disable"
+911064     testcase_v1/v620/fortivm/scripts/911064.txt       "Verify upload new v-license with different bundle"
+911065     testcase_v1/v620/fortivm/scripts/911065.txt        "Verify upload new s-license with differnt bundle"
+959708     testcase_v1/v620/fortivm/scripts/959708.txt       "Verify policy and utm work with valid v-license"
+
+#- stackable vdom licen for V-series -
+866272	   testcase_v1/v620/fortivm/scripts/866272.txt 	"Verify 15-UG apply to V-series"
+
+#- LENC License -
+849490     testcase_v1/v620/fortivm/scripts/849490.txt         "Verify non vdom lenc license can be validated"
+849493     testcase_v1/v620/fortivm/scripts/849493.txt         "Verify vdom lenc license can be validated"
+
+#- offline License -
+850561     testcase_v1/v620/fortivm/scripts/850561.txt         "Verify offline license can be validated"
+959211     testcase_v1/v620/fortivm/scripts/959211.txt         "Verify traffic can go through with offline license"
+850562     testcase_v1/v620/fortivm/scripts/850562.txt         "Verify offline license near expiration"
+850563     testcase_v1/v620/fortivm/scripts/850563.txt         "Verify offline license expired but within 30-day grace period"
+850564     testcase_v1/v620/fortivm/scripts/850564.txt         "Verify offline license expired and pass 30-day grace period"
+

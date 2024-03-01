@@ -1,0 +1,34 @@
+# 893973：Verify update-server-location is usa by default  
+# fortiguard settting default 
+# 
+############################################################
+
+[FVM_A]
+    
+    comments: 893973 Verify update-server-location is usa by default 
+    # get license file name
+    setlicense -t 02G -for SN -to lic    
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+
+    #sleep 100	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Valid" -for 893973 -t 5
+ 
+    execute factoryreset2 keepvmlicense
+
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Valid" -for 893973 -t 5
+
+    show full system fortiguard | grep update
+    expect -e "update-server-location usa" -for 893973 -t 5
+
+    config system fortiguard
+        set update-server-location any 
+    end
+
+    show full system fortiguard | grep update
+    expect -e "update-server-location any" -for 893973 -t 5
+
+    report 893973
+   

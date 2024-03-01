@@ -1,0 +1,140 @@
+import time
+
+import pexpect
+from lib.services import logger
+from lib.utilities.exceptions import LoginDeviceFailed
+
+from .dev_conn import DevConn
+
+READ_WAIT_TIME = 120
+WAIT_TIME = 60
+
+CODE_FORMAT = "ascii"
+MAX_VIEW_LAYER = 5
+
+
+class FosDevConn(DevConn):
+    RETRY_MAX_TIME = 15
+    FOS_DEFAULT_PASSWORD = ""
+
+    def __init__(self, dev_name, connection, user_name, password):
+        super().__init__(dev_name, connection, user_name, password)
+        self.conn_state = "init"
+        self.retry_cnt = 0
+        self.use_default_password = False
+        self.init_view = True
+
+    def _connected(self):
+        self._client.sendline("")
+        logger.info("enter into connect")
+        index = self._client.expect_exact(
+            ["login:", "#", "Password:", pexpect.TIMEOUT, pexpect.EOF]
+        )
+        logger.info("enter into connect: the index is %s", index)
+        if index in [0,1,2]:
+            logger.info("In connected, current buffer output is %s", self._client.before + self._client.after)
+        if index == 0:
+            self.conn_state = "_require_credential"
+        elif index == 1:
+            self.conn_state = "_cache_logged"
+        elif index == 2:
+            logger.info("Password appears before login, ignored it.")
+            self.conn_state = "_retry"
+        elif index == 3:
+            logger.error("Failed to login %s, will retry it again.", self.dev_name)
+            self.conn_state = "_retry"
+        else:
+            logger.error("Failed to login %s as connection is closed.", self.dev_name)
+            self.conn_state = "_retry"
+
+    def _cache_logged(self):
+        view_layer = 0
+        logger.info("Enter into cache logged.")
+        if not self.init_view:
+            self.conn_state = "_logged_in"
+            return
+        while view_layer < MAX_VIEW_LAYER:
+            self._client.sendline("")
+            logger.info("Start expecting prompts.")
+            index = self._client.expect_exact(["#", ") #", pexpect.TIMEOUT, pexpect.EOF])
+            logger.info("In connected, current buffer output is %s", self._client.before + self._client.after)
+            logger.info("Finished expecting prompts.")
+            if index == 0:
+                self.conn_state = "_logged_in"
+                return
+            self._client.sendline("end")
+            view_layer += 1
+
+        self.conn_state = "_retry"
+
+    def _require_credential(self):
+        self._client.sendline(self.user_name)
+        self._client.expect("Password:")
+        password = (
+            self.FOS_DEFAULT_PASSWORD if self.use_default_password else self.password
+        )
+        self._client.sendline(password)
+        index = self._client.expect_exact(
+            [
+                "#",
+                "Login incorrect",
+                "You are forced to change your password. Please input a new password.",
+            ]
+        )
+        if index == 0:
+            self.conn_state = "_logged_in"
+        elif index == 1:
+            self.use_default_password = True
+            self.conn_state = "_retry"
+        elif index == 2:
+            logger.info("Required to reset password.")
+            self.conn_state = "_reset_password"
+
+    def _reset_password(self):
+        self._client.sendline(self.password)
+        self._client.expect("Password:")
+        self._client.sendline(self.password)
+        self._client.expect("#")
+        self.conn_state = "_logged_in"
+
+    def _retry(self):
+        self._client.sendcontrol('c')
+        if self.retry_cnt > self.RETRY_MAX_TIME:
+            logger.error("Failed to login after retry for %s times", self.retry_cnt)
+            self.conn_state = "_failed"
+            return
+        time.sleep(60)
+        self.retry_cnt += 1
+        self.conn_state = "_connected"
+
+    def login(self, reset=False, init_view=True):
+        # self.conn_state = "init"
+        self.init_view = init_view
+        logger.info("enter into login")
+        content = ""
+        try:
+            logger.info("Start sending line.")
+            self._client.sendline("")
+            logger.info("Start reading.")
+            content = self._client.expect(".+")
+        except pexpect.TIMEOUT:
+            logger.info("No more characters cleared for login.")
+        logger.info(
+            "current buffer output for login is %s",
+            self._client.before + self._client.after,
+        )
+        self.retry_cnt = 0
+        self.conn_state = "_connected"
+        self.use_default_password = reset
+        while hasattr(self, self.conn_state):
+            func = getattr(self, self.conn_state)
+            func()
+        if self.conn_state == "_failed":
+            raise LoginDeviceFailed(self.conn)
+        if self.conn_state == "_logged_in":
+            logger.info("Succeeded to login the device: %s. ", self.dev_name)
+
+
+if __name__ == "__main__":
+    dev_conn = DevConn("172.18.57.99 2004", "admin", "admin")
+    # dev_conn.send_command("get system status")

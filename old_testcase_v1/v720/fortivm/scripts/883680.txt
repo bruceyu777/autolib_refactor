@@ -1,0 +1,8 @@
+# 883680
+#####################################################
+
+[FVM_A]
+    diag debug crash log read
+    expect -e "Backtrace" -fail match -for 883680 -t 30
+
+    report 883680

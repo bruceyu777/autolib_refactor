@@ -1,0 +1,83 @@
+# 959211：Verify with valid offline license
+# traffic can go through policy, utm is working
+# traffic log and utm log working 
+# 2022-07-24
+#############################
+
+[FVM_B]
+	### 959211.txt ### 
+    comments: 959211 Verify traffic can go through policy with valid offline license 
+    config system interface
+        edit FVM_B:PORT2
+            set vdom "root"
+            set mode static
+            set ip FVM_B:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit FVM_B:PORT3
+            set vdom "root"
+            set mode static
+            set ip FVM_B:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+    
+    config firewall policy
+        purge
+        y
+        edit 959211
+            set name "959211"
+            set srcintf "FVM_B:PORT2"
+            set dstintf "FVM_B:PORT3"
+            set srcaddr "all"
+            set dstaddr "all"
+            set action accept
+            set schedule "always"
+            set service "ALL"
+            set utm-status enable
+            set av-profile "default"
+            set profile-protocol-options "default"
+            set ssl-ssh-profile "certificate-inspection"
+            set nat enable
+        next
+    end
+
+    sleep 5
+    execute log delete-all
+    yes
+
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+
+    route add -host 172.16.200.55 gw FVM_B:IPV4_PORT2
+
+    rm -f eicar.*
+    curl http://PC_01:DESTINATION4/virus/eicar
+    expect -e "not permitted" -t 30 -for 959211
+
+
+[FVM_B]
+    diag sys session filter dst 172.16.200.55
+    diag sys session clear
+    sleep 5
+
+    execute log filter device disk
+    execute log filter category 2
+    execute log display
+    expect -e "EICAR_TEST_FILE" -t 20 -for 959211
+
+    execute log filter category traffic
+    execute log filter field subtype forward
+    execute log filter field policyid 959211
+    execute log display
+    expect -e "dstip=172.16.200.55" -t 10 -for 959211
+
+    config firewall policy
+     purge
+       yes
+    end
+
+    report 959211
+   

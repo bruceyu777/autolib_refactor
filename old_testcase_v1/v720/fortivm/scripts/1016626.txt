@@ -1,0 +1,36 @@
+# 1016626：Verify g02-license can be valided
+# fortiguard settting default 
+# 
+#############################
+
+[PC_KVM]
+    ### 1016626.txt ###
+    comment: Verify G02 can be valided base on cpu cores with default FGD setting
+
+    # get license file name
+    setlicense -t 02G -for SN -to lic
+ 
+
+[FVM_A]
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Invalid" -for 1016626 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVM02T" -for 1016626 -t 5
+    expect -e "License Status: Valid" -for 1016626 -t 5
+    expect -e "2 CPU/2 allowed" -for 1016626 -t 5
+
+    # VM01: default 10 vdoms, max 10 vdoms
+    diag debug vm-print-license
+    expect -e "Model: 02" -for 1016626 -t 5
+    expect -e "CPU: 2" -for 1016626 -t 5
+    expect -e "permanent: 10" -for 1016626 -t 5
+
+
+    report 1016626
+   

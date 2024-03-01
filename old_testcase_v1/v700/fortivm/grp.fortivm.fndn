@@ -1,0 +1,9 @@
+######## FORTIVM auto test #########
+
+#- FNDN License -
+827306     testcase_v1/trunk/fortivm/scripts/827306.txt       "Verify fndn license can be validated"
+827280     testcase_v1/trunk/fortivm/scripts/827280.txt       "Verify 10 firewall policy"
+827281     testcase_v1/trunk/fortivm/scripts/827281.txt       "Verify firewall address limit 10"
+827282     testcase_v1/trunk/fortivm/scripts/827282.txt       "Verify custom service limit 10"
+1016997    testcase_v1/trunk/fortivm/scripts/1016997.txt      "Verify fndn allow one admin and one traffic vdom"
+

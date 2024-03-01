@@ -1,0 +1,15 @@
+# 893973: Verify update-server-location default is usa
+# can be change to any
+##################################################
+
+
+[FVM_A]
+    config ips global
+        unset database
+    end
+
+    show full ips global | grep database
+    expect -e "database extended" -for 893973 -t 5
+
+    report 893973
+

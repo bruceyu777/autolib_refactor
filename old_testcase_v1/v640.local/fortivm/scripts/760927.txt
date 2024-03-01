@@ -1,0 +1,43 @@
+# 760927：Verify fgtvm with g08-license upgrade stackable vdom license
+#  
+# 
+#########################################################################
+
+#[FVM_A]
+    ### 760927.txt ###
+    comments: Verify stackabel vdom license upgrade on vm with G08 
+
+    setlicense -t 08G -for SN -to lic
+    setlicense -t 08G -for VDOM -to vdlic
+ 
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Invalid" -for 760927 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVM08T" -for 760927 -t 5
+    expect -e "4 CPU/8 allowed" -for 760927 -t 5
+
+[FVM_A]
+    get system status | grep 'domain'
+    expect -e "Max number of virtual domains: 10" -for 760927 -t 10
+
+    setlicense -t 08G -for VDOM -to vdlic
+
+    # import vdom license 
+    execute upd-vd-license {$vdlic}
+    y
+    sleep 10
+
+    get system status | grep 'domain'
+    expect -e "Max number of virtual domains: 25" -for 760927 -t 10
+
+    diag debug vm-print-license
+    expect -e "permanent: 25" -for 760927 -t 5
+
+    report 760927
+   

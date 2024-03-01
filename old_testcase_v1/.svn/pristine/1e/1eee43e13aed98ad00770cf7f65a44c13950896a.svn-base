@@ -1,0 +1,97 @@
+# 811477：Verify eicar virus is blocked when enable av in policy 
+# 
+# 
+##################################################################
+
+[FVM_A]
+    ### 811477.txt ###
+    comments: Verify eicar is blocked
+    # get license file name
+    setlicense -t 04G -for SN -to lic
+
+    #config system fortiguard
+    #    unset fortiguard-anycast
+    #end
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+
+    sleep 20	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Valid" -for 811477 -t 5
+
+    config system interface
+        edit "port2"
+            set vdom "root"
+            set ip 10.1.100.200 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "port3"
+            set vdom "root"
+            set mode static
+            set ip 172.16.200.200 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+
+    config antivirus profile
+        edit "av_test"
+            config http
+                set av-scan block
+            end
+        next
+    end
+
+    config firewall policy
+        purge
+        y
+        edit 811477
+            set name "811477"
+            set srcintf "FVM_A:PORT2"
+            set dstintf "FVM_A:PORT3"
+            set srcaddr "all"
+            set dstaddr "all"
+            set action accept
+            set schedule "always"
+            set service "ALL"
+            set utm-status enable
+            set ssl-ssh-profile "certificate-inspection"
+            set av-profile "av_test"
+            set nat enable
+        next
+    end
+
+    sleep 10
+    exe log delete-all
+    y
+
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55 
+
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+
+
+    sleep 10
+    rm -f eicar.*
+    curl http://PC_01:DESTINATION4/virus/eicar
+    expect -e ">High Security Alert"  -t 30 -for 811477
+    expect -e "infected with the virus" -t 30 -for 811477
+
+   # route del -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+
+[FVM_A]
+    diagnose sys session filter policy 811477
+    diagnose sys session clear
+    
+    execute log filter category 2
+    execute log display
+    expect -e "EICAR_TEST_FILE" -t 20 -for 811477
+
+#    config firewall policy
+#        delete 811477
+#    end
+
+
+    report 811477
+   

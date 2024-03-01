@@ -1,0 +1,5 @@
+search, y/n, 30
+send_line, y
+search, login:, 300, -1
+command, admin, Password:, 30
+command, admin, #, 30

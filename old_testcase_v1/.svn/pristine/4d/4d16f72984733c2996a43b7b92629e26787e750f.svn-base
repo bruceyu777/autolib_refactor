@@ -1,0 +1,78 @@
+# Test Case ID: 811522
+# Objective: Verify the firewall can deny traffic when set action to deny in policy
+#
+#######################################################################
+[FVM_A]
+	comment 811522:Busy:Verify the firewall can deny traffic when set action to deny in policy
+
+   config system interface
+        edit "FVM_A:PORT2"
+            set vdom "root"
+            set ip FVM_A:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "FVM_A:PORT3"
+            set vdom "root"
+            set mode static
+            set ip FVM_A:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+
+
+    config firewall policy
+        purge
+        y
+	edit 811522
+		set name "811522"
+		set srcintf "FVM_A:PORT2"
+		set dstintf "FVM_A:PORT3"
+		set srcaddr "all"
+		set dstaddr "all"
+		set action accept
+		set schedule "always"
+		set service "ALL"
+		set action deny
+                set logtraffic all
+	next
+    end
+  
+    sleep 10
+    diag sys session clear
+    show firewall policy
+
+    config log disk setting
+        set status enable
+    end
+
+    exe log delete-all
+    y
+
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+
+    sleep 5
+
+    ping -c 5 PC_01:DESTINATION4
+    expect -e "64 bytes from" -fail match -for 811522 -t 5
+
+
+[FVM_A]
+    diagnose sys session clear
+
+    exe log filter device disk
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log filter field action deny
+    exe log display
+    expect -e "policyid=811522" -for 811522 -t 5
+
+    config firewall policy
+#     purge
+#     y
+    end
+	
+    report 811522

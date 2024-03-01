@@ -1,0 +1,39 @@
+# 797355：Verify CN of Fortinet_CA_SSL and Fortinet_SSL matching properly with VM SN
+# M280914
+# 
+#######################################################
+
+[FVM_A]
+    comments: Verify Fortinet_Factory and Fortinet_Factory_Backup CN  
+
+    # get license file name
+    setlicense -t 04G -for SN -to lic
+ 
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "(FGVM.*)" -for 797355 -t 5
+
+    execute vpn certificate local export tftp Fortinet_SSL cer Fortinet_SSL.cer FVM_A:LICENSE_SERVER
+    expect -e "Done" -for 797355 -t 5
+    execute vpn certificate local export tftp Fortinet_CA_SSL cer Fortinet_CA_SSL.cer FVM_A:LICENSE_SERVER
+    expect -e "Done" -for 797355 -t 5
+
+[PC_KVM]
+    
+    openssl x509 -in /tftpboot/Fortinet_SSL.cer -text | grep  Subject:
+    setvar -e "CN = (FGVM.*), " -to sn1
+
+    openssl x509 -in /tftpboot/Fortinet_CA_SSL.cer -text | grep  Subject:
+    setvar -e "CN = (FGVM.*), " -to sn2
+
+
+[FVM_A]
+
+    get system status | grep 'Serial-Number' -A 3
+    varexpect -v {$sn1} -for 797355 -t 5
+    get system status | grep 'Serial-Number' -A 3
+    varexpect -v {$sn2} -for 797355 -t 5
+
+    report 797355
+   

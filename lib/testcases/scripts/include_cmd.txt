@@ -1,0 +1,4 @@
+
+[FGT_A]
+
+include ./testcases/if_cmd.txt

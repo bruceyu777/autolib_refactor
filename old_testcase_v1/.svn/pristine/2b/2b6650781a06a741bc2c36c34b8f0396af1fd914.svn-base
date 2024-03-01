@@ -1,0 +1,76 @@
+# Test Case ID: 811537
+# Objective: Verify the firewall can create a service group when config policy
+#
+###################################################################
+[FVM_A]
+	comment 811537:Busy:Verify the firewall can create a service group when config policy
+	
+config firewall service group
+    edit "811537" 
+        set member "ALL_ICMP" "HTTP"
+    next
+end
+
+config system interface
+        edit "FVM_A:PORT2"
+            set vdom "root"
+            set ip FVM_A:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "FVM_A:PORT3"
+            set vdom "root"
+            set mode static
+            set ip FVM_A:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+end
+
+
+config firewall policy
+    edit 811537
+        set name "811537"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT3"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+	set service "811537"
+	set logtraffic all
+    next
+end
+
+show firewall policy
+diag sys session clear
+  
+sleep 5
+
+	
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+    sleep 10
+
+    ping -c 3 FVM_A:PC_05
+    expect -e "64 bytes from" -for 811537 -t 5
+	
+    wget --delete-after http://PC_01:DESTINATION4
+    expect -e "100%"  -for 811537 -t 5
+
+[FVM_A]
+	
+    config firewall policy
+     purge
+	   y
+	end
+
+    config firewall service group
+        del "811537"
+    end
+
+    report 811537

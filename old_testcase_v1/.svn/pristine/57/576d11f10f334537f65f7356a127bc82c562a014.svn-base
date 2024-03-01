@@ -1,0 +1,41 @@
+# 945213
+# FGVMSBTM20000001 - 100MB 
+# Verify inbandwidth/outbandwidth can be configured up to extra 10% bandwidth# 
+# 
+#####################################################################
+
+[FVM_A]
+    ### 945213.txt ###
+    comments: Verify cli show extra 10% bandwidth 
+
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGVMSB" -for 945213 -t 5
+    expect -e "License Status: Valid" -for 945213 -t 5
+
+    diag debug vm-print-license
+    expect -e "Bandwidth: 110000 kbps" -for 945213 -t 5
+
+    config system interface
+        edit FVM_A:PORT1
+            set inbandwidth 110000
+            set outbandwidth 110000
+        next
+    end
+
+    show system interface FVM_A:PORT1 | grep 'bandwidth'
+    expect -e "inbandwidth 110000" -for 945213 -t 5
+    expect -e "outbandwidth 110000" -for 945213 -t 5
+
+    config system interface
+        edit FVM_A:PORT1
+            set inbandwidth 120000
+            set outbandwidth 210000
+        next
+    end
+
+    show system interface FVM_A:PORT1 | grep 'bandwidth'
+    expect -e "inbandwidth 110000" -for 945213 -t 5
+    expect -e "outbandwidth 110000" -for 945213 -t 5
+
+    report 945213
+   

@@ -1,0 +1,46 @@
+# 1015668：Verify s08-license can be used on instanc with 4 cpu
+# fortiguard settting default (anycast=enable)
+#
+#############################
+
+[PC_KVM]
+    ### 1015668.txt ###
+    comments: Verify s08 can be valided on vm with 4 vcpu
+    #check vm cpu count
+    virsh dominfo VM04
+    expect -e "CPU\(s\):         4" -for 1015668 -t 5
+
+    # get license file name
+    #cat PC_KVM:LICENSE_DIR/PC_KVM:LIECENSE_FILE | grep 08S
+    #setvar -e "(?n)^08S,(FGVMSL.*?lic)," -to lic
+    setlicense -t 08S -for SN -to lic
+
+[FVM_A]
+
+    # fortiguard default setting
+    config system fortiguard
+        unset fortiguard-anycast
+    end
+
+    show full sys fortiguard | grep anycast
+    expect -e "fortiguard-anycast enable" -for 1015668 -t 5
+
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 60
+
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVMSL" -for 1015668 -t 5
+    expect -e "License Status: Valid" -for 1015668 -t 5
+    expect -e "1 CPU/8 allowed" -for 1015668 -t 5
+
+    #s-license need a reboot or exe cpu add to activate
+    #kernel panic #0701739
+    #exe cpu add 3
+    #expect -e "Active CPU number: 4" -for 1015668 -t 10
+
+    diag debug vm-print-license
+    expect -e "Model: SL" -for 1015668 -t 5
+    expect -e "CPU: 8" -for 1015668 -t 5
+
+    report 1015668
+

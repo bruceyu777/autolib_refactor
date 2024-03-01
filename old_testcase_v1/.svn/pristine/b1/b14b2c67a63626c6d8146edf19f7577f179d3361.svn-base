@@ -1,0 +1,20 @@
+# 1054900：Verify dia test update setup trigger VM validation 
+#  
+#  
+#################################
+
+[FVM_A]
+    ### 1054900.txt ###
+    comment: Verify dia test update setup trigger VM validation
+
+    diag debug application update -1
+    diag debug en
+    
+    diag test update setup
+    sleep 5 
+	
+    expect -e "Command=VMSetup" -for 1054900 -t 20 
+
+    diag debug reset
+
+    report 1054900

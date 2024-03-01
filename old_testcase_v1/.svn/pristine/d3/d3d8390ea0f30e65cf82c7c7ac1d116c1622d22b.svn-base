@@ -1,0 +1,50 @@
+
+############## 811522 ##################
+[FVM_A]
+	comment 811522:Busy:Verify the firewall can deny traffic when set action to deny in policy
+
+config firewall policy
+    purge
+    y
+	edit 811522
+		set name "811522"
+		set srcintf "FVM_A:PORT2"
+		set dstintf "FVM_A:PORT3"
+		set srcaddr "all"
+		set dstaddr "all"
+		set action accept
+		set schedule "always"
+		set service "ALL"
+		set action deny
+        set logtraffic all
+	next
+end
+  
+diag sys session clear
+
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+
+    ping -c 5 PC_01:DESTINATION4
+    expect -e "64 bytes from" -fail match -for 811522 -t 5
+
+
+[FVM_A]
+    diagnose sys session clear
+
+    exe log filter device disk
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log filter field action deny
+    exe log display
+    expect -e "policyid=811522" -for 811522 -t 5
+
+    config firewall policy
+     purge
+     y
+    end
+	
+    report 811522

@@ -1,0 +1,31 @@
+# 911067：Verify s-license has expiration date 
+# fortiguard settting default (anycast=enable)
+# 
+#############################
+
+[PC_KVM]
+    ### 911067.txt ###
+    comment: Verify s-license has expiration date
+
+    # get license file name
+    #cat PC_KVM:LICENSE_DIR/PC_KVM:LIECENSE_FILE | grep 04S
+    #setvar -e "(?n)^04S,(FGVMSL.*?lic)," -to lic
+    setlicense -t 04S -for SN -to lic 
+
+[FVM_A]
+    
+    # fortiguard default setting
+    config system fortiguard
+        unset fortiguard-anycast
+    end
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 60
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVMSL" -for 911067 -t 5
+    expect -e "License Status: Valid" -for 911067 -t 5
+    expect -e "License Expiration Date: 202[1-9]" -for 911067 -t 5
+
+    report 911067
+   

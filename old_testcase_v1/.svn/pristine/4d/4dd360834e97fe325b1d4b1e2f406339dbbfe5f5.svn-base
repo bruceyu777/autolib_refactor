@@ -1,0 +1,34 @@
+# 849493：Verify FGTVM turn into Lenc mode with vdom lenc license
+#  
+# 
+#####################################################################
+
+[FVM_A]
+    ### 849493.txt ###
+    comment: Verify lenc non-vdom license can be valided 
+
+    # get license file name
+    setlicense -t LENCVD -for SN -to lic
+ 
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Invalid" -for 849493 -t 5
+
+    # low-enc require anycast disable
+    config system fortiguard
+        set fortiguard-anycast disable
+    end
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'domains'
+    expect -e "Max number of virtual domains: 10" -for 849493 -t 10
+
+    get system status | grep 'License'
+    expect -e "License Status: Valid" -for 849493 -t 5
+    expect -e "Low-Encryption\\(LENC\\)" -for 849493 -t 10
+   
+    report 849493
+   

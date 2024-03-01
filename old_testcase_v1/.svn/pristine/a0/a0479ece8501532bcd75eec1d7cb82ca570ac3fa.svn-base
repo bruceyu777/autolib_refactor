@@ -1,0 +1,117 @@
+# 850563：Verify offline license expired but within graceful
+# license status show warning
+# FGT can be configured
+# traffic can passthrough and utm working
+# has traffic/utm log
+# event log shows license expired
+# expire 2023-07-23
+#############################
+
+[FVM_B]
+	### 850563.txt ###
+	comment: 850563 Verify expired offline license within 30 days graceful peirod
+
+    config system interface
+        edit FVM_B:PORT2
+            set vdom "root"
+            set mode static
+            set ip FVM_B:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit FVM_B:PORT3
+            set vdom "root"
+            set mode static
+            set ip FVM_B:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+
+    config firewall policy
+        purge
+        y
+        edit 850563
+            set name "850563"
+            set srcintf "FVM_B:PORT2"
+            set dstintf "FVM_B:PORT3"
+            set srcaddr "all"
+            set dstaddr "all"
+            set action accept
+            set schedule "always"
+            set service "ALL"
+            set utm-status enable
+            set av-profile "default"
+            set profile-protocol-options "default"
+            set nat enable
+        next
+    end
+
+    config router static
+        edit 1
+            set status disable
+        next
+    end
+
+    sleep 5
+    execute log delete-all
+    y
+
+    # change system time to expired time
+    exe date 2023-07-30
+    sleep 30 
+    forcelogin
+    sleep 10
+    get system status | grep 'License'
+    expect -e "License Status: Warning" -for 850563 -t 10
+  #  report 850563
+
+[PC_02]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+
+    route add -host 172.16.200.55 gw FVM_B:IPV4_PORT2
+    sleep 5
+
+    rm -f eicar.*
+    curl -v http://PC_02:DESTINATION4/virus/eicar
+    expect -e "not permitted" -t 30 -for 850563
+
+
+[FVM_B]
+    diag sys session filter dst 172.16.200.55
+    diag sys session clear
+    sleep 5
+
+    #check event log
+    execute log filter device disk
+    execute log filter category event
+    execute log filter field subtype system
+    execute log filter field level critical
+    execute log display
+    expect -e "License has expired" -t 20 -for 850563
+
+    #check traffic log
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log filter field policyid 850563
+    exe log display
+    expect -e "172.16.200.55" -for 850563 -t 5
+
+    #check av log
+    exe log filter category 2
+    exe log display
+    expect -e "File is infected(.*)172.16.200.55(.*)eicar" -for 850563 -t 5
+
+    report 850563
+
+    config router static
+        edit 1
+            set status enable
+        next
+    end
+
+    # reset system time by reboot
+    exe reboot
+    y
+
+

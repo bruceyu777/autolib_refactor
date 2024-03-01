@@ -1,0 +1,31 @@
+# 827306：Verify FNDN license can be valided
+# fortiguard settting default 
+# 
+#####################################################################
+
+[FVM_A]
+    ### 827306.txt ###
+    comments: Verify FNDN license can be valided 
+
+    # get license file name
+    setlicense -t FNDN -for SN -to lic
+ 
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Invalid" -for 827306 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVMXX" -for 827306 -t 5
+    expect -e "License Status: Valid" -for 827306 -t 5
+
+
+    diag debug vm-print-license
+    expect -e "Model: SB" -for 827306 -t 5
+    expect -e "CPU: 1" -for 827306 -t 5
+
+     report 827306
+   

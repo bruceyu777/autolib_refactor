@@ -1,0 +1,69 @@
+# Test Case: 811524
+# Objective: Verify IPSEngine can be upgraded using exe update-ips
+# 7.2.0 default ips engine flen-fos7.2-7.212.pkg
+# EngineOld: flen-fos7.2-7.212.pkg
+############################################################
+
+[FVM_A]
+    comment 811524:Busy:Verify the IPSEngine can be upgrade from cli via exec update-ips
+
+    diag autoupdate downgrade enable
+    #comment 811524:Downgrade to previous IPSEngine first
+
+    execute restore ips tftp packages/FVM_A:EngineOld FVM_A:LICENSE_SERVER
+    sleep 20
+
+
+    diag autoupdate versions | grep 'IPS Attack' -A 6
+    expect -e "7.00320 signed" -for 811524 -t 5
+
+    comment 811524:Busy:check it can be upgraded to the newer version
+    #diag autoupdate downgrade disable
+
+     config ips global
+        set database extended
+     end
+
+     config firewall policy
+        edit 811524
+            set name "811524"
+            set srcintf "FVM_A:PORT2"
+            set dstintf "FVM_A:PORT1"
+            set srcaddr "all"
+            set dstaddr "all"
+            set action accept
+            set schedule always
+            set service "ALL"
+            set inspection-mode flow
+            set utm-status enable
+            set ips-sensor "all_default"
+            set profile-protocol-options "default"
+            set ssl-ssh-profile "certificate-inspection"
+            set nat enable
+       next
+    end
+
+    sleep 10
+
+    sysctl killall updated
+    fnsysctl killall updated
+
+    diagnose test application ipsmonitor 1
+    sleep 5
+
+    diagnose test application ipsmonitor 99
+    sleep 10
+
+    exec update-ips
+    sleep 150
+
+    exe log filter category event
+    exe log filter field subtype system
+    exe log filter field logdesc "IPS database updated"
+    sleep 60
+    exe log display
+
+    diag autoupdate version | grep 'IPS Attack Engine' -A 6
+    expect -e "7.00320 signed" -fail match -for 811524 -t 10
+
+    report 811524

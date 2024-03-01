@@ -1,0 +1,23 @@
+#
+###############################################
+
+[FVM_A]
+    comment 874492:Busy:Verify disk is reserved for log if FGT_VM has one virtual disk 
+    
+    exe disk list
+    expect -e "Virtual-Disk" -for 874492 -t 10
+
+    clean_cache
+    exe disk list
+    expect -e "Virtual-Disk2" -fail match -for 874492 -t 10
+
+    config system storage
+        edit "Virtual-Disk"
+            unset usage
+        next
+    end
+
+    show full system storage
+    expect -e "usage log" -for 874492 -t 10
+ 
+    report 874492

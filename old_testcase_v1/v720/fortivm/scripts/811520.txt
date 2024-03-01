@@ -1,0 +1,98 @@
+# Test Case ID: 811520
+# Objective: Verify ETDB_TEST_FILE virus is blocked
+####################################################
+[FVM_A]
+	comment 811520:Busy:checking for "Verify ETDB_TEST_FILE virus is blocked when enable av profile in policy"
+
+config system interface
+        edit "FVM_A:PORT2"
+            set vdom "root"
+            set ip FVM_A:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "FVM_A:PORT3"
+            set vdom "root"
+            set mode static
+            set ip FVM_A:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+end
+
+config antivirus settings
+    set use-extreme-db enable
+end
+
+config antivirus profile
+    delete "av_test"
+    edit "av_test"
+        set feature-set flow  
+        config http
+            set av-scan block
+        end
+    next
+end
+
+config firewall policy
+    edit 811520
+        set name "811520"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT3"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set inspection-mode flow 
+        set utm-status enable
+        set av-profile "av_test"
+        set ssl-ssh-profile "certificate-inspection" 
+        set nat enable
+    next
+end
+
+config log memory setting
+    set status enable
+end
+
+sleep 10
+diagnose ips av cache clear
+exe log delete-all
+y
+sleep 3
+
+exe update-av
+sleep 60
+
+[PC_02]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+    sleep 10 
+
+    ping -c 3 PC_02:DESTINATION4
+    sleep 3
+
+    rm -f etdb_test_file*
+    curl -v http://PC_02:DESTINATION4/virus/etdb_test_file.com
+    expect -e "High Security Alert" -t 30 -for 811520
+    expect -e "infected with the virus \"ETDB_TEST_FILE" -t 30 -for 811520
+
+
+[FVM_A]
+    diagnose sys session filter policyid 811520
+    diagnose sys session clear
+
+    execute log filter device memory
+    execute log filter category 2
+    execute log display
+    expect -e "action=.*?blocked" -t 20 -for 811520
+    expect -e "ETDB_TEST_FILE" -t 10 -for 811520
+	#1: date=2016-03-21 time=18:16:47 logid=0211008192 type=utm subtype=virus eventtype=infected level=warning vd="root" msg="File is infected." action=blocked service=HTTP sessionid=236 srcip=10.1.100.22 dstip=172.16.200.55 srcport=51958 dstport=80 srcintf="port4" dstintf="port1" policyid=811520 proto=6 direction=incoming filename="ETDB_TEST_FILE" quarskip=No-skip virus="ETDB_TEST_FILE" dtype="Virus" ref="http://www.fortinet.com/ve?vn=ETDB_TEST_FILE" virusid=413188 url="http://172.16.200.55/virus/ETDB_TEST_FILE" profile="default" user="" agent="curl/7.15.5" analyticscksum="4eb799c2bb8186be18ec4c71a86e6df90a13abf17e28babd
+
+#    config firewall policy
+#    purge
+#	   y
+#	end
+
+    report 811520

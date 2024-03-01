@@ -1,0 +1,151 @@
+# 1030880: trial license supports 3 policyies
+# 1030881: trial license supports 3 interfaces
+# 1030882: trial license supports 3 routes
+# 1030883: trial license support only LENC
+# 1030884: trial license has no expireation date
+######################################################
+
+
+[FVM_A]
+    comment 1030880: verify trial license supports 3 policyies
+
+    execute factoryreset2
+    get system status
+    expect -e "FGVMEV" -for 1030880 -t 5
+
+    config firewall policy
+    	    purge
+	    y
+    end
+
+    config firewall policy
+     edit 1
+        set name "1"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+    edit 2
+	set name "2"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+    edit 3
+        set name "3"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+    next
+      edit 4
+        set name "4"
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT1"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set nat enable
+      next
+    end
+
+    show firewall policy 3
+    expect -e "edit 3"  -t 5 -for 1030880
+
+    clearbuff
+    show firewall policy
+    expect -e "edit 4" -fail match -t 5 -for 1030880
+
+    report 1030880
+
+    # 1030881: trial license support 3 interfaces
+    config system interface
+        edit "vlan4"
+            set vdom "root"
+            set ip 4.4.4.200 255.255.255.0
+            set allowaccess ping
+            set interface FVM_A:PORT2
+            set vlanid 4
+        next
+    end
+
+    show system interface | grep port -c
+    expect -e "3" -t 5 -for 1030881
+
+    clearbuff
+    show system interface
+    expect -e "vlan4" -fail match -t 5 -for 1030881
+    report 1030881
+
+    #1030882: trial license supports 3 routes
+    config router static
+      purge
+      y
+      edit 1
+          set gateway 10.6.30.254
+          set device FVM_A:PORT1
+      next
+      edit 2
+          set dst 1.1.1.0 255.255.255.0
+          set gateway 10.6.30.111
+          set device FVM_A:PORT1
+      next
+      edit 3
+          set dst 2.2.2.0 255.255.255.0
+          set gateway 10.6.30.111
+          set device FVM_A:PORT1
+      next
+      edit 4
+          set dst 3.3.3.0 255.255.255.0
+          set gateway 10.6.30.111
+          set device FVM_A:PORT1
+      next
+    end
+
+    show router static
+    expect -e "edit 3" -t 5 -for 1030882
+
+    clearbuff
+    show router static
+    expect -e "edit 4" -fail match -t 5 -for 1030882
+
+    report 1030882
+
+    #1030883" trial license in LENC mode
+    # only cleartext protocol dns setting in LENC mode
+    show full system dns | grep protocol
+    expect -e "cleartext" -t 5 -for 1030883
+
+    show full system central-management | grep enc-algorithm
+    expect -e "low" -t 5 -for 1030883
+
+    report 1030883
+
+    #1030884: trial license has no expiration date
+    diagnose hardware sysinfo vm full
+    expect -e "expire"  -fail match -t 5 -for 1030884
+
+    diagnose debug vm-print-license
+    expect -e "expire"  -fail match -t 5 -for 1030884
+
+    get sys status
+    expect -e "expire"  -fail match -t 5 -for 1030884
+
+    report 1030884
+

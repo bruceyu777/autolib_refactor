@@ -1,0 +1,44 @@
+# 1014980：Verify FFVMBB license can be activated 
+# fortiguard settting default 
+# FFVMBB license is available on FC-TST and FGD-Internal-Trunk
+###############################################################
+
+
+[FFW_A]
+    ### 1014980.txt ###
+    comments: Verify FFVMBB can be valided by FGD 
+
+    setlicense -t FFW -for SN -to lic
+    
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 5
+    #expect -e "FFVMEV" -for 1014979 -t 5
+    #expect -e "License Status: Valid" -for 1014979 -t 5
+
+    diagnose debug vm-print-license
+    #expect -e "Model: EVAL" -for 1014979 -t 5
+    
+    # validate license with internal FGD
+    config system dns
+    	set primary 172.17.254.148
+    	set secondary 172.17.254.151
+    end
+
+    config system fortiguard
+        set fortiguard-anycast disable
+	set update-server-location any
+    end
+
+    execute restore vmlicense tftp FFW_A:LICENSE_DIR{$lic} FFW_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 5
+    #expect -e "FFVMBB" -for 1014980 -t 5
+    #expect -e "License Status: Valid" -for 1014980 -t 5
+
+    diag debug vm-print-license
+    #expect -e "Model: BB" -for 1014980 -t 5
+    #expect -e "permanent: 10" -for 1014980 -t 5
+
+    report 1014980

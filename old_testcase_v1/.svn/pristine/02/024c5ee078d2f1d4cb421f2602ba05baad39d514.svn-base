@@ -1,0 +1,33 @@
+######## FORTIVM auto test #########
+
+#- general License -
+#711282     testcase/trunk/fortivm/scripts/711282.txt		"Verify vm status warning when unable to contact FGD"
+#topology1  testcase/trunk/fortivm/scripts/topology1.txt   "config interface and default gw"
+993589     testcase/trunk/fortivm/scripts/993589.txt       "Verify VM00 license can import into FGTVM"
+1016627	   testcase/trunk/fortivm/scripts/1016627.txt      "Verify VM01 license can import into FGTVM"
+1016626    testcase/trunk/fortivm/scripts/1016626.txt      "Verify VM02 license can import into FGTVM"
+1016625    testcase/trunk/fortivm/scripts/1016625.txt      "Verify VM04 license can import into FGTVM"
+704212     testcase/trunk/fortivm/scripts/704212.txt       "Verify VM08 license can import into FGTVM"
+812410     testcase/trunk/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"
+960181     testcase/trunk/fortivm/scripts/960181.txt       "Verify VM32 license able to import into FGTVM"
+960184     testcase/trunk/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"
+812442     testcase/trunk/fortivm/scripts/812442.txt       "Verify VMUL CPU no limitation"
+871711     testcase/trunk/fortivm/scripts/871711.txt       "Verify VM02 license can work on VM configured 4 vCPU"
+730419     testcase/trunk/fortivm/scripts/730419.txt       "Verify VM IPS DB default to extended if mem larger than 1024MB"
+906824     testcase/trunk/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"
+973364     testcase/trunk/fortivm/scripts/973364.txt       "Verify license status change event log"
+711282     testcase/trunk/fortivm/scripts/711282.txt       "Verify vm status warning when unable to contact FGD"
+986333     testcase/trunk/fortivm/scripts/986333.txt       "Verify MIB file contain object ID for vm license"
+961817     testcase/trunk/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"
+808043     testcase/trunk/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"
+866426     testcase/trunk/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"
+
+#- Vdom License -
+#760927     testcase/trunk/fortivm/scripts/760927.txt       "Verify VM08 license support stackable vdom lic"
+#812961      testcase/trunk/fortivm/scripts/812961.txt      "Verify VM16 license support stackable vdom lic"
+#812970      testcase/trunk/fortivm/scripts/812970.txt      "Verify VM32 license support stackable vdom lic"
+#812971      testcase/trunk/fortivm/scripts/812971.txt      "Verify VMUL license support stackable vdom lic"
+#859097      testcase/trunk/fortivm/scripts/859097.txt      "Verify cannot add stackable vdom lic when VM reaches its maximum vdoms"
+#877977      testcase/trunk/fortivm/scripts/877977.txt      "Verify VM with non-vdom lic can set to split-vdom"
+
+

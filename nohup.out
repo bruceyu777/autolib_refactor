@@ -1,0 +1,392 @@
+Start test job.
+Test group is testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+Test environment file is testcase_v1/trunk/fortivm/env/env.vm04vm01.conf
+Start executing script: testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+1 812410     testcase_v1/trunk/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"
+('812410     testcase_v1/trunk/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"',)
+2 960184     testcase_v1/trunk/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"
+('960184     testcase_v1/trunk/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"',)
+3 1006317    testcase_v1/trunk/fortivm/scripts/1006317.txt      "Verify validate VM license via FMG"
+('1006317    testcase_v1/trunk/fortivm/scripts/1006317.txt      "Verify validate VM license via FMG"',)
+4 906824     testcase_v1/trunk/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"
+('906824     testcase_v1/trunk/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"',)
+5 1054900	   testcase_v1/trunk/fortivm/scripts/1054900.txt      "Verify diag test udpate setup"
+('1054900\t   testcase_v1/trunk/fortivm/scripts/1054900.txt      "Verify diag test udpate setup"',)
+6 973364     testcase_v1/trunk/fortivm/scripts/973364.txt       "Verify license status change event log"
+('973364     testcase_v1/trunk/fortivm/scripts/973364.txt       "Verify license status change event log"',)
+7 986360     testcase_v1/trunk/fortivm/scripts/986360.txt       "Verify FGT can return correct sysObjID with valid license"
+('986360     testcase_v1/trunk/fortivm/scripts/986360.txt       "Verify FGT can return correct sysObjID with valid license"',)
+8 986461     testcase_v1/trunk/fortivm/scripts/986461.txt       "Verify sysObjID of VM model returned when license is invalid"
+('986461     testcase_v1/trunk/fortivm/scripts/986461.txt       "Verify sysObjID of VM model returned when license is invalid"',)
+9 961817     testcase_v1/trunk/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"
+('961817     testcase_v1/trunk/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"',)
+10 808043     testcase_v1/trunk/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"
+('808043     testcase_v1/trunk/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"',)
+11 866426     testcase_v1/trunk/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"
+('866426     testcase_v1/trunk/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"',)
+12 704213     testcase_v1/trunk/fortivm/scripts/704213.txt         "Verify v-series 04 license can be validated"
+('704213     testcase_v1/trunk/fortivm/scripts/704213.txt         "Verify v-series 04 license can be validated"',)
+13 1015703     testcase_v1/trunk/fortivm/scripts/1015703.txt            "Verify v-series 01 license can be validated"
+('1015703     testcase_v1/trunk/fortivm/scripts/1015703.txt            "Verify v-series 01 license can be validated"',)
+14 1015704     testcase_v1/trunk/fortivm/scripts/1015704.txt            "Verify v-series 02 license can be validated"
+('1015704     testcase_v1/trunk/fortivm/scripts/1015704.txt            "Verify v-series 02 license can be validated"',)
+15 1015705     testcase_v1/trunk/fortivm/scripts/1015705.txt            "Verify v-series 08 license can be validated"
+('1015705     testcase_v1/trunk/fortivm/scripts/1015705.txt            "Verify v-series 08 license can be validated"',)
+16 1015706     testcase_v1/trunk/fortivm/scripts/1015706.txt            "Verify v-series 16 license can be validated"
+('1015706     testcase_v1/trunk/fortivm/scripts/1015706.txt            "Verify v-series 16 license can be validated"',)
+17 1015707     testcase_v1/trunk/fortivm/scripts/1015707.txt            "Verify v-series 32 license can be validated"
+('1015707     testcase_v1/trunk/fortivm/scripts/1015707.txt            "Verify v-series 32 license can be validated"',)
+18 1015708     testcase_v1/trunk/fortivm/scripts/1015708.txt            "Verify v-series UL license can be validated"
+('1015708     testcase_v1/trunk/fortivm/scripts/1015708.txt            "Verify v-series UL license can be validated"',)
+19 959708     testcase_v1/trunk/fortivm/scripts/959708.txt       "Verify policy and utm work with valid v-license"
+('959708     testcase_v1/trunk/fortivm/scripts/959708.txt       "Verify policy and utm work with valid v-license"',)
+22 866272	   testcase_v1/trunk/fortivm/scripts/866272.txt 	"Verify 15-UG apply to V-series"
+('866272\t   testcase_v1/trunk/fortivm/scripts/866272.txt \t"Verify 15-UG apply to V-series"',)
+23 945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"
+('945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"',)
+24 945211     testcase_v1/trunk/fortivm/scripts/945211.txt            "Verify cli show 10% extra bandwidth"
+('945211     testcase_v1/trunk/fortivm/scripts/945211.txt            "Verify cli show 10% extra bandwidth"',)
+25 945213     testcase_v1/trunk/fortivm/scripts/945213.txt            "Verify interface inbandwidth/outbandwidth can configred extra 10%"
+('945213     testcase_v1/trunk/fortivm/scripts/945213.txt            "Verify interface inbandwidth/outbandwidth can configred extra 10%"',)
+29 911059     testcase_v1/trunk/fortivm/scripts/911059.txt	      "Verify S04 license can be validated"
+('911059     testcase_v1/trunk/fortivm/scripts/911059.txt\t      "Verify S04 license can be validated"',)
+30 1015664    testcase_v1/trunk/fortivm/scripts/1015664.txt      "Verify S08 license"
+('1015664    testcase_v1/trunk/fortivm/scripts/1015664.txt      "Verify S08 license"',)
+31 1015665    testcase_v1/trunk/fortivm/scripts/1015665.txt      "Verify S16 license"
+('1015665    testcase_v1/trunk/fortivm/scripts/1015665.txt      "Verify S16 license"',)
+32 1015666    testcase_v1/trunk/fortivm/scripts/1015666.txt      "Verify S32 license"
+('1015666    testcase_v1/trunk/fortivm/scripts/1015666.txt      "Verify S32 license"',)
+33 1015667    testcase_v1/trunk/fortivm/scripts/1015667.txt      "Verify SUL license"
+('1015667    testcase_v1/trunk/fortivm/scripts/1015667.txt      "Verify SUL license"',)
+34 1016492    testcase_v1/trunk/fortivm/scripts/1016492.txt      "Verify reboot activate all CPU after loading S04 license"
+('1016492    testcase_v1/trunk/fortivm/scripts/1016492.txt      "Verify reboot activate all CPU after loading S04 license"',)
+35 911061     testcase_v1/trunk/fortivm/scripts/911061.txt         "Verify 5-UG apply to S-series"
+('911061     testcase_v1/trunk/fortivm/scripts/911061.txt         "Verify 5-UG apply to S-series"',)
+37 945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"
+('945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"',)
+40 849490     testcase_v1/trunk/fortivm/scripts/849490.txt         "Verify non vdom lenc license can be validated"
+('849490     testcase_v1/trunk/fortivm/scripts/849490.txt         "Verify non vdom lenc license can be validated"',)
+41 849493     testcase_v1/trunk/fortivm/scripts/849493.txt         "Verify vdom lenc license can be validated"
+('849493     testcase_v1/trunk/fortivm/scripts/849493.txt         "Verify vdom lenc license can be validated"',)
+44 897191     testcase_v1/trunk/fortivm/scripts/897191.txt       "Verify foc lic activated on 08V vm"
+('897191     testcase_v1/trunk/fortivm/scripts/897191.txt       "Verify foc lic activated on 08V vm"',)
+45 1017042     testcase_v1/trunk/fortivm/scripts/1017042.txt      "Verify foc lic activated on 08G vm"
+('1017042     testcase_v1/trunk/fortivm/scripts/1017042.txt      "Verify foc lic activated on 08G vm"',)
+53 1030872     testcase_v1/trunk/fortivm/scripts/1030872.txt       "Verify download permanent trial license"
+('1030872     testcase_v1/trunk/fortivm/scripts/1030872.txt       "Verify download permanent trial license"',)
+54 1030873     testcase_v1/trunk/fortivm/scripts/1030873.txt       "Verify one trial license one forticare account"
+('1030873     testcase_v1/trunk/fortivm/scripts/1030873.txt       "Verify one trial license one forticare account"',)
+56 1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"
+('1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"',)
+57 1030877     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license invalid if ram > 2G"
+('1030877     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license invalid if ram > 2G"',)
+60 827306     testcase_v1/trunk/fortivm/scripts/827306.txt       "Verify fndn license can be validated"
+('827306     testcase_v1/trunk/fortivm/scripts/827306.txt       "Verify fndn license can be validated"',)
+61 827280     testcase_v1/trunk/fortivm/scripts/827280.txt       "Verify 10 firewall policy"
+('827280     testcase_v1/trunk/fortivm/scripts/827280.txt       "Verify 10 firewall policy"',)
+62 827281     testcase_v1/trunk/fortivm/scripts/827281.txt       "Verify firewall address limit 10"
+('827281     testcase_v1/trunk/fortivm/scripts/827281.txt       "Verify firewall address limit 10"',)
+63 827282     testcase_v1/trunk/fortivm/scripts/827282.txt       "Verify custom service limit 10"
+('827282     testcase_v1/trunk/fortivm/scripts/827282.txt       "Verify custom service limit 10"',)
+64 1016997    testcase_v1/trunk/fortivm/scripts/1016997.txt      "Verify fndn allow one admin and one traffic vdom"
+('1016997    testcase_v1/trunk/fortivm/scripts/1016997.txt      "Verify fndn allow one admin and one traffic vdom"',)
+69 1014980     testcase_v1/trunk/fortivm/scripts/1014980.ffw.txt         "Verify FFVMBB license"
+('1014980     testcase_v1/trunk/fortivm/scripts/1014980.ffw.txt         "Verify FFVMBB license"',)
+70 1014981     testcase_v1/trunk/fortivm/scripts/1014981.ffw.txt         "Verify validate license via FMG"
+('1014981     testcase_v1/trunk/fortivm/scripts/1014981.ffw.txt         "Verify validate license via FMG"',)
+71 1054875     testcase_v1/trunk/fortivm/scripts/1054875.ffw.txt	      "Verify FFW turn into FOC"
+('1054875     testcase_v1/trunk/fortivm/scripts/1054875.ffw.txt\t      "Verify FFW turn into FOC"',)
+Finished executing script: testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+Traceback (most recent call last):
+  File "autotest.py", line 61, in <module>
+    job.run()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/scheduler/job.py", line 46, in run
+    self.execute_script()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/scheduler/job.py", line 19, in execute_script
+    task.run()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/scheduler/task.py", line 112, in run
+    self.setup_devices()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/scheduler/task.py", line 64, in setup_devices
+    self.init_devices()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/scheduler/task.py", line 45, in init_devices
+    self.devices[dev_name] = FortiVM(dev_name)
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/fos_dev.py", line 28, in __init__
+    super().__init__(dev_name)
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/device.py", line 35, in __init__
+    self.connect()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/fos_dev.py", line 42, in connect
+    self.send_command("")
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/fos_dev.py", line 246, in send_command
+    match, output = super().send_command(command, timeout=timeout)
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/device.py", line 112, in send_command
+    matched, output = self.conn.send_command(command, pattern, timeout)
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/dev_conn.py", line 86, in send_command
+    self.client.sendline(command)
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/dev_conn.py", line 57, in client
+    self.login()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/fosdev_conn.py", line 125, in login
+    func()
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/lib/core/device/fosdev_conn.py", line 29, in _connected
+    index = self._client.expect_exact(
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/venv/lib/python3.8/site-packages/pexpect/spawnbase.py", line 421, in expect_exact
+    return exp.expect_loop(timeout)
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/venv/lib/python3.8/site-packages/pexpect/expect.py", line 169, in expect_loop
+    incoming = spawn.read_nonblocking(spawn.maxread, timeout)
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/venv/lib/python3.8/site-packages/pexpect/pty_spawn.py", line 500, in read_nonblocking
+    if (timeout != 0) and select(timeout):
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/venv/lib/python3.8/site-packages/pexpect/pty_spawn.py", line 450, in select
+    return select_ignore_interrupts([self.child_fd], [], [], timeout)[0]
+  File "/home/zdl/samba/AutoTestPro/autolib_v3/venv/lib/python3.8/site-packages/pexpect/utils.py", line 143, in select_ignore_interrupts
+    return select.select(iwtd, owtd, ewtd, timeout)
+KeyboardInterrupt
+Start test job.
+Test group is testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+Test environment file is testcase_v1/trunk/fortivm/env/env.vm04vm01.conf
+Start executing script: testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+1 812410     testcase_v1/trunk/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"
+('812410     testcase_v1/trunk/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"',)
+2 960184     testcase_v1/trunk/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"
+('960184     testcase_v1/trunk/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"',)
+3 1006317    testcase_v1/trunk/fortivm/scripts/1006317.txt      "Verify validate VM license via FMG"
+('1006317    testcase_v1/trunk/fortivm/scripts/1006317.txt      "Verify validate VM license via FMG"',)
+4 906824     testcase_v1/trunk/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"
+('906824     testcase_v1/trunk/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"',)
+5 1054900	   testcase_v1/trunk/fortivm/scripts/1054900.txt      "Verify diag test udpate setup"
+('1054900\t   testcase_v1/trunk/fortivm/scripts/1054900.txt      "Verify diag test udpate setup"',)
+6 973364     testcase_v1/trunk/fortivm/scripts/973364.txt       "Verify license status change event log"
+('973364     testcase_v1/trunk/fortivm/scripts/973364.txt       "Verify license status change event log"',)
+7 986360     testcase_v1/trunk/fortivm/scripts/986360.txt       "Verify FGT can return correct sysObjID with valid license"
+('986360     testcase_v1/trunk/fortivm/scripts/986360.txt       "Verify FGT can return correct sysObjID with valid license"',)
+8 986461     testcase_v1/trunk/fortivm/scripts/986461.txt       "Verify sysObjID of VM model returned when license is invalid"
+('986461     testcase_v1/trunk/fortivm/scripts/986461.txt       "Verify sysObjID of VM model returned when license is invalid"',)
+9 961817     testcase_v1/trunk/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"
+('961817     testcase_v1/trunk/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"',)
+10 808043     testcase_v1/trunk/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"
+('808043     testcase_v1/trunk/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"',)
+11 866426     testcase_v1/trunk/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"
+('866426     testcase_v1/trunk/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"',)
+12 704213     testcase_v1/trunk/fortivm/scripts/704213.txt         "Verify v-series 04 license can be validated"
+('704213     testcase_v1/trunk/fortivm/scripts/704213.txt         "Verify v-series 04 license can be validated"',)
+13 1015703     testcase_v1/trunk/fortivm/scripts/1015703.txt            "Verify v-series 01 license can be validated"
+('1015703     testcase_v1/trunk/fortivm/scripts/1015703.txt            "Verify v-series 01 license can be validated"',)
+14 1015704     testcase_v1/trunk/fortivm/scripts/1015704.txt            "Verify v-series 02 license can be validated"
+('1015704     testcase_v1/trunk/fortivm/scripts/1015704.txt            "Verify v-series 02 license can be validated"',)
+15 1015705     testcase_v1/trunk/fortivm/scripts/1015705.txt            "Verify v-series 08 license can be validated"
+('1015705     testcase_v1/trunk/fortivm/scripts/1015705.txt            "Verify v-series 08 license can be validated"',)
+16 1015706     testcase_v1/trunk/fortivm/scripts/1015706.txt            "Verify v-series 16 license can be validated"
+('1015706     testcase_v1/trunk/fortivm/scripts/1015706.txt            "Verify v-series 16 license can be validated"',)
+17 1015707     testcase_v1/trunk/fortivm/scripts/1015707.txt            "Verify v-series 32 license can be validated"
+('1015707     testcase_v1/trunk/fortivm/scripts/1015707.txt            "Verify v-series 32 license can be validated"',)
+18 1015708     testcase_v1/trunk/fortivm/scripts/1015708.txt            "Verify v-series UL license can be validated"
+('1015708     testcase_v1/trunk/fortivm/scripts/1015708.txt            "Verify v-series UL license can be validated"',)
+19 959708     testcase_v1/trunk/fortivm/scripts/959708.txt       "Verify policy and utm work with valid v-license"
+('959708     testcase_v1/trunk/fortivm/scripts/959708.txt       "Verify policy and utm work with valid v-license"',)
+22 866272	   testcase_v1/trunk/fortivm/scripts/866272.txt 	"Verify 15-UG apply to V-series"
+('866272\t   testcase_v1/trunk/fortivm/scripts/866272.txt \t"Verify 15-UG apply to V-series"',)
+23 945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"
+('945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"',)
+24 945211     testcase_v1/trunk/fortivm/scripts/945211.txt            "Verify cli show 10% extra bandwidth"
+('945211     testcase_v1/trunk/fortivm/scripts/945211.txt            "Verify cli show 10% extra bandwidth"',)
+25 945213     testcase_v1/trunk/fortivm/scripts/945213.txt            "Verify interface inbandwidth/outbandwidth can configred extra 10%"
+('945213     testcase_v1/trunk/fortivm/scripts/945213.txt            "Verify interface inbandwidth/outbandwidth can configred extra 10%"',)
+29 911059     testcase_v1/trunk/fortivm/scripts/911059.txt	      "Verify S04 license can be validated"
+('911059     testcase_v1/trunk/fortivm/scripts/911059.txt\t      "Verify S04 license can be validated"',)
+30 1015664    testcase_v1/trunk/fortivm/scripts/1015664.txt      "Verify S08 license"
+('1015664    testcase_v1/trunk/fortivm/scripts/1015664.txt      "Verify S08 license"',)
+31 1015665    testcase_v1/trunk/fortivm/scripts/1015665.txt      "Verify S16 license"
+('1015665    testcase_v1/trunk/fortivm/scripts/1015665.txt      "Verify S16 license"',)
+32 1015666    testcase_v1/trunk/fortivm/scripts/1015666.txt      "Verify S32 license"
+('1015666    testcase_v1/trunk/fortivm/scripts/1015666.txt      "Verify S32 license"',)
+33 1015667    testcase_v1/trunk/fortivm/scripts/1015667.txt      "Verify SUL license"
+('1015667    testcase_v1/trunk/fortivm/scripts/1015667.txt      "Verify SUL license"',)
+34 1016492    testcase_v1/trunk/fortivm/scripts/1016492.txt      "Verify reboot activate all CPU after loading S04 license"
+('1016492    testcase_v1/trunk/fortivm/scripts/1016492.txt      "Verify reboot activate all CPU after loading S04 license"',)
+35 911061     testcase_v1/trunk/fortivm/scripts/911061.txt         "Verify 5-UG apply to S-series"
+('911061     testcase_v1/trunk/fortivm/scripts/911061.txt         "Verify 5-UG apply to S-series"',)
+37 945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"
+('945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"',)
+40 849490     testcase_v1/trunk/fortivm/scripts/849490.txt         "Verify non vdom lenc license can be validated"
+('849490     testcase_v1/trunk/fortivm/scripts/849490.txt         "Verify non vdom lenc license can be validated"',)
+41 849493     testcase_v1/trunk/fortivm/scripts/849493.txt         "Verify vdom lenc license can be validated"
+('849493     testcase_v1/trunk/fortivm/scripts/849493.txt         "Verify vdom lenc license can be validated"',)
+44 897191     testcase_v1/trunk/fortivm/scripts/897191.txt       "Verify foc lic activated on 08V vm"
+('897191     testcase_v1/trunk/fortivm/scripts/897191.txt       "Verify foc lic activated on 08V vm"',)
+45 1017042     testcase_v1/trunk/fortivm/scripts/1017042.txt      "Verify foc lic activated on 08G vm"
+('1017042     testcase_v1/trunk/fortivm/scripts/1017042.txt      "Verify foc lic activated on 08G vm"',)
+53 1030872     testcase_v1/trunk/fortivm/scripts/1030872.txt       "Verify download permanent trial license"
+('1030872     testcase_v1/trunk/fortivm/scripts/1030872.txt       "Verify download permanent trial license"',)
+54 1030873     testcase_v1/trunk/fortivm/scripts/1030873.txt       "Verify one trial license one forticare account"
+('1030873     testcase_v1/trunk/fortivm/scripts/1030873.txt       "Verify one trial license one forticare account"',)
+56 1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"
+('1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"',)
+57 1030877     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license invalid if ram > 2G"
+('1030877     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license invalid if ram > 2G"',)
+60 827306     testcase_v1/trunk/fortivm/scripts/827306.txt       "Verify fndn license can be validated"
+('827306     testcase_v1/trunk/fortivm/scripts/827306.txt       "Verify fndn license can be validated"',)
+61 827280     testcase_v1/trunk/fortivm/scripts/827280.txt       "Verify 10 firewall policy"
+('827280     testcase_v1/trunk/fortivm/scripts/827280.txt       "Verify 10 firewall policy"',)
+62 827281     testcase_v1/trunk/fortivm/scripts/827281.txt       "Verify firewall address limit 10"
+('827281     testcase_v1/trunk/fortivm/scripts/827281.txt       "Verify firewall address limit 10"',)
+63 827282     testcase_v1/trunk/fortivm/scripts/827282.txt       "Verify custom service limit 10"
+('827282     testcase_v1/trunk/fortivm/scripts/827282.txt       "Verify custom service limit 10"',)
+64 1016997    testcase_v1/trunk/fortivm/scripts/1016997.txt      "Verify fndn allow one admin and one traffic vdom"
+('1016997    testcase_v1/trunk/fortivm/scripts/1016997.txt      "Verify fndn allow one admin and one traffic vdom"',)
+69 1014980     testcase_v1/trunk/fortivm/scripts/1014980.ffw.txt         "Verify FFVMBB license"
+('1014980     testcase_v1/trunk/fortivm/scripts/1014980.ffw.txt         "Verify FFVMBB license"',)
+70 1014981     testcase_v1/trunk/fortivm/scripts/1014981.ffw.txt         "Verify validate license via FMG"
+('1014981     testcase_v1/trunk/fortivm/scripts/1014981.ffw.txt         "Verify validate license via FMG"',)
+71 1054875     testcase_v1/trunk/fortivm/scripts/1054875.ffw.txt	      "Verify FFW turn into FOC"
+('1054875     testcase_v1/trunk/fortivm/scripts/1054875.ffw.txt\t      "Verify FFW turn into FOC"',)
+Finished executing script: testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+Failed to login FVM_A, will retry it again.
+Start test job.
+Test group is testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+Test environment file is testcase_v1/trunk/fortivm/env/env.vm04vm01.conf
+Start executing script: testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+1 812410     testcase_v1/trunk/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"
+('812410     testcase_v1/trunk/fortivm/scripts/812410.txt       "Verify VM16 license able to import into FGTVM"',)
+2 960184     testcase_v1/trunk/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"
+('960184     testcase_v1/trunk/fortivm/scripts/960184.txt       "Verify VMUL license able to import into FGTVM"',)
+3 1006317    testcase_v1/trunk/fortivm/scripts/1006317.txt      "Verify validate VM license via FMG"
+('1006317    testcase_v1/trunk/fortivm/scripts/1006317.txt      "Verify validate VM license via FMG"',)
+4 906824     testcase_v1/trunk/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"
+('906824     testcase_v1/trunk/fortivm/scripts/906824.txt       "Verify no memory limitation for byol g-license"',)
+5 1054900	   testcase_v1/trunk/fortivm/scripts/1054900.txt      "Verify diag test udpate setup"
+('1054900\t   testcase_v1/trunk/fortivm/scripts/1054900.txt      "Verify diag test udpate setup"',)
+6 973364     testcase_v1/trunk/fortivm/scripts/973364.txt       "Verify license status change event log"
+('973364     testcase_v1/trunk/fortivm/scripts/973364.txt       "Verify license status change event log"',)
+7 986360     testcase_v1/trunk/fortivm/scripts/986360.txt       "Verify FGT can return correct sysObjID with valid license"
+('986360     testcase_v1/trunk/fortivm/scripts/986360.txt       "Verify FGT can return correct sysObjID with valid license"',)
+8 986461     testcase_v1/trunk/fortivm/scripts/986461.txt       "Verify sysObjID of VM model returned when license is invalid"
+('986461     testcase_v1/trunk/fortivm/scripts/986461.txt       "Verify sysObjID of VM model returned when license is invalid"',)
+9 961817     testcase_v1/trunk/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"
+('961817     testcase_v1/trunk/fortivm/scripts/961817.txt       "Verify exe factoryreset2 keepvmlicense"',)
+10 808043     testcase_v1/trunk/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"
+('808043     testcase_v1/trunk/fortivm/scripts/808043.txt       "Verify exe factoryreset keepvmlicense"',)
+11 866426     testcase_v1/trunk/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"
+('866426     testcase_v1/trunk/fortivm/scripts/866426.txt       "Verify vm license removed after exe factoryreset"',)
+12 704213     testcase_v1/trunk/fortivm/scripts/704213.txt         "Verify v-series 04 license can be validated"
+('704213     testcase_v1/trunk/fortivm/scripts/704213.txt         "Verify v-series 04 license can be validated"',)
+13 1015703     testcase_v1/trunk/fortivm/scripts/1015703.txt            "Verify v-series 01 license can be validated"
+('1015703     testcase_v1/trunk/fortivm/scripts/1015703.txt            "Verify v-series 01 license can be validated"',)
+14 1015704     testcase_v1/trunk/fortivm/scripts/1015704.txt            "Verify v-series 02 license can be validated"
+('1015704     testcase_v1/trunk/fortivm/scripts/1015704.txt            "Verify v-series 02 license can be validated"',)
+15 1015705     testcase_v1/trunk/fortivm/scripts/1015705.txt            "Verify v-series 08 license can be validated"
+('1015705     testcase_v1/trunk/fortivm/scripts/1015705.txt            "Verify v-series 08 license can be validated"',)
+16 1015706     testcase_v1/trunk/fortivm/scripts/1015706.txt            "Verify v-series 16 license can be validated"
+('1015706     testcase_v1/trunk/fortivm/scripts/1015706.txt            "Verify v-series 16 license can be validated"',)
+17 1015707     testcase_v1/trunk/fortivm/scripts/1015707.txt            "Verify v-series 32 license can be validated"
+('1015707     testcase_v1/trunk/fortivm/scripts/1015707.txt            "Verify v-series 32 license can be validated"',)
+18 1015708     testcase_v1/trunk/fortivm/scripts/1015708.txt            "Verify v-series UL license can be validated"
+('1015708     testcase_v1/trunk/fortivm/scripts/1015708.txt            "Verify v-series UL license can be validated"',)
+19 959708     testcase_v1/trunk/fortivm/scripts/959708.txt       "Verify policy and utm work with valid v-license"
+('959708     testcase_v1/trunk/fortivm/scripts/959708.txt       "Verify policy and utm work with valid v-license"',)
+22 866272	   testcase_v1/trunk/fortivm/scripts/866272.txt 	"Verify 15-UG apply to V-series"
+('866272\t   testcase_v1/trunk/fortivm/scripts/866272.txt \t"Verify 15-UG apply to V-series"',)
+23 945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"
+('945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"',)
+24 945211     testcase_v1/trunk/fortivm/scripts/945211.txt            "Verify cli show 10% extra bandwidth"
+('945211     testcase_v1/trunk/fortivm/scripts/945211.txt            "Verify cli show 10% extra bandwidth"',)
+25 945213     testcase_v1/trunk/fortivm/scripts/945213.txt            "Verify interface inbandwidth/outbandwidth can configred extra 10%"
+('945213     testcase_v1/trunk/fortivm/scripts/945213.txt            "Verify interface inbandwidth/outbandwidth can configred extra 10%"',)
+29 911059     testcase_v1/trunk/fortivm/scripts/911059.txt	      "Verify S04 license can be validated"
+('911059     testcase_v1/trunk/fortivm/scripts/911059.txt\t      "Verify S04 license can be validated"',)
+30 1015664    testcase_v1/trunk/fortivm/scripts/1015664.txt      "Verify S08 license"
+('1015664    testcase_v1/trunk/fortivm/scripts/1015664.txt      "Verify S08 license"',)
+31 1015665    testcase_v1/trunk/fortivm/scripts/1015665.txt      "Verify S16 license"
+('1015665    testcase_v1/trunk/fortivm/scripts/1015665.txt      "Verify S16 license"',)
+32 1015666    testcase_v1/trunk/fortivm/scripts/1015666.txt      "Verify S32 license"
+('1015666    testcase_v1/trunk/fortivm/scripts/1015666.txt      "Verify S32 license"',)
+33 1015667    testcase_v1/trunk/fortivm/scripts/1015667.txt      "Verify SUL license"
+('1015667    testcase_v1/trunk/fortivm/scripts/1015667.txt      "Verify SUL license"',)
+34 1016492    testcase_v1/trunk/fortivm/scripts/1016492.txt      "Verify reboot activate all CPU after loading S04 license"
+('1016492    testcase_v1/trunk/fortivm/scripts/1016492.txt      "Verify reboot activate all CPU after loading S04 license"',)
+35 911061     testcase_v1/trunk/fortivm/scripts/911061.txt         "Verify 5-UG apply to S-series"
+('911061     testcase_v1/trunk/fortivm/scripts/911061.txt         "Verify 5-UG apply to S-series"',)
+37 945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"
+('945210     testcase_v1/trunk/fortivm/scripts/945210.txt         "Verify b-license can be validated"',)
+40 849490     testcase_v1/trunk/fortivm/scripts/849490.txt         "Verify non vdom lenc license can be validated"
+('849490     testcase_v1/trunk/fortivm/scripts/849490.txt         "Verify non vdom lenc license can be validated"',)
+41 849493     testcase_v1/trunk/fortivm/scripts/849493.txt         "Verify vdom lenc license can be validated"
+('849493     testcase_v1/trunk/fortivm/scripts/849493.txt         "Verify vdom lenc license can be validated"',)
+44 897191     testcase_v1/trunk/fortivm/scripts/897191.txt       "Verify foc lic activated on 08V vm"
+('897191     testcase_v1/trunk/fortivm/scripts/897191.txt       "Verify foc lic activated on 08V vm"',)
+45 1017042     testcase_v1/trunk/fortivm/scripts/1017042.txt      "Verify foc lic activated on 08G vm"
+('1017042     testcase_v1/trunk/fortivm/scripts/1017042.txt      "Verify foc lic activated on 08G vm"',)
+53 1030872     testcase_v1/trunk/fortivm/scripts/1030872.txt       "Verify download permanent trial license"
+('1030872     testcase_v1/trunk/fortivm/scripts/1030872.txt       "Verify download permanent trial license"',)
+54 1030873     testcase_v1/trunk/fortivm/scripts/1030873.txt       "Verify one trial license one forticare account"
+('1030873     testcase_v1/trunk/fortivm/scripts/1030873.txt       "Verify one trial license one forticare account"',)
+56 1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"
+('1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"',)
+57 1030877     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license invalid if ram > 2G"
+('1030877     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license invalid if ram > 2G"',)
+60 827306     testcase_v1/trunk/fortivm/scripts/827306.txt       "Verify fndn license can be validated"
+('827306     testcase_v1/trunk/fortivm/scripts/827306.txt       "Verify fndn license can be validated"',)
+61 827280     testcase_v1/trunk/fortivm/scripts/827280.txt       "Verify 10 firewall policy"
+('827280     testcase_v1/trunk/fortivm/scripts/827280.txt       "Verify 10 firewall policy"',)
+62 827281     testcase_v1/trunk/fortivm/scripts/827281.txt       "Verify firewall address limit 10"
+('827281     testcase_v1/trunk/fortivm/scripts/827281.txt       "Verify firewall address limit 10"',)
+63 827282     testcase_v1/trunk/fortivm/scripts/827282.txt       "Verify custom service limit 10"
+('827282     testcase_v1/trunk/fortivm/scripts/827282.txt       "Verify custom service limit 10"',)
+64 1016997    testcase_v1/trunk/fortivm/scripts/1016997.txt      "Verify fndn allow one admin and one traffic vdom"
+('1016997    testcase_v1/trunk/fortivm/scripts/1016997.txt      "Verify fndn allow one admin and one traffic vdom"',)
+69 1014980     testcase_v1/trunk/fortivm/scripts/1014980.ffw.txt         "Verify FFVMBB license"
+('1014980     testcase_v1/trunk/fortivm/scripts/1014980.ffw.txt         "Verify FFVMBB license"',)
+70 1014981     testcase_v1/trunk/fortivm/scripts/1014981.ffw.txt         "Verify validate license via FMG"
+('1014981     testcase_v1/trunk/fortivm/scripts/1014981.ffw.txt         "Verify validate license via FMG"',)
+71 1054875     testcase_v1/trunk/fortivm/scripts/1054875.ffw.txt	      "Verify FFW turn into FOC"
+('1054875     testcase_v1/trunk/fortivm/scripts/1054875.ffw.txt\t      "Verify FFW turn into FOC"',)
+Finished executing script: testcase_v1/trunk/fortivm/grp.fortivm.lic_zdl
+Start creating FVM_B.
+Failed to login FVM_A, will retry it again.
+FVM_B is created.
+Start creating FFW_A.
+FFW_A is created.
+Start creating FVM_A.
+Failed to login FVM_A as connection is closed.
+FVM_A is created.
+set up device PC_KVM 2.749195634998614
+Failed to login FVM_B, will retry it again.
+Failed to login FVM_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Succeeded to login the device: FVM_B. 
+Start configuring output mode to be standard.
+Succeeded configuring output mode to be standard.
+Start configuring mgmt settings.
+Finished configuring mgmt settings.
+Failed to login FVM_A as connection is closed.
+set up device FVM_B 168.53047403800883
+set up device PC_02 2.4093663950043265
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FVM_A as connection is closed.
+Failed to login after retry for 16 times
+Could not login device telnet 10.6.30.139 3023!
+Failed to login FFW_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login FFW_A as connection is closed.
+Failed to login after retry for 16 times
+Could not login device telnet 10.6.30.139 3025!

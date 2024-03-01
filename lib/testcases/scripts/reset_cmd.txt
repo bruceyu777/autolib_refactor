@@ -1,0 +1,6 @@
+# 730419: Verify IPS DB default is extended
+##################################################
+comment Verify IPS DB default is extended
+[FGT_A]
+    config global
+    exe factoryreset2

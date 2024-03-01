@@ -1,0 +1,43 @@
+# 1014979: Verify new deployed FFW_VM has 15 day ev license 
+# 1014962: Verify FFW_VM64_KVM platform is FFWKVM
+# FFVMBB license is available on FC-TST and FGD-Internal-Trunk
+###############################################################
+
+[PC_KVM]
+    date
+    clearbuff
+    
+    date -d "+15 days" "+%b"
+    setvar -e "(?n)([A-Z][a-z][a-z])" -to month
+    echo {$month}
+    
+    date -d "+15 days" "+%-d"
+    setvar -e "(?n)^(\\d{1,2})" -to day
+    echo {$day}
+    
+    date -d "+15 days" "+%Y"
+    setvar -e "(?n)^(\\d{4,4})" -to year
+    echo {$year}
+
+
+[FFW_A]
+    ### 1014979.txt ###
+    comments: Verify FFVMBB EV 15-day license 
+
+    #remove license
+    #execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FFVMEV" -for 1014979 -t 5
+    expect -e "License Status: Valid" -for 1014979 -t 5
+
+    diagnose debug vm-print-license
+    expect -e "Evaluation license expires: ... {$month}.*{$day} .* {$year}" -for 1014979 -t 5
+    expect -e "Model: EVAL" -for 1014979 -t 5
+
+    comment: Verify 1014962 FFW_VM64_KVM platform is FFWKVM
+    diag test application forticldd 1
+    expect -e "FFWKVM" -for 1014962 -t 5
+
+    report 1014979
+    report 1014962

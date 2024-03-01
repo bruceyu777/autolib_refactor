@@ -1,0 +1,9 @@
+[PC_KVM]
+    comment: Shutdown FVM_B
+    virsh shutdown --domain FVM_B --mode acpi
+    sleep 5
+
+    comment: delete FVM_B and remove storage
+    virsh undefine --domain FVM_B --remove-all-storage
+    sleep 3
+

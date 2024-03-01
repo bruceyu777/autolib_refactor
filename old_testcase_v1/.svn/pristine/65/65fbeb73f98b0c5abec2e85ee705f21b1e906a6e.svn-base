@@ -1,0 +1,50 @@
+# 1054875：Verify FOC license can apply to FFW_VM
+# 
+# 
+###############################################################
+
+[FFW_A]
+    # validate license with internal FGD
+    config system dns
+        set primary 172.17.254.148
+        set secondary 172.17.254.151
+	set protocol cleartext
+    end
+
+    config system fortiguard
+        set update-server-location automatic
+        # command will fail if fgtvm is in ev license
+        set fortiguard-anycast disable
+    end
+
+    sleep 30
+
+
+
+[FFW_A]
+    ### 1054875.txt ###
+    comment: Verify FOC license can apply to FFW_VM
+
+    setlicense -t FFW -for VDOM -to foclic
+
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FFVMBB" -for 1054875 -t 5
+    expect -e "License Status: Valid" -for 1054875 -t 5
+
+    execute forticarrier-license {$foclic}
+    y
+
+    get system status | grep "License Status"
+    expect -e "FortiCarrier License Status: Carrier" -for 1054875 -t 5
+
+
+    
+    report 1054875
+
+    #convert back to FortiFirewall for FFVMBBTM22090003
+    exe forticarrier-license QZGB-B3EH-5XJH-25L3-OK4W-L4RH-KU
+    y
+
+    get system status | grep "License Status"
+    
+    

@@ -1,0 +1,14 @@
+search, y/n, 30
+send_line, y
+search, login:, 300, -1
+send_line, admin
+search, Password:, 30, -1
+send_line
+search, Password:, 30, -1
+send_line, admin
+search, Password:, 30, -1
+send_line, admin
+search, #, 30
+command, config system console
+command, set output standard
+command, end

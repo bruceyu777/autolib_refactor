@@ -1,0 +1,8 @@
+######## FORTIVM auto test #########
+
+#- FOC  License -
+897191     testcase_v1/v720/fortivm/scripts/897191.txt       "Verify foc lic activated on 08V vm" 
+#891699	   testcase_v1/v720/fortivm/scripts/973320.txt      "Verify foc still preserve minimum netowrk settings"
+1017042     testcase_v1/v720/fortivm/scripts/1017042.txt      "Verify foc lic activated on 08G vm"
+
+

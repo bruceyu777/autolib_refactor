@@ -1,0 +1,59 @@
+# 1015664：Verify s08-license can be valided
+# fortiguard settting default (anycast=enable)
+# 
+#############################
+
+[FVM_A]
+    comment: Verify s08 can be valided base on cpu cores with default FGD setting
+    setlicense -t 08S -for SN -to lic
+
+    #remove license
+    execute factoryreset2    
+    
+    sleep 60
+
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "Serial-Number: FGVMEV" -for 1015664 -t 5
+    expect -e "License Status: Invalid" -for 1015664 -t 5
+    
+    # fortiguard default setting
+    config system fortiguard
+        unset fortiguard-anycast
+    end
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 60
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVMSL" -for 1015664 -t 5
+    expect -e "License Status: Valid" -for 1015664 -t 5
+    expect -e "4 CPU/8 allowed" -for 1015664 -t 5
+
+    #s-license need to add cpu(see #596988)
+    #new kernel no longer require cpu add
+    exe cpu show
+    expect -e "Active CPU number: 4" -for 1015664 -t 5
+    expect -e "Total CPU number: 4" -for 1015664 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: SL" -for 1015664 -t 5
+    expect -e "CPU: 8" -for 1015664 -t 5
+
+   # Test 1021270: UTM bundle(990)
+    comment: Verify 1021270: check 990 UTM bundle contracts
+    diagnose test update info | grep "System contracts" -A 40
+    expect -e "ENHN" -for 1021270 -t 5
+    expect -e "FMWR" -for 1021270 -t 5
+    expect -e "FURL" -for 1021270 -t 5
+    expect -e "SPAM" -for 1021270 -t 5
+    expect -e "VMLS" -for 1021270 -t 5
+    expect -e "IOTH" -fail match -for 1021270 -t 5
+    expect -e "ETDB" -for 1021270 -t 5
+    expect -e "NIDB" -for 1021270 -t 5
+    expect -e "ISDB" -fail match -for 1021270 -t 5
+    expect -e "SFAS" -fail match -for 1021270 -t 5
+ 
+
+    report 1015664
+    report 1021270
+   

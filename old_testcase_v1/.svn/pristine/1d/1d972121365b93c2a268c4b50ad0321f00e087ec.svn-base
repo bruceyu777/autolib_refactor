@@ -1,0 +1,21 @@
+# Delete VM instance after test 
+######################################################
+
+[PC_KVM]
+    comment: Shutdown VM04 and VM01
+    virsh shutdown VM04
+    sleep 3
+    virsh shutdown VM01
+    sleep 3
+
+    comment: Delete and remove storage 
+    sudo virsh undefine VM01 --remove-all-storage
+    expect -e "VM01 has been undefined" -for deletevm -t 5
+    sleep 3
+
+    sudo virsh undefine VM04 --remove-all-storage
+    expect -e "VM04 has been undefined" -for deletevm -t 5
+    sleep 3
+   
+    report deletevm
+

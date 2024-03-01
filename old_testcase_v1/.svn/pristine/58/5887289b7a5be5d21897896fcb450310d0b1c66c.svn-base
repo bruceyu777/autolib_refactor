@@ -1,0 +1,111 @@
+# 850564：Verify offline license expired
+# license status show expired
+# traffic cannot passthrough, utm not working
+# no traffic / utm log
+# event log show license expired
+# expire 2023-07-23
+##################################################
+
+[FVM_B]
+	### 850564.txt ###
+    comment: 850564 Verify expired offline license after 30 days graceful peirod
+
+    config system interface
+        edit FVM_B:PORT2
+            set vdom "root"
+            set mode static
+            set ip FVM_B:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit FVM_B:PORT3
+            set vdom "root"
+            set mode static
+            set ip FVM_B:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+
+    config firewall policy
+        purge
+        y
+        edit 850564
+            set name "850564"
+            set srcintf "FVM_B:PORT2"
+            set dstintf "FVM_B:PORT3"
+            set srcaddr "all"
+            set dstaddr "all"
+            set action accept
+            set schedule "always"
+            set service "ALL"
+            set utm-status enable
+            set av-profile "default"
+            set profile-protocol-options "default"
+            set ssl-ssh-profile "certificate-inspection"
+            set nat enable
+        next
+    end
+
+     config router static
+        edit 1
+            set status disable
+        next
+    end
+
+    sleep 10
+    execute log delete-all
+    y
+
+    # change system time to expired time
+    exe date 2023-09-23
+    sleep 30
+    forcelogin
+    sleep 10
+    get system status | grep 'License'
+    expect -e "License Status: Expired" -for 850564 -t 10
+
+#    report 850564
+
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+
+    route add -host 172.16.200.55 gw FVM_B:IPV4_PORT2
+    sleep 5
+
+    ping -c 3 172.16.200.55
+    expect -e "64 bytes" -fail match -t 30 -for 850564
+
+
+[FVM_B]
+
+    diag sys session filter proto 1
+    diag sys session clear
+    sleep 5
+
+    #check event log
+    execute log filter device disk
+    execute log filter category event
+    execute log filter field subtype system
+    execute log filter field level critical
+    execute log display
+    expect -e "License has expired" -t 20 -for 850564
+
+    #check no traffic log
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log display
+    expect -e "172.16.200.55" -fail match -for 850564 -t 2
+
+    report 850564
+
+    config router static
+        edit 1
+            set status enable
+        next
+    end
+
+    # reset system time by reboot
+    exe reboot
+    y
+

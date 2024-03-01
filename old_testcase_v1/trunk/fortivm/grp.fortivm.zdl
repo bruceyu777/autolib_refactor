@@ -1,0 +1,13 @@
+######## FORTIVM auto test #########
+
+#Crashlog Check :  883680
+#- Setup Topology -
+#scripts   testcase_v1/trunk/fortivm/scripts/topology1.txt      "config interface and default gateway"
+
+#- Sanity -
+loadlic       testcase_v1/trunk/fortivm/scripts/loadlic.txt             "load VM04 license"
+1049632       testcase_v1/trunk/fortivm/scripts/1049632.txt             "slim extended db from FDS for vm with vcpu <= 4"
+1050906       testcase_v1/trunk/fortivm/scripts/1050906.txt             "slim extended db vis manual update for vm with vcpu <= 4"
+811477        testcase_v1/trunk/fortivm/scripts/811477.txt              "checking for \"Firewall blocks file with EICAR virus"
+811519        testcase_v1/trunk/fortivm/scripts/811519.txt              "Verify  file without EICAR virus  passed when enable AV profile in policy"
+

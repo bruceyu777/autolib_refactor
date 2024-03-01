@@ -1,0 +1,29 @@
+# FGVMSB - 100MB license
+# 945211：Verify cli show extra 10% bandwidth 
+#  
+# 
+#####################################################################
+
+[FVM_A]
+    ### 945211.txt ###
+    comments: Verify cli show extra 10% bandwidth 
+    sleep 60
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGVMSB" -for 945211 -t 5
+    expect -e "License Status: Valid" -for 945211 -t 5
+
+    diag debug vm-print-license
+    expect -e "Bandwidth: 110000 kbps" -for 945211 -t 5
+
+    diag netlink interface list FVM_A:PORT1
+    expect -e "inbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+    expect -e "outbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+
+    get system status
+
+    diag netlink interface list FVM_A:PORT2 
+    expect -e "inbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+    expect -e "outbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+
+    report 945211
+   

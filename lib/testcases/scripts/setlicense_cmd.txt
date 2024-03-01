@@ -1,0 +1,5 @@
+# 730419: Verify IPS DB default is extended
+##################################################
+comment Verify IPS DB default is extended
+[FGT_A]
+    setlicense -t 04V -for SN -to lic

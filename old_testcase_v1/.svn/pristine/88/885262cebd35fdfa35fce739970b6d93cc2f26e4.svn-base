@@ -1,0 +1,38 @@
+# 1015707：Verify v32-license can be valided
+# fortiguard settting default 
+# 
+##############################################
+
+[PC_KVM]
+    ### 1015707.txt ###
+    comments: Verify V32 can be valided base on cpu cores with default FGD setting
+
+    # get license file name
+    #cat PC_KVM:LICENSE_DIR/PC_KVM:LIECENSE_FILE | grep 04V
+    #setvar -e "(?n)^04V,(FGVM4V.*?lic)," -to lic
+    setlicense -t 14 -for SN -to lic
+ 
+
+[FVM_A]
+    #remove license
+    execute factoryreset2    
+    
+   # sleep 60
+
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "License Status: Invalid" -for 1015707 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+  #  sleep 90
+	
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGV32V" -for 1015707 -t 5
+    expect -e "License Status: Valid" -for 1015707 -t 5
+    expect -e "4 CPU/32 allowed" -for 1015707 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: 14" -for 1015707 -t 5
+    expect -e "CPU: 32" -for 1015707 -t 5
+
+    report 1015707
+   

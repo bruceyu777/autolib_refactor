@@ -1,0 +1,57 @@
+# Test Case: 954433:Pre-Paid flex vm after factoryreset keepvmlicense
+# Test Case: 954432:Pre-Paid flex vm after factoryreset
+# Used time: 
+############################################################ 
+
+[FVM_B]
+
+    comment Verify 954433:Pre-Paid flex vm factoryreset keepvmlicense
+    comment Verify 954432:Pre-Paid flex vm after factoryreset
+
+    get system status | grep 'Serial-Number' -A 5
+    setvar -e "(FGVMEL.*)" -to el_sn
+    expect -e "License Status: Valid" -for 954433 -t 10
+
+    diag deb vm-print-license
+    expect -e "Model: EL" -for 954433 -t 5
+
+    execute factoryreset keepvmlicense 
+    y
+    sleep 120
+
+    config system interface
+        edit FVM_B:PORT1
+            set mode static
+            set ip  FVM_B:IPV4_PORT1 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+
+    config router static
+        edit 1
+            set gateway 10.6.30.254
+            set device FVM_B:PORT1
+        next
+    end
+    
+    sleep 60
+ 
+    get system status | grep 'Serial-Number' -A 5
+    varexpect -v {$el_sn} -for 954433 -t 5 
+    expect -e "License Status: Valid" -for 954433 -t 5
+ 
+    diag deb vm-print-license
+    expect -e "Model: EL" -for 954433 -t 5
+    
+    report 954433
+
+[FVM_B]
+    exec factoryreset
+    y
+    sleep 120
+
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGVMEV" -for 954432 -t 10
+    expect -e "License Status: Invalid" -for 954432 -t 10
+
+    report 954432

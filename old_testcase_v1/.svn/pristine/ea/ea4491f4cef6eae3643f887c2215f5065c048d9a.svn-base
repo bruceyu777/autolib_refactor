@@ -1,0 +1,26 @@
+# 1030873：Verify 2nd FGTVM cannot download trial license with same forticare account 
+# [FVM_A] forticare account: fosvmqa@gmail.com
+# [FVM_B] 
+################################################################
+
+[FVM_B]
+    ### 1030873.txt ###
+    comments: Verify 2nd FGTVM cannot download permanent trial license using same forticare account
+
+    #remove license
+    execute factoryreset2    
+    
+    # config forticare account
+    exe vm-license-options account-id fosvmqa@gmail.com
+    exe vm-license-options account-password Fosvmqa123!
+
+    exe vm-license-options show
+    expect -e "Account ID: fosvmqa@gmail.com" -for 1030873 -t 5
+    expect -e "Government: no" -for 1030873 -t 5
+
+    exe vm-license
+    y
+    expect -e "Forticare response error 61" -for 1030873 -t 20 
+    expect -e "Failed to download VM license" -for 1030873 -t 20
+
+    report 1030873

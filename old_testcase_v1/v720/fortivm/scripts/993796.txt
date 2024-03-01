@@ -1,0 +1,240 @@
+# Test Case ID: 993796
+# Objective: Verify geneve tunnel works with loopback interface (M714682） 
+#
+#################################################################################
+[FVM_A]
+	comment 993796:Busy:Verify geneve tunnel works withloopback interface (M714682）
+
+	config system global
+		set hostname FVM_A
+	end
+
+	config system interface
+	    edit "Loopback_G"
+        	set vdom "root"
+        	set ip 10.255.230.1 255.255.255.255
+        	set allowaccess ping
+        	set type loopback
+        	set role lan
+        	set snmp-index 13
+    	    next
+	end
+
+	config system geneve
+	    edit "g2301"
+        	set interface "Loopback_G"
+        	set vni 230001
+        	set remote-ip 10.255.230.2
+    	    next
+	end
+
+	config system interface
+	    edit "g2301"
+        	set vdom "root"
+        	set ip 10.255.240.1 255.255.255.252
+        	set allowaccess ping
+        	set type geneve
+        	set snmp-index 14
+        	set interface "Loopback_G"
+    	    next
+	end
+
+	config router static
+	    edit 1
+        	set gateway 10.6.30.254
+        	set device FVM_A:PORT1
+    	    next
+     	edit 2
+        	set dst 10.255.230.2 255.255.255.255
+        	set gateway 10.6.30.201
+        	set device FVM_A:PORT1
+    	    next
+	end
+
+	config firewall policy
+	    edit 1
+        	set name "Geneve"
+        	set srcintf "Loopback_G"
+        	set dstintf FVM_A:PORT1
+        	set action accept
+        	set srcaddr "all"
+        	set dstaddr "all"
+        	set schedule "always"
+        	set service "ALL"
+    	   next
+    	   edit 2
+        	set name "PORT1_Geneve"
+        	set srcintf FVM_A:PORT1
+        	set dstintf "Loopback_G"
+        	set action accept
+        	set srcaddr "all"
+        	set dstaddr "all"
+        	set schedule "always"
+        	set service "ALL"
+    	   next
+	end
+
+[FVM_B]
+    # make sure FVM_B valid license
+    setlicense -t OFFLINE -for SN -to lic
+
+    config system interface
+        edit FVM_B:PORT1
+            set vdom "root"
+            set mode static
+            set ip FVM_B:IPV4_PORT1 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+
+     # disable default route for closed network
+    #config router static
+    #    edit 1
+    #        set status disable
+    #    next
+    #end
+
+    execute restore vmlicense tftp FVM_B:LICENSE_DIR{$lic} FVM_B:LICENSE_SERVER
+
+    get system status | grep 'Serial-Number' -A 3
+    #expect -e "License Status: Valid" -for 993796 -t 5
+
+    config system global
+            set hostname FVM_B
+    end
+
+    #####################################
+    # Config loopback and geneve
+      config system interface
+            edit "Loopback_G"
+                set vdom "root"
+                set ip 10.255.230.2 255.255.255.255
+                set allowaccess ping
+                set type loopback
+                set role lan
+                set snmp-index 13
+            next
+        end
+
+        config system geneve
+            edit "g2301"
+                set interface "Loopback_G"
+                set vni 230001
+                set remote-ip 10.255.230.1
+            next
+        end
+
+        config system interface
+            edit "g2301"
+                set vdom "root"
+                set ip 10.255.240.2 255.255.255.252
+                set allowaccess ping
+                set type geneve
+                set snmp-index 14
+                set interface "Loopback_G"
+            next
+        end
+
+        config router static
+            edit 1
+                set gateway 10.6.30.254
+                set device FVM_B:PORT1
+                set status enable             
+            next
+            edit 2
+                set dst 10.255.230.1 255.255.255.255
+                set gateway 10.6.30.200
+                set device FVM_B:PORT1
+            next
+        end
+
+	config firewall policy
+            edit 1
+                set name "Geneve"
+                set srcintf "Loopback_G"
+                set dstintf FVM_B:PORT1
+                set action accept
+                set srcaddr "all"
+                set dstaddr "all"
+                set schedule "always"
+                set service "ALL"
+           next
+           edit 2
+                set name "PORT1_Geneve"
+                set srcintf FVM_B:PORT1
+                set dstintf "Loopback_G"
+                set action accept
+                set srcaddr "all"
+                set dstaddr "all"
+                set schedule "always"
+                set service "ALL"
+           next
+        end
+
+[FVM_A]
+      forcelogin
+      #start test
+      exe ping 10.255.240.2
+      expect -e "64 bytes from" -for 993796 -t 10
+
+[FVM_B]
+     #diagnose sniffer packet any 'port 6081' 4 2 l
+     #2022-08-23 17:21:38.928346 port1 in 10.255.230.1.6081 -> 10.255.230.2.6081: udp 106
+     #2022-08-23 17:21:38.928457 port1 out 10.255.230.2.6081 -> 10.255.230.1.6081: udp 106
+     #expect -e "10.255.230.1.6081 -> 10.255.230.2.6081" -for 993796 -t 10
+    forcelogin
+    exe ping 10.255.240.1
+    expect -e "64 bytes from" -for 993796 -t 10
+
+
+     report 993796
+
+#[FVM_A]	
+	config firewall policy
+	    purge
+	    y
+	end
+
+	config router static
+	    delete 2
+	end
+
+	config system interface
+	    delete "g2301"
+        end
+
+	config system geneve
+	    delete "g2301"
+	end
+
+	config system interface
+            delete "Loopback_G"
+        end
+ 
+#[FVM_B]
+        config firewall policy
+            purge
+            y
+        end
+
+        config router static
+            delete 2
+        end
+
+        config system interface
+            delete "g2301"
+        end
+
+        config system geneve
+            delete "g2301"
+        end
+
+        config system interface
+            delete "Loopback_G"
+        end
+
+
+
+
+
+

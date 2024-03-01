@@ -1,0 +1,70 @@
+# 1015667：Verify sul-license can be valided
+# fortiguard settting default (anycast=enable)
+# 
+#############################
+
+[FVM_A]
+    comment: Verify sul can be valided base on cpu cores with default FGD setting
+    setlicense -t ULS -for SN -to lic
+
+    #remove license
+    execute factoryreset2    
+    
+    sleep 60
+
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "Serial-Number: FGVMEV" -for 1015667 -t 5
+    expect -e "License Status: Invalid" -for 1015667 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 60
+	
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGVMSL" -for 1015667 -t 5
+    expect -e "License Status: Valid" -for 1015667 -t 5
+    expect -e "1 CPU," -for 1015667 -t 5
+
+    #s-license need to add cpu(see #596988)
+    #exe cpu add cause kernel panic, comment it now
+    #exe cpu add 3
+    #expect -e "Active CPU number: 4" -for 1015667 -t 5
+    #expect -e "Total CPU number: 4" -for 1015667 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: 18" -for 1015667 -t 5
+    expect -e "CPU: 2147483647" -for 1015667 -t 5
+
+    # Test 1021271: FC-Only bundle(258)
+    comment: Verify 1021271: check 258 FC-Only bundle contracts
+    diagnose test update info | grep "System contracts" -A 1 
+    setvar -e "ENHN,(.*)" -to CONTRACT
+
+    diagnose test update info | grep FMWR
+    varexpect -v {$CONTRACT} -for 1021271 -t 5
+
+    diagnose test update info | grep VMLS
+    varexpect -v {$CONTRACT} -for 1021271 -t 5
+
+    diagnose test update info | grep FURL
+    varexpect -v {$CONTRACT} -fail match -for 1021271 -t 5
+
+    diagnose test update info | grep SPAM
+    varexpect -v {$CONTRACT} -fail match -for 1021271 -t 5
+
+    diagnose test update info | grep IOTH
+    varexpect -v {$CONTRACT} -fail match -for 1021271 -t 5
+
+    diagnose test update info | grep ETDB
+    varexpect -v {$CONTRACT} -fail match -for 1021271 -t 5
+
+    diagnose test update info | grep NIDB
+    varexpect -v {$CONTRACT} -fail match -for 1021271 -t 5
+
+    diagnose test update info | grep ISDB
+    varexpect -v {$CONTRACT} -fail match -for 1021271 -t 5
+
+    diagnose test update info | grep SFAS
+    varexpect -v {$CONTRACT} -fail match -for 1021271 -t 5
+
+    report 1015667
+    report 1021271   

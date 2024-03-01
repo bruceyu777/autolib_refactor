@@ -1,0 +1,81 @@
+# Test Case ID: 797331
+# Objective: Verify memory and disk log can be viewed
+#
+########################################################
+[FVM_A]
+    comment 797331:Busy:Verify memory and disk log can be viewed
+
+    config log memory setting
+        set status enable
+    end
+
+    config log memory filter
+        set severity information
+    end
+
+    config log disk setting
+        set status enable
+    end
+
+    config log disk filter
+        set severity information
+    end
+
+    exe log delete-all
+    y
+    sleep 2
+
+config firewall policy
+	edit 797331
+		set name "797331"
+		set srcintf "FVM_A:PORT2"
+		set dstintf "FVM_A:PORT3"
+		set srcaddr "all"
+		set dstaddr "all"
+		set action accept
+		set schedule "always"
+		set service "ALL"
+		set action deny
+                set logtraffic all
+	next
+end
+  
+diag sys session clear
+
+    diag log test
+
+#[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+    route -n
+    sleep 5
+
+    ping -c 5 PC_01:DESTINATION4
+    expect -e "64 bytes from" -fail match -for 797331 -t 5
+
+
+[FVM_A]
+    diag sys session clear	
+    exe log filter device disk 
+    exe log filter category traffic
+    #exe log filter field subtype forward
+    #exe log filter field action deny
+    exe log display
+    expect -e "1: date=" -for 797331 -t 5
+
+    exe log filter device memory
+    exe log filter category traffic
+    #exe log filter field subtype forward
+    #exe log filter field action deny
+    exe log display
+    expect -e "1: date=" -for 797331 -t 5
+
+    config firewall policy
+     purge
+     y
+    end
+	
+    report 797331

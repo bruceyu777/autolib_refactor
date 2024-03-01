@@ -1,0 +1,232 @@
+# 827281
+# fndn: firewal address have max of 10
+###########################################
+
+
+[FVM_A]
+    comment 827281:checking for "Firewall addresses have max of 10 of each"
+
+get system status
+expect -e "FGVMXX" -for 827281 -t 5
+#there are 10 build-in addresses
+config firewall address
+purge
+y
+end
+
+config firewall address
+edit "address1"
+set subnet 1.1.1.0 255.255.255.0
+next
+edit "address2"
+set subnet 1.1.1.2 255.255.255.255
+next
+edit "address3"
+set subnet 1.1.1.3 255.255.255.255
+next
+edit "address4"
+set subnet 1.1.1.4 255.255.255.255
+next
+edit "address5"
+set subnet 1.1.1.5 255.255.255.255
+next
+edit "address6"
+set subnet 1.1.1.6 255.255.255.255
+next
+end
+
+#setresultlist -v result1 -e "edit,edit,edit,edit,edit,edit,edit,edit,edit,edit"
+
+clean_buffer
+sleep 2
+show firewall address | grep 'edit' -c  
+expect -e "10"  -t 5 -for 827281
+
+config firewall address
+edit "address11"
+set subnet 1.1.1.11 255.255.255.255
+next
+end
+
+show firewall address | grep 'edit' -c
+expect -e "10"  -t 5 -for 827281 
+
+#	report 827281
+
+config firewall address6
+purge
+y
+end
+
+config firewall address6
+edit "v6-addr1"
+set ip6 2001::/64
+next
+edit "v6-addr2"
+set ip6 2002::/64
+next
+edit "v6-addr3"
+set ip6 2003::/64
+next
+edit "v6-addr4"
+set ip6 2004::/64
+next
+edit "v6-addr5"
+set ip6 2005::/64
+next
+edit "v6-addr6"
+set ip6 2006::/64
+next
+edit "v6-addr7"
+set ip6 2007::/64
+next
+edit "v6-addr8"
+set ip6 2008::/64
+next
+end
+
+clean_buffer
+show firewall address6 | grep 'v6-addr8' -A 4
+expect -e "set ip6 2008"  -t 5 -for 827281
+
+config firewall address6
+edit "v6-addr9"
+set ip6 2009::/64
+next
+end
+
+#clean_buffer
+#show firewall address6 | grep 'v6-addr9' -A 4
+#expect -e "set ip6 2009" -fail match -t 5 -for 827281
+
+show firewall address6 | grep 'edit' -c
+expect -e "10" -t 5 -for 827281
+
+config firewall multicast-address
+edit "all"
+set start-ip 224.0.0.0
+set end-ip 239.255.255.255
+next
+edit "all_hosts"
+set start-ip 224.0.0.1
+set end-ip 224.0.0.1
+next
+edit "all_routers"
+set start-ip 224.0.0.2
+set end-ip 224.0.0.2
+next
+edit "Bonjour"
+set start-ip 224.0.0.251
+set end-ip 224.0.0.251
+next
+edit "EIGRP"
+set start-ip 224.0.0.10
+set end-ip 224.0.0.10
+next
+edit "OSPF"
+set start-ip 224.0.0.5
+set end-ip 224.0.0.6
+next
+edit "mul-addr1"
+set start-ip 224.0.0.11
+set end-ip 224.0.0.11
+next
+edit "mul-addr2"
+set start-ip 224.0.0.12
+set end-ip 224.0.0.12
+next
+edit "mul-addr3"
+set start-ip 224.0.0.13
+set end-ip 224.0.0.13
+next
+edit "mul-addr4"
+set start-ip 224.0.0.14
+set end-ip 224.0.0.14
+next
+end
+
+clean_buffer
+show firewall multicast-address | grep 'mul-addr4' -A 4
+expect -e "224.0.0.14" -for 827281 -t 5
+
+config firewall multicast-address
+edit "mul-addr5"
+set start-ip 224.0.0.15
+set end-ip 224.0.0.15
+next
+end
+
+clean_buffer
+show firewall multicast-address | grep 'addr5'
+expect -e "224.0.0.15" -fail match -t 5 -for 827281
+
+config firewall multicast-address6
+edit "all"
+set ip6 ff00::/8
+next
+edit "v6-mul-addr1"
+set ip6 ff01::/8
+next
+edit "v6-mul-addr2"
+set ip6 ff02::/8
+next
+edit "v6-mul-addr3"
+set ip6 ff03::/8
+next
+edit "v6-mul-addr4"
+set ip6 ff04::/8
+next
+edit "v6-mul-addr5"
+set ip6 ff05::/8
+next
+edit "v6-mul-addr6"
+set ip6 ff06::/8
+next
+edit "v6-mul-addr7"
+set ip6 ff07::/8
+next
+edit "v6-mul-addr8"
+set ip6 ff08::/8
+next
+edit "v6-mul-addr9"
+set ip6 ff09::/8
+next
+end
+
+
+show firewall multicast-address6 | grep 'v6-mul-addr9' -A 3
+expect -e "ff09" -fail match -for 827281 -t 5
+
+
+config firewall multicast-address6
+edit "v6-mul-addr-new1"
+set ip6 ff10::/8
+next
+end
+
+clean_buffer
+show firewall multicast-address6 | grep 'edit' -c
+expect -e "10" -t 5 -for 827281
+
+
+config firewall address
+purge
+y
+end
+
+config firewall address6
+purge
+y
+end
+
+config firewall multicast-address
+purge
+y
+end
+
+config firewall multicast-address6
+purge
+y
+end
+
+report 827281

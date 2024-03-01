@@ -1,0 +1,45 @@
+# Test Case ID: 945659
+# Objective: Verify IPv6 that is configured to interface work
+#
+###########################################################
+[FVM_A]
+    comment 945659:Busy:Verify IPv6 that is configured to interface work
+
+    config system interface
+        edit "FVM_A:PORT2"
+            config ipv6
+                set ip6-mode static
+                set ip6-address FVM_A:IPV6_PORT2/64
+                set ip6-allowaccess ping https ssh telnet
+            end
+        next
+    end
+	
+[PC_02] 
+
+    #########PING6###############
+    ping6 -c 5 FVM_A:IPV6_PORT2
+    expect -e "64 bytes from" -t 10 -for 945659
+
+    ########TELNET##############
+    telnet -6 -a -l admin FVM_A:IPV6_PORT2
+    admin
+    admin
+    expect -e "Welcome!" -t 50 -for 945659
+    exit 
+    sleep 3
+
+    ########SSH#################
+    ssh-keygen -f "/root/.ssh/known_hosts" -R FVM_A:IPV6_PORT2
+    sleep 3
+    ssh -6 -o StrictHostKeyChecking=no admin@FVM_A:IPV6_PORT2
+    yes
+    admin
+    show system global
+    expect -e "hostname" -t 50 -for 945659
+    exit
+
+[FVM_A]
+	
+    get system status	 	 
+    report 945659

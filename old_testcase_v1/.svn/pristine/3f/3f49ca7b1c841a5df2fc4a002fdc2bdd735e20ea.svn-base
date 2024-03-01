@@ -1,0 +1,38 @@
+# 911059：Verify s04-license can be valided
+# fortiguard settting default (anycast=enable)
+# 
+########################################################
+
+[PC_KVM]
+    ### 911059.txt ###
+    comment: Verify S04 can be valided base on cpu cores with default FGD setting
+    setlicense -t 04S -for SN -to lic
+
+[FVM_A]
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "License Status: Invalid" -for 911059 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 60
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVMSL" -for 911059 -t 5
+    expect -e "License Status: Valid" -for 911059 -t 5
+    expect -e "1 CPU/4 allowed" -for 911059 -t 5
+
+    #s-license need a reboot or exe cpu add to activate
+    exe cpu add 3
+    expect -e "Active CPU number: 4" -for 911059 -t 10
+
+    diag debug vm-print-license
+    expect -e "Model: SL" -for 911059 -t 5
+    expect -e "CPU: 4" -for 911059 -t 5
+
+    #diag test update info | grep 'AVDB'
+    #expect -e "AVDB,(.*)2022" -for 911059 -t 5
+
+    report 911059
+   

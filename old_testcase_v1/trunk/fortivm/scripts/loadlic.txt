@@ -1,0 +1,60 @@
+# load a valid license before sanity test
+# 
+###############################################
+
+[FVM_A]
+    ### loadlic.txt ###
+    # get license file name
+    setlicense -t 04G -for SN -to lic
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVM04T" -for loadlic -t 5
+    expect -e "License Status: Valid" -for loadlic -t 5
+
+    config system interface
+        edit "port2"
+            set vdom "root"
+            set ip 10.1.100.200 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "port3"
+            set vdom "root"
+            set mode static
+            set ip 172.16.200.200 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+    end
+
+[FVM_B]
+   setlicense -t 01S -for SN -to lic
+
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVMSL" -for loadlic -t 5
+    expect -e "License Status: Valid" -for loadlic -t 5
+
+    config system interface
+        edit "port2"
+            set vdom "root"
+            set ip 10.1.100.201 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "port3"
+            set vdom "root"
+            set mode static
+            set ip 172.16.200.201 255.255.255.0
+            set allowaccess ping https ssh http telnet
+            config ipv6
+	        set ip6-address 2000:172:16:200::201/64
+        	set ip6-allowaccess ping https ssh
+            end
+        next
+    end
+
+
+
+#    report loadlic
+   

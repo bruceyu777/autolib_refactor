@@ -1,0 +1,48 @@
+[FGT_A]
+get system status | grep 'Serial-Number' -A 3
+setvar -e "(?n)Serial-Number: (FG[\d\w]+)" -to sn
+
+get system status | grep 'Serial-Number' -A 3
+setvar -e "(?n)Serial-Number: (FG[\d\w]+)" -to sn
+<if  $sn eq FG201FT921900397>
+    comment serial number is found
+    <if $x eq 1>
+        comment x is 1
+    <else>
+        comment x is not 1
+    <fi>
+<else>
+    comment serial number is not found
+<fi>
+
+get system status | grep 'Serial-Number' -A 3
+setvar -e "(?n)Serial-Number: (FG[\d\w]+)" -to sn
+<if  $sn eq 201FT921900397>
+    comment serial-number is found
+
+<else>
+    comment serial-number is not found
+<fi>
+
+get system status | grep 'Security Level' -A 3
+setvar -e "(?n)Security Level:: (\d+)" -to security_level
+<if  $security_level eq 2 >
+    comment security_level is 2
+<elseif $security_level eq 1 >
+    comment security_level is 1
+<elseif $security_level eq 3 >
+    comment security_level is 3
+<fi>
+
+
+get system status | grep 'Security Level' -A 3
+setvar -e "(?n)Security Level: (\d+)" -to security_level
+expect -e "hello" -for 123456 -t 5
+<if  $security_level eq 2 >
+    comment security_level is 2
+<elseif $security_level eq 1 >
+    comment security_level is 1
+<elseif $security_level eq 3 >
+    comment security_level is 3
+<fi>
+report 123456

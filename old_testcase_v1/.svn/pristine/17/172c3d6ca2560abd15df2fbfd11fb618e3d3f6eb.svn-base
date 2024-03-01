@@ -1,0 +1,103 @@
+# 945210：Verify bandwidth license can be valided
+# fortiguard settting default 
+# 
+#####################################################################
+
+[FVM_A]
+    ### 945210.txt ###
+    comments: Verify bandwidth license can be valided 
+
+    # get license file name
+    setlicense -t BW -for SN -to lic
+ 
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "License Status: Invalid" -for 945210 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGVMSB" -for 945210 -t 5
+    expect -e "License Status: Valid" -for 945210 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: SB" -for 945210 -t 5
+    expect -e "CPU: 2147483647" -for 945210 -t 5
+    expect -e "Bandwidth: 110000 kbps" -for 945210 -t 5
+    expect -e "permanent: 2" -for 945210 -t 5
+
+    # test 945211: interface bandwidth limit show extra 10%
+    diag netlink interface list port1
+    expect -e "inbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+    expect -e "outbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+
+    diag netlink interface list port2
+    expect -e "inbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+    expect -e "outbandwidth=110000\\(kbps\\)" -for 945211 -t 5
+
+    # test 945213: interface can config extra 10% bandwidth
+    config system interface
+        edit FVM_A:PORT1
+            set inbandwidth 110000
+            set outbandwidth 110000
+        next
+    end
+
+    show system interface FVM_A:PORT1 | grep 'bandwidth'
+    expect -e "inbandwidth 110000" -for 945213 -t 5
+    expect -e "outbandwidth 110000" -for 945213 -t 5
+
+    config system interface
+        edit FVM_A:PORT1
+            set inbandwidth 120000
+            set outbandwidth 210000
+        next
+    end
+
+    show system interface FVM_A:PORT1 | grep 'bandwidth'
+    expect -e "inbandwidth 110000" -for 945213 -t 5
+    expect -e "outbandwidth 110000" -for 945213 -t 5
+
+    # test 945214: dedicate managment interface no bandwidth limitation
+    config system interface
+        edit port3
+            set dedicated-to none
+        next
+    end
+
+    sleep 3
+    show full system interface port3 | grep 'dedicate'
+    expect -e "set dedicated-to none" -for 945214 -t 5
+
+    diag netlink interface list port3
+    expect -e "inbandwidth=110000\\(kbps\\)" -for 945214 -t 5
+    expect -e "outbandwidth=110000\\(kbps\\)" -for 945214 -t 5
+
+    config system interface
+        edit port3
+            set dedicated-to management
+        next
+    end
+
+    diag netlink interface list port3
+    expect -e "inbandwidth=110000\\(kbps\\)" -fail match -for 945214 -t 5
+    expect -e "outbandwidth=110000\\(kbps\\)" -fail match -for 945214 -t 5
+
+    config system interface
+        edit port3
+            set inbandwidth 120000
+            set outbandwidth 210000
+        next
+    end
+
+    show full system interface port3 | grep 'bandwidth'
+    expect -e "inbandwidth 120000"  -for 945214 -t 5
+    expect -e "outbandwidth 210000"  -for 945214 -t 5
+
+    report 945210
+    report 945211
+    report 945213
+    report 945214
+   

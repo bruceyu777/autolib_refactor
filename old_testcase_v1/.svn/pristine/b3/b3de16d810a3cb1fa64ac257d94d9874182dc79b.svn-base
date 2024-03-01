@@ -1,0 +1,34 @@
+######## FORTIVM auto test #########
+
+#Crashlog Check :  883680
+#- Setup Topology -
+#scripts   testcase_v1/trunk/fortivm/scripts/topology1.txt      "config interface and default gateway"
+
+#- Sanity -
+loadlic	      testcase_v1/trunk/fortivm/scripts/loadlic.txt   		"load VM04 license"
+811477        testcase_v1/trunk/fortivm/scripts/811477.txt		"checking for \"Firewall blocks file with EICAR virus"
+811519        testcase_v1/trunk/fortivm/scripts/811519.txt		"Verify  file without EICAR virus  passed when enable AV profile in policy"
+811520        testcase_v1/trunk/fortivm/scripts/811520.txt		"Verify ETDB_TEST_FILE virus is blocked when enable av profile in policy"
+811521        testcase_v1/trunk/fortivm/scripts/811521.txt		"Verify AV Update through FDS works in NAT mode when set system dns"
+811522        testcase_v1/trunk/fortivm/scripts/811522.txt		"Verify the firewall can deny traffic when set action to deny in policy"
+811523        testcase_v1/trunk/fortivm/scripts/811523.txt		"Verify attack definition can be upgraded in NAT mode when set system dns"
+811524        testcase_v1/trunk/fortivm/scripts/811524.txt		"Verify the IPSEngine can be upgrade from FDS Server when set system dns"
+811525        testcase_v1/trunk/fortivm/scripts/811525.txt		"Verify the firewall can process an incoming VIP traffic when without NAT in policy"
+811526        testcase_v1/trunk/fortivm/scripts/811526.txt		"Verify the firewall can process an incoming VIP traffic when enable NAT in policy"
+811528        testcase_v1/trunk/fortivm/scripts/811528.txt		"Verify the FGT can handle traffic when config variety policy"
+811529        testcase_v1/trunk/fortivm/scripts/811529.txt		"Verify the firewall can recognize and process the predefined services when config in policy"
+811530        testcase_v1/trunk/fortivm/scripts/811530.txt		"Verify the firewall can create a TCP based custom service when create policy"
+811531        testcase_v1/trunk/fortivm/scripts/811531.txt		"Verify the firewall can create a UDP based custom service when config policy"
+811536        testcase_v1/trunk/fortivm/scripts/811536.txt		"Verify the firewall can create a ICMP based custom service when config policy"
+811537        testcase_v1/trunk/fortivm/scripts/811537.txt		"Verify the firewall can create a service group when config policy"
+811539        testcase_v1/trunk/fortivm/scripts/811539.txt		"Verify Interface administrative access http, https, telnet, ssh, ping, snmp works"
+797331        testcase_v1/trunk/fortivm/scripts/797331.txt	        "Verify disk and memory log can be viewed"
+874492        testcase_v1/trunk/fortivm/scripts/874492.txt	        "Verify FGT_VM with one disk reserved for log"
+908302        testcase_v1/trunk/fortivm/scripts/908302.txt      	"Verify ring-rx and ring-tx can be configured for interface"
+943007        testcase_v1/trunk/fortivm/scripts/943007.txt     		"Verify ipv6 traffic pass or blocked according to policy"
+945659        testcase_v1/trunk/fortivm/scripts/945659.txt     		"Verify IPv6 interface administrative access work"
+993796	      testcase_v1/trunk/fortivm/scripts/993796.txt		"Verify geneve tunnel work with loopback interface"
+1031478       testcase_v1/trunk/fortivm/scripts/1031478.txt		"Verify only manatory wad process start by default on VM with 2G RAM"
+1038449	      testcase_v1/trunk/fortivm/scripts/1038449.txt		"Verify exec factoryrest-for-central-management"
+954323        testcase_v1/trunk/fortivm/scripts/954323.txt     		"Verify create long name vdom when VM has vdom license"
+883680        testcase_v1/trunk/fortivm/scripts/883680.txt      		"Verify no daemon crash"

@@ -1,0 +1,5 @@
+
+# test group
+
+**ifx     lib/testcases/scripts/if_cmd.txt             "test_if"
+forx    lib/testcases/scripts/loop_cmd.txt           "test loop"

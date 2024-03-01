@@ -1,0 +1,95 @@
+
+############## 827282 ##################
+[PC_05]
+	comment 827282:Busy:checking for "Firewall custom service have max of 10"
+	ssh -o StrictHostKeyChecking=no admin@PC_05:FORTIVM01_PORT3_IPV4
+
+	get system status
+	expect -e "FGVMXX" -for 827282 -t 5
+	
+	config firewall service custom
+    	purge
+	y
+	
+	config firewall service custom
+		edit "ALL"
+			set category "General"
+			set protocol IP
+		next
+		edit "ALL_TCP"
+			set category "General"
+			set tcp-portrange 1-65535
+		next
+		edit "ALL_UDP"
+			set category "General"
+			set udp-portrange 1-65535
+		next
+		edit "ALL_ICMP"
+			set category "General"
+			set protocol ICMP
+			unset icmptype
+		next
+		edit "ALL_ICMP6"
+			set category "General"
+			set protocol ICMP6
+			unset icmptype
+		next
+		edit "GRE"
+			set category "Tunneling"
+			set protocol IP
+			set protocol-number 47
+		next
+		edit "AH"
+			set category "Tunneling"
+			set protocol IP
+			set protocol-number 51
+		next
+		edit "ESP"
+			set category "Tunneling"
+			set protocol IP
+			set protocol-number 50
+		next
+		edit "AOL"
+			set visibility disable
+			set tcp-portrange 5190-5194
+		next
+		edit "webproxy"
+			set category "Web Proxy"
+			set tcp-portrange 0-65535:0-65535
+		next
+	end
+
+	
+	#setresultlist -v result1 -e "edit,edit,edit,edit,edit,edit,edit,edit,edit,edit"
+
+	#clean_buffer
+	#multiexpect -v result1 -c "show firewall service custom" -fail unmatch -t 5 -for 827282
+
+    clean_buffer
+    sleep 2
+    show firewall service custom | grep 'edit'
+    expect -e "edit \"(.*)edit \"(.*)edit \"(.*)edit \"(.*)edit \"(.*)edit \"(.*)edit \"(.*)edit \"(.*)edit \"(.*)edit \""  -t 5 -for 827282
+
+   	config firewall service custom
+      		edit "myhttp"
+	                set category "General"
+					set protocol TCP
+					set protocol-number 80
+        	next
+   	end
+	
+	show firewall service custom | grep 'myhttp' -A 4
+	expect -e "edit \"myhttp\"" -fail match -t 5 -for 827282
+
+	#report 827282
+
+[PC_05]
+	
+	ssh -o StrictHostKeyChecking=no admin@PC_05:FORTIVM01_PORT3_IPV4
+
+    	config firewall service custom
+     		purge
+			y
+    	end
+
+ 	report 827282

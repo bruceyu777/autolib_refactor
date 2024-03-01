@@ -1,0 +1,94 @@
+# 850564：Verify offline license expired
+# license status show expired
+# traffic cannot passthrough, utm not working
+# no traffic / utm log
+# event log show license expired
+# 2022-11-03
+#############################
+
+[PC_05]
+	### 850564.txt ### 
+	comments: 850564 Verify expired offline license after 30 days graceful peirod
+    ssh -o StrictHostKeyChecking=no admin@PC_05:FORTIVM01_PORT3_IPV4
+        
+    
+    config firewall policy
+        purge
+        y
+        edit 850564
+            set name "850564"
+            set srcintf "PC_05:FORTIVM01_PORT2"
+            set dstintf "PC_05:FORTIVM01_PORT1"
+            set srcaddr "all"
+            set dstaddr "all"
+            set action accept
+            set schedule "always"
+            set service "ALL"
+            set utm-status enable
+            set av-profile "default"
+            set profile-protocol-options "default"
+            set ssl-ssh-profile "certificate-inspection"
+            set nat enable
+        next
+    end
+
+    sleep 5
+    execute log delete-all
+    yes
+
+    # change system time to expired time
+    exe date 2022-12-17
+    sleep 30
+
+[PC_05]
+    ssh -o StrictHostKeyChecking=no admin@PC_05:FORTIVM01_PORT3_IPV4
+
+    get system status | grep 'License'
+    expect -e "License Status: Expired" -for 850564 -t 10
+
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+
+    route del default
+    route add default gateway PC_05:FORTIVM01_PORT2_IPV4 dev eth1
+
+    ping -c 3 172.16.200.55
+    expect -e "64 bytes" -fail match -t 30 -for 850564
+
+
+[PC_05]
+    ssh -o StrictHostKeyChecking=no admin@PC_05:FORTIVM01_PORT3_IPV4
+    diag sys session filter proto 1
+    diag sys session clear
+    sleep 5
+
+    #check event log
+	execute log filter device disk
+    execute log filter category event
+    execute log filter field subtype system
+    execute log filter field level critical
+    execute log display
+    expect -e "License has expired" -t 20 -for 850564
+
+    #check no traffic log
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log display
+    expect -e "172.16.200.55" -fail match -for 850564
+
+    report 850564
+
+    # reset system time by reboot
+    exe reboot
+    y
+
+[PC_05]
+    sleep 90
+
+[PC_05]
+    ssh -o StrictHostKeyChecking=no admin@PC_05:FORTIVM01_PORT3_IPV4
+ 
+    get system status | grep 'License'
+    expect -e "License Status: Valid" -for 111111 -t 10
+

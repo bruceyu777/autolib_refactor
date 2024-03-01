@@ -1,0 +1,6 @@
+<loop i>
+comment I have enter into loop
+get system status | grep 'Serial-Number' -A 3
+setvar -e "(?n)Serial-Number: (FG[\d\w]+)" -to sn
+<intchange i + 1>
+<until {$i} > 100>

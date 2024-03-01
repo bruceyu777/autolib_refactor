@@ -1,0 +1,23 @@
+######## FORTIVM auto test #########
+
+#- Evaluation License -
+#972419     testcase_v1/trunk/fortivm/scripts/972419.txt       "Verify ev license support 1cpu/2Gmem, lenc" 
+#973320	   testcase_v1/trunk/fortivm/scripts/973320.txt      "Verify ev lic valid for 15 days"
+#1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"
+
+# Permanent Trail License -
+1030872     testcase_v1/trunk/fortivm/scripts/1030872.txt	"Verify download permanent trial license"
+1030873     testcase_v1/trunk/fortivm/scripts/1030873.txt       "Verify one trial license one forticare account"
+# 1030876 and 1030877 are tested in 1030872
+#1030876     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial licens allow 1 vcpu"
+#1030880     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license support 3 policy"
+#1030881     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license support 3 interfaces"
+#1030882     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license support 3 routes"
+#1030883     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license in LENC mode"
+#1030884     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license no expiration date"
+1016998     testcase_v1/trunk/fortivm/scripts/1016998.txt      "Verify ev lic allows one admin and one traffic vdom"
+
+1030877     testcase_v1/trunk/fortivm/scripts/1030872.txt      "Verify trial license invalid if ram > 2G"
+1030878     testcase_v1/trunk/fortivm/scripts/1030878.txt       "Verify VM with paid license cannot download trial license"
+
+

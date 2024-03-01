@@ -1,0 +1,74 @@
+# Test Case ID: 1014989
+# Objective: FFW_VM can process VIP traffic
+#
+########################################################
+[FFW_A]
+	comment 1014989:Busy:Verify FFW can process an incoming VIP traffic
+
+    config system interface
+        edit "FFW_A:PORT2"
+            set vdom "root"
+            set ip FFW_A:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "FFW_A:PORT3"
+            set vdom "root"
+            set mode static
+            set ip FFW_A:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+   end
+
+    config firewall vip
+        edit "1014989"
+            set extip FFW_A:VIP_IPV4
+            set extintf "FFW_A:PORT2"
+            set mappedip PC_05:IPV4_ETH1
+        next
+    end
+
+    config firewall policy
+      edit 1014989
+        set srcintf "FFW_A:PORT2"
+        set dstintf "FFW_A:PORT3"
+    	set srcaddr "all"
+        set dstaddr "1014989"
+        set action accept
+        set schedule "always"
+        set service "ALL"
+        set logtraffic "all"
+	set nat enable
+      next
+    end
+
+[PC_02]
+    ping  FFW_A:VIP_IPV4 -c 10
+    expect -e "64 bytes from" -for 1014989 -t 10
+
+[FFW_A]
+    diag sys session filter proto 1
+    diag sys session clear
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log filter field dstip FFW_A:VIP_IPV4
+    sleep 120
+    exe log display
+    expect -e "trandisp=\"snat\+dnat" -for 1014989 -t 5
+    #expect -e "snat+dnat" -for 1014989 -t 5
+    expect -e "tranip=PC_05:IPV4_ETH1" -for 1014989 -t 5
+    expect -e "transip=FFW_A:IPV4_PORT3" -for 1014989 -t 5
+
+    #report 1014989
+
+    config firewall policy
+      purge
+      y
+    end
+
+
+    config firewall vip
+	purge
+	y
+    end
+
+    report 1014989

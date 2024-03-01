@@ -1,0 +1,48 @@
+# 704212：Verify g08-license can be valided
+# fortiguard settting default 
+# 
+#############################
+
+[FVM_A]
+    ### 704212.txt ###
+    comments: Verify G08 can be valided base on cpu cores with default FGD setting
+
+    setlicense -t 08G -for SN -to lic
+    
+    #remove license
+    execute factoryreset2    
+    
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "License Status: Invalid" -for 704212 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+	
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGVM08T" -for 704212 -t 5
+    expect -e "License Status: Valid" -for 704212 -t 5
+    expect -e "4 CPU/8 allowed" -for 704212 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: 11" -for 704212 -t 5
+    expect -e "CPU: 8" -for 704212 -t 5
+    #expect -e "permanent: 10" -for 704212 -t 5
+
+    report 704212
+  
+    # 760927: apply vdom license
+    setlicense -t 08G -for VDOM -to vdlic
+
+    # import vdom license
+    execute upd-vd-license {$vdlic}
+    y
+    sleep 10
+
+    get system status | grep 'domain'
+    expect -e "Max number of virtual domains: 15" -for 760927 -t 10
+
+    diag debug vm-print-license
+    #expect -e "permanent: 15" -for 760927 -t 5
+
+    report 704212
+    report 760927
+ 

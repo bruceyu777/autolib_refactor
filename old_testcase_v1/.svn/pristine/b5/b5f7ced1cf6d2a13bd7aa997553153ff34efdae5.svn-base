@@ -1,0 +1,40 @@
+# 871711：Verify g-license with less cpu capacity can be loaded to vm with larger cpu counts 
+# tested using g02-license on instance with 4 cpu 
+# fortiguard settting default (anycast=enable)
+# 
+#############################
+
+[PC_KVM]
+    ### 871711.txt ###
+    comments: Verify g02 can be valided base vm with 4 cpu
+    #check vm cpu count
+    virsh dominfo VM04
+    expect -e "CPU\(s\):         4" -for 871711 -t 5
+
+    # get license file name
+    setlicense -t 02G -for SN -to lic
+
+[FVM_A]
+    
+    # fortiguard default setting
+    config system fortiguard
+        unset fortiguard-anycast
+    end
+
+#    show full sys fortiguard | grep anycast
+#    expect -e "fortiguard-anycast enable" -for 871711 -t 5
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 90 
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVM02" -for 871711 -t 5
+    expect -e "License Status: Valid" -for 871711 -t 5
+    expect -e "2 CPU/2 allowed" -for 871711 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: 02" -for 871711 -t 5
+    expect -e "CPU: 2" -for 871711 -t 5
+
+    report 871711
+   

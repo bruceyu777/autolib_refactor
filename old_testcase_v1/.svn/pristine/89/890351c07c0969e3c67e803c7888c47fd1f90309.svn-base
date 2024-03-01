@@ -1,0 +1,66 @@
+# 1015666：Verify s32-license can be valided
+# fortiguard settting default (anycast=enable)
+# 
+#############################
+
+[PC_KVM]
+    ### 1015666.txt ###
+    comments: Verify s32 can be valided base on cpu cores with default FGD setting
+
+    # get license file name
+    #cat PC_KVM:LICENSE_DIR/PC_KVM:LIECENSE_FILE | grep 32S
+    #setvar -e "(?n)^32S,(FGVMSL.*?lic)," -to lic
+    setlicense -t 32S -for SN -to lic 
+
+[FVM_A]
+    #remove license
+    execute factoryreset2    
+    
+    sleep 60
+
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "Serial-Number: FGVMEV" -for 1015666 -t 5
+    expect -e "License Status: Invalid" -for 1015666 -t 5
+    
+    # ev license not support anycast
+    #config system fortiguard
+    #    unset fortiguard-anycast
+    #end
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 60
+	
+    get system status | grep 'Serial-Number' -A 3
+    expect -e "FGVMSL" -for 1015666 -t 5
+    expect -e "License Status: Valid" -for 1015666 -t 5
+    expect -e "4 CPU/32 allowed" -for 1015666 -t 5
+
+    #s-license need to add cpu(see #596988)
+    #Due to #701739, kernel panic, comment this part for now
+    #after B1315, switch to 4.19 kernel, hot-added vcpu is supported
+    #exe cpu add 3
+    #expect -e "Active CPU number: 4" -for 1015666 -t 5
+    #expect -e "Total CPU number: 4" -for 1015666 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: SL" -for 1015666 -t 5
+    expect -e "CPU: 32" -for 1015666 -t 5
+
+    # Test 1007339: ATP bundle(993)
+    comment: check 993 ATP bundle contracts
+    diagnose test update info | grep "System contracts" -A 40
+    expect -e "ENHN" -for 1007339 -t 5
+    expect -e "FMWR" -for 1007339 -t 5
+    expect -e "FURL" -fail match -for 1007339 -t 5
+    expect -e "SPAM" -fail match -for 1007339 -t 5
+    expect -e "VMLS" -for 1007339 -t 5
+    expect -e "IOTH" -fail match -for 1007339 -t 5
+    expect -e "ETDB" -for 1007339 -t 5
+    expect -e "NIDB" -for 1007339 -t 5
+    expect -e "ISDB" -fail match -for 1007339 -t 5
+    expect -e "SFAS" -fail match -for 1007339 -t 5
+
+
+    report 1015666
+    report 1007339
+   

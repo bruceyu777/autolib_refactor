@@ -1,0 +1,50 @@
+# Attack Definition:
+# regular db: /data/etc/ips.rules
+# extended db" /data/etc/ips.et.rules
+############## 811523 #######################
+[FVM_A]
+    comment 811523:Busy:Verify attack definition can be upgraded from cli via exec update-ips
+
+    # ips sensor need to config in firewall policy to download attack definition
+    config firewall policy
+        edit 811523 
+                set name "811523"
+                set srcintf "FVM_A:PORT2"
+                set dstintf "FVM_A:PORT3"
+                set srcaddr "all"
+                set dstaddr "all"
+                set action accept
+                set schedule "always"
+                set service "ALL"
+                set action accept
+                set utm-status enable
+                set ssl-ssh-profile "certificate-inspection"
+                set ips-sensor "default"
+                set logtraffic all
+        next
+    end
+
+
+    diagnose autoupdate downgrade enable
+
+    #downgrade attack defintion
+    exe restore ips tftp packages/nids-700-22.490.pkg 10.6.30.139
+    sleep 10
+   
+    fnsysctl killall updated
+    sleep 5
+    exec update-ips
+    sleep 120
+
+    diagnose test update info | grep NIDS
+    expect -e "NIDS026 installed successfully" -for 1049632 -t 5
+    expect -e "NIDS02605-00022.00490" -fail match -for 1049632 -t 5
+
+    diag autoupdate version | grep 'Attack Extended Definitions' -A 6
+    expect -e "Result: Updates Installed" -for 811523 -t 10
+
+    config firewall policy
+        delete 811523
+    end
+
+    report 811523

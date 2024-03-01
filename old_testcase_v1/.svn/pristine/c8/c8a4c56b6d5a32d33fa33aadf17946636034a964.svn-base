@@ -1,0 +1,146 @@
+# Test Case ID: 811528
+# Objective: Verify the FGT can handle traffic when config variety policy
+#
+##################################################
+[FVM_A]
+    comment 811528:Busy:Verify the FGT can handle traffic when config variety policy
+
+config system interface
+        edit "FVM_A:PORT2"
+            set vdom "root"
+            set ip FVM_A:IPV4_PORT2 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+        edit "FVM_A:PORT3"
+            set vdom "root"
+            set mode static
+            set ip FVM_A:IPV4_PORT3 255.255.255.0
+            set allowaccess ping https ssh http telnet
+        next
+end
+
+config log setting
+    set fwpolicy-implicit-log enable
+end
+
+config firewall service custom
+    edit "ALL_ICMP"
+        set category "General"
+        set protocol ICMP
+        unset icmptype
+    next
+    edit "HTTP"
+        set category "Web Access"
+        set tcp-portrange 80
+    next
+end
+
+
+config firewall policy
+    edit 8115281
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT3"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set status enable
+        set schedule "always"
+        set service "ALL_ICMP"
+        set logtraffic all
+        set nat enable
+    next
+    edit 8115282
+        set srcintf "FVM_A:PORT2"
+        set dstintf "FVM_A:PORT3"
+        set srcaddr "all"
+        set dstaddr "all"
+        set action accept
+        set schedule "always"
+        set service "HTTP"
+        set nat enable
+        set status disable
+    next
+end
+
+config log memory setting
+    set statu enable
+end
+
+sleep 10
+show firewall policy
+exec log delete-all
+y
+
+[PC_01]
+    route -n
+    route del -net 172.16.200.0 netmask 255.255.255.0
+    route del -host 172.16.200.55
+
+    route add -host 172.16.200.55 gw FVM_A:IPV4_PORT2
+    route -n
+    sleep 10 
+
+    ping -c 5 PC_01:DESTINATION4
+    expect -e "64 bytes from" -for 811528 -t 5
+
+    wget --timeout=20 --delete-after http://PC_01:DESTINATION4
+    expect -e "200 OK" -fail match  -for 811528 -t 20
+    sleep 20
+
+
+[FVM_A]
+    diag sys session clear
+    exe log filter device memory
+    execute log filter field service HTTP
+    execute log filter field action deny
+    exec log display
+    expect -e "policyid=0" -for 811528 -t 5
+
+    exe log filter reset
+    exe log filter device memory
+    exe log filter field subtype forward
+    exe log filter field action accept
+    exe log display
+    expect -e "policyid=8115281" -for 811528 -t 5
+
+    config firewall policy
+        edit 8115281
+            set status disable
+        next
+        edit 8115282
+            set status enable
+            set logtraffic all
+        next
+    end
+
+    exec log delete-all
+    y
+    exit
+
+
+[PC_01]
+
+    pwd
+    curl -v --retry 3 http://PC_01:DESTINATION4
+    expect -e "200 OK" -for 811528 -t 5 
+
+    ping -c 5 PC_01:DESTINATION4
+    expect -e "64 bytes from" -fail match -for 811528 -t 5
+
+
+[FVM_A]
+
+    diag sys session clear
+    exe log filter device memory
+    exe log filter field subtype forward
+    execute log filter field service HTTP
+    exec log display
+    expect -e "policyid=8115282" -for 811528 -t 5
+
+
+    config log setting
+        set fwpolicy-implicit-log disable
+    end
+
+
+    report 811528

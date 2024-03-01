@@ -1,0 +1,42 @@
+# 1015662：Verify s01-license can be valided
+# fortiguard settting default (anycast=enable)
+# 2020-10-16
+#############################
+
+[PC_KVM]
+    ### 1015662.txt ###
+    comment: Verify s01 can be valided base on cpu cores with default FGD setting
+
+    # get license file name
+    #cat PC_KVM:LICENSE_DIR/PC_KVM:LIECENSE_FILE | grep 01S
+    #setvar -e "(?n)^01S,(FGVMSL.*?lic)," -to lic
+    setlicense -t 01S -for SN -to lic 
+
+[FVM_A]
+    #remove license
+    #execute factoryreset2    
+    
+    #sleep 60
+
+    #get system status | grep 'Serial-Number' -A 5
+    #expect -e "License Status: Invalid" -for 1015662 -t 5
+    
+    # fortiguard default setting
+    config system fortiguard
+        unset fortiguard-anycast
+    end
+    
+    execute restore vmlicense tftp FVM_A:LICENSE_DIR{$lic} FVM_A:LICENSE_SERVER
+    sleep 60
+	
+    get system status | grep 'Serial-Number' -A 5
+    expect -e "FGVMSL" -for 1015662 -t 5
+    expect -e "License Status: Valid" -for 1015662 -t 5
+    expect -e "1 CPU/1 allowed" -for 1015662 -t 5
+
+    diag debug vm-print-license
+    expect -e "Model: 18" -for 1015662 -t 5
+    expect -e "CPU: 1" -for 1015662 -t 5
+
+    report 1015662
+   

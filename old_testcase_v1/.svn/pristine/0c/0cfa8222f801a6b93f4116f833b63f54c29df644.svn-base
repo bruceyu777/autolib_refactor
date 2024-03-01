@@ -1,0 +1,93 @@
+# 1014986：Verify ipv4 traffic pass through ffw base on  policy 
+# 
+# 
+##################################################################
+
+[FFW_A]
+    ### 1014986.txt ###
+    comment: 1014986:Verify ipv4 allow firewall policy work
+    #setlicense -t FFW -for SN -to lic
+
+    get system status | grep 'Serial-Number' -A 5
+    #expect -e "License Status: Valid" -for 1014986 -t 5
+
+    # validate license with internal FGD
+    config system dns
+        set primary 172.17.254.148
+        set secondary 172.17.254.151
+    end
+
+    config system fortiguard
+        set fortiguard-anycast disable
+        set update-server-location any
+    end
+
+    config system interface
+        edit "FFW_A:PORT2"
+            set mode static
+            set ip FFW_A:IPV4_PORT2/24
+        next
+        edit "FFW_A:PORT3"
+            set mode static
+            set ip FFW_A:IPV4_PORT3/24
+        next
+    end
+
+
+    config firewall policy
+        purge
+        y
+        edit 1014986
+            set name "1014986"
+            set srcintf "FFW_A:PORT2"
+            set dstintf "FFW_A:PORT3"
+            set srcaddr "all"
+            set dstaddr "all"
+            set action accept
+            set schedule "always"
+            set service ALL
+            set logtraffic all
+            set nat enable
+        next
+    end
+
+    config log memory setting
+        set status enable
+    end
+
+    sleep 10
+    diag sys session clear
+    exe log delete-all
+    y
+
+[PC_01]
+    route delete PC_05:IPV4_ETH1
+    sleep 3
+    route add PC_05:IPV4_ETH1 gw FFW_A:IPV4_PORT2
+    route -n 
+    sleep 3
+
+    ping -c 5 PC_01:DESTINATION4 
+    expect -e "64 bytes from" -for 1014986 -t 10 
+
+    route del PC_05:IPV4_ETH1 gw FFW_A:IPV4_PORT2
+
+[FFW_A]
+    diag sys session clear
+    sleep 2
+    exe log filter device memory 
+    exe log filter category traffic
+    exe log filter field subtype forward
+    exe log filter field action accept
+    exe log filter field proto 1
+    exe log display
+    expect -e "policyid=1014986" -for 1014986 -t 5
+
+
+  #  config firewall policy
+  #   purge
+  #     y
+  #  end
+
+    report 1014986
+   
