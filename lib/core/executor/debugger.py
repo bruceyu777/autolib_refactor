@@ -1,4 +1,5 @@
 import pdb
+import sys
 
 OFF = 0
 ON  = 1
@@ -47,7 +48,7 @@ class Debugger:
         return
 
     def _quit(self, _):
-        exit(0)
+        sys.exit(0)
 
     def _jump(self, line_number):
         if line_number < 0 or line_number >= len(self.lines):

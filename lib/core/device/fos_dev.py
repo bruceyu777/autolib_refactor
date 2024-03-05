@@ -5,6 +5,7 @@ import pexpect
 from lib.services.image_server import (TFTP_SERVER_IP, UPGRADE, Image,
                                        image_server)
 from lib.services.log import logger
+from lib.services.environment import env
 from lib.utilities.exceptions import KernelPanicErr, RestoreFailure
 
 from .device import Device
@@ -213,11 +214,33 @@ class FosDev(Device):
         self.send_line("admin")
         self.search("Password:", 30, -1)
         self.send_line("admin")
-        self.search("#", 30)
-        self.send_command("config system admin")
-        self.send_command("edit admin")
-        self.send_command("unset password admin")
-        self.send_command("end")
+        self.search("#", 30, -1)
+        self.send_line("config system admin")
+        self.search("#", 30, -1)
+        self.send_line("edit admin")
+        self.search("#", 30, -1)
+        self.send_line("unset password admin")
+        self.search("#", 30, -1)
+        self.send_line("end")
+        self.search("login:", 30, -1)
+        self.send_line("admin")
+        self.search("Password:", 30, -1)
+        self.send_line("")
+        self.search("#", 30, -1)
+        password = env.get_section_var(self.dev_name, "PASSWORD")
+        if password:
+            self.send_line("config system admin")
+            self.search("#", 30, -1)
+            self.send_line("edit admin")
+            self.search("#", 30, -1)
+            self.send_line(f"set password {password}")
+            self.search("#", 30, -1)
+            self.send_line("end")
+            self.search("login:", 30, -1)
+            self.send_line("admin")
+            self.search("Password:", 30, -1)
+            self.send_line(password)
+            self.search("#", 30, -1)
 
     def restore_image(self, release, build):
         logger.notify("Start reset firewall.")

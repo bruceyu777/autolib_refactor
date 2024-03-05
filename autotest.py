@@ -9,8 +9,13 @@ from lib.utilities.exceptions import CompileException, FileNotExist
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Regression Test Automation Framework."
+        prog="AutoLib_v3",
+        description=("Regression Test Automation Framework.")
     )
+
+    parser.add_argument("-v", '--version', action="version",
+                    version="AutoLib 3.0.1")
+
     parser.add_argument(
         "-e",
         "--environment",
@@ -66,6 +71,8 @@ if __name__ == "__main__":
             "succeeded: only submit succeeded testcases' result to oriole"
         ),
     )
+
+
 
     args = parser.parse_args()
 
