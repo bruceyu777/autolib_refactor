@@ -14,7 +14,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-v", '--version', action="version",
-                    version="AutoLib 3.0.1")
+                    version="AutoLib 3.0.2")
 
     parser.add_argument(
         "-e",

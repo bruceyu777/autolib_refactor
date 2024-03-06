@@ -6,12 +6,14 @@ from time import sleep, perf_counter
 
 from lib.services import env, logger, oriole, output, summary
 from lib.services.log import add_logger_handler
+from lib.utilities.exceptions import ReportUnderPCWithoutDut
 
 from ..compiler.compiler import compiler
 from ..compiler.vm_code import VMCode
 from .if_stack import if_stack
 import pdb
 from .debugger import Debugger
+import sys
 
 class Executor:
     def __init__(
@@ -27,11 +29,13 @@ class Executor:
         self.last_line_number = None
         self.pc = 0
         self.need_report = need_report
-        self.report_testcase_ids = set()
+        self.report_testcases = dict()
         self.script_type = script_type
         self.scripts = dict()
         self.log_file_handler = None
         self.debugger = None
+        self.need_stop = False
+        self.testcase_dev_info = dict()
 
     def _add_file_handler(self):
         formatter = logging.Formatter(
@@ -65,6 +69,11 @@ class Executor:
         dev_name = parameters[0]
         self.cur_device = self.devices[dev_name]
         self.cur_device.switch()
+
+    def _switch_device_for_collect_info(self, parameters):
+        dev_name = parameters[0]
+        self.cur_device = self.devices[dev_name]
+        self.cur_device.switch_for_collect_info()
 
     def _command(self, parameters):
         if self.script_type == "GROUP":
@@ -161,6 +170,19 @@ class Executor:
         result, output = self.cur_device.expect(rule, wait_seconds, clear=='yes')
         is_succeeded = bool(result) ^ fail_match
         cnt = 1
+        # print(retry_cnt, self.vmcodes[self.pc - 1])
+        if env.need_retry_expect():
+            if retry_command is None:
+                previous_vm_code = self.vmcodes[self.pc - 1]
+
+                operation = previous_vm_code.operation
+                if operation == "command":
+                    previus_command = previous_vm_code.parameters[0]
+                    # print(f"previous command:{previus_command}")
+                    if previus_command.startswith(("curl", "wget", "exe log display", "execute log display")):
+                        retry_command = f"\"{previus_command}\""
+                        retry_cnt = 3
+
         while not is_succeeded and retry_command is not None and cnt < retry_cnt:
             logger.info("Begin to retry for expect, cur cnt: %s", cnt)
             self.cur_device.send_command(retry_command[1:-1])
@@ -256,17 +278,25 @@ class Executor:
             fail_match,
             wait_seconds,
             user_name,
-            password
+            password,
+            command,
+            action
         ) = parameters
         wait_seconds = int(wait_seconds)
         fail_match = fail_match == "match"
         rule = self._normalize_regexp(rule)
         self.cur_device.send_line(f"ftp {ip}")
-        self.cur_device.search(f"Name")
+        self.cur_device.search(f"Name", pos=-1)
         self.cur_device.send_line(user_name)
-        self.cur_device.search(f"Password:")
+        self.cur_device.search(f"Password:", pos=-1)
         self.cur_device.send_line(password)
+        if command is not None:
+            self.cur_device.search("[#>]", pos=-1)
+            self.cur_device.send_line(command)
+
         result, output = self.cur_device.expect(rule, wait_seconds)
+
+
         self.expect_result[testcase_id].append(
             (
                 bool(result) ^ fail_match,
@@ -287,6 +317,13 @@ class Executor:
         )
         self.cur_device.send_line("quit")
         self.cur_device.search(".+")
+
+        if result_str != "Succeeded":
+            if action == "stop":
+                sys.exit(-1)
+            elif action == "nextgroup":
+                self.need_stop = True
+
 
     def _mytelnet(self, parameters):
         (
@@ -389,27 +426,25 @@ class Executor:
         return ",".join(f"{line_number}: {line}" for _, details in self.expect_result.items() for  result, line_number, line, _  in details if not result)
 
     def report_all(self):
-        dut = env.get_dut()
-        t1 = perf_counter()
-        if dut:
-            logger.info("Start reporting with information collected from dut:%s", dut)
-            self._switch_device([dut])
-        else:
-            logger.info(
-                "Start reporting with information collected from current device:%s",
-                self.cur_device.dev_name,
-            )
-            self._switch_device([self.cur_device.dev_name])
-        t2 = perf_counter()
-        logger.info("It takes %s s to switch to device.", t2 - t1)
-        # self.cur_device.set_output_mode()
-
         is_script_succeeded = True
+        devices_info = dict()
         for testcase_id in self.expect_result:
-            if testcase_id in self.report_testcase_ids:
-                is_succeed = self.report_to_oriole(testcase_id, self.cur_device.get_device_info(env.get_dut_info_on_fly()))
+            if testcase_id in self.testcase_dev_info:
+                is_succeed = self.report_to_oriole(testcase_id, self.testcase_dev_info[testcase_id])
                 if not is_succeed:
                     is_script_succeeded = False
+            else:
+                if testcase_id in self.report_testcases:
+                    dev = self.report_testcases[testcase_id]
+                    if dev not in devices_info:
+                        logger.info("Start reporting with information collected from device:%s", dev)
+                        self._switch_device_for_collect_info([dev])
+                        device_info = self.cur_device.get_device_info(env.get_dut_info_on_fly())
+                        devices_info[dev] = device_info
+
+                    is_succeed = self.report_to_oriole(testcase_id, devices_info[dev])
+                    if not is_succeed:
+                        is_script_succeeded = False
 
         res_str = "passed" if is_script_succeeded else "failed"
         summary.update_testscript(Path(self.script).stem, res_str)
@@ -420,7 +455,22 @@ class Executor:
         testcase_id = parameters[0]
         if testcase_id not in self.expect_result:
             logger.error("Results for %s could not be found", testcase_id)
-        self.report_testcase_ids.add(testcase_id)
+        self.report_testcases[testcase_id] = self.cur_device.dev_name
+
+        if not self.cur_device.dev_name.startswith("PC"):
+            return
+        if testcase_id in self.testcase_dev_info:
+            return
+        dut = env.get_dut()
+        if dut is None:
+            raise ReportUnderPCWithoutDut("Please specify DUT or collect device info ahead when reporting under PC section.")
+        self.report_testcases[testcase_id] = dut
+
+
+    def _collect_dev_info(self, parameters):
+        testcase_id = parameters[0]
+        self.testcase_dev_info[testcase_id] = self.cur_device.get_device_info(env.get_dut_info_on_fly())
+
 
     def _setvar(self, parameters):
         rule, name = parameters
@@ -449,7 +499,9 @@ class Executor:
         buffer_size = buffer_size
         wait_seconds = int(wait_seconds)
         fail_match = fail_match == "match"
+
         value = env.get_var(variable)
+
         value = variable if value is None else value
         # print("*" * 80)
         # print("The value is ", value, type(value))
@@ -561,8 +613,9 @@ class Executor:
 
     def _strset(self, parameters):
         var_name = parameters[0]
-        var_name = parameters[1]
-        env.add_var(f"${var_name}", var_name)
+        var_value = parameters[1]
+        env.add_var(var_name, var_value)
+        # print(env.variables)
 
     def _loop(self, _):
         pass
@@ -652,6 +705,8 @@ class Executor:
                 "until",
             ]:
                 self.pc += 1
+            if self.need_stop:
+                break
 
 
 

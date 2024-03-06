@@ -223,5 +223,16 @@ class Environment:
     def get_vm_os(self):
         return self._get_global_section_var_val("VM_OS")
 
+    def get_license_info(self):
+        return self._get_global_section_var_val("LICENSE_INFORMATION")
+
+    def need_retry_expect(self):
+        return self.is_cfg_option_enabled(
+            "GLOBAL", "RETRY_EXPECT"
+        ) or self.is_cfg_option_enabled("Global", "RETRY_EXPECT")
+
+    def need_keep_alive(self):
+        return self._get_global_section_var_val("KEEP_ALIVE")
+
 env = Environment()
 # env.get_env_file_name()

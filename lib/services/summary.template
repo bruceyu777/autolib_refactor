@@ -140,9 +140,9 @@
                                                 <td>{{detail.line_num}}</td>
                                                 <td>{{detail.expect}}</td>
                                                 <td>
-                                                    {% for line in detail.output %}
-                                                        {{line}}<br>
-                                                    {% endfor %}
+
+                                                        {{detail.output}}
+
                                                 </td>
                                             </tr>
                                         {% endfor%}

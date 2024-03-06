@@ -11,6 +11,7 @@ from rich.table import Table
 from .environment import env
 from .output import output
 import os
+import html
 
 # from lib.services.oriole.oriole_client import oriole
 
@@ -61,8 +62,8 @@ class Summary:
 
     def show_summary(self):
         self.end_time = datetime.now().replace(microsecond=0)
-        self._print()
         self._generate()
+        self._print()
 
 
     def _statistic_testcases(self):
@@ -98,7 +99,7 @@ class Summary:
                 dict(
                     zip(
                         ["line_num", "expect", "output"],
-                        [line_number, expect, output.split("\n")],
+                        [line_number, expect, html.escape(output).replace('\n', '<br>')],
                     )
                 )
                 for succeeded, line_number, expect, output in res

@@ -42,7 +42,7 @@ v740_error_testcases.csv
 lib/tests/test_in_batch.py
 
 testcase/trunk/*
-autotest.spec
+
 
 build/
 dist/

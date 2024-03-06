@@ -8,7 +8,7 @@ search, Password:, 30, -1
 send_line, admin
 search, Password:, 30, -1
 send_line, admin
-search, #, 30
+search, #, 30, -1
 command, config system console
 command, set output standard
 command, end

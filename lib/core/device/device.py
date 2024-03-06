@@ -1,6 +1,9 @@
+import csv
 import re
 import time
-from lib.services.environment import env, logger
+
+from lib.services.environment import env
+from lib.services.log import logger
 
 DEFAULT_TIMEOUT_FOR_PROMPT = 10
 
@@ -38,6 +41,8 @@ class Device:
         self.connect()
         self.embeded_conn = False
         self.fnsysctl = False
+        self.license_info = {}
+        self._extract_license_info()
 
     def _reconnect_if_exited(self):
         # self.conn._read_output()
@@ -94,6 +99,7 @@ class Device:
         except Exception as e:
             print(e)
             self.switch(retry + 1)
+
 
     def connect(self):
         raise NotImplementedError
@@ -182,3 +188,20 @@ class Device:
 
     def set_keep_running(self, keep_running):
         self.keep_running = keep_running
+
+    def _extract_license_info(self):
+        license_info_file = env.get_license_info()
+        if not license_info_file:
+            return
+        with open(license_info_file, "r", encoding="utf-8") as f:
+            input_file = csv.DictReader(f)
+            for row in input_file:
+                type_ = row["Type"]
+                sn = row["SN"]
+                vdom_lic = row["Vdom Lic"]
+                expire_date = row["Expired Date"]
+                self.license_info[type_] = {
+                    "SN": sn,
+                    "VDOM": vdom_lic,
+                    "expire_date": expire_date,
+                }

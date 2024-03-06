@@ -62,7 +62,7 @@ class ComputerConn(DevConn):
         # Certificate Type (1.local (pkcs12) / 2.smartcard (pkcs11) / 3.disable) [current=disable]:
         # DONE.
 
-        pattern = pattern + "|:\s$" + "|Password:$"
+        pattern = pattern + "|:\s$" + "|Password:$" + "password:$"
         try:
             m, output = self.search(pattern, timeout, cur_pos)
             return m, output

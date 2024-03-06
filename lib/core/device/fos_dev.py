@@ -72,7 +72,18 @@ class FosDev(Device):
             r"Virtual domain configuration: (?P<vdom_mode>[^\r\n]*).*?"
             r"Branch point: (?P<branch_point>[^\r\n]*).*?"
         )
-        return self.show_command_may_have_more("get system status", rule)
+        matched = self.show_command_may_have_more("get system status", rule)
+        if not matched:
+            rule = (
+            r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
+            r"(build(?P<build>\d+)),\d+\s+\((?P<release_type>[\.\s\w]+)\).*"
+            r"Serial-Number: (?P<serial>[^\n]*).*"
+            r"Virtual domain configuration: (?P<vdom_mode>[^\n]*).*"
+            r"Branch point: (?P<branch_point>[^\n]*).*"
+        )
+            matched = self.show_command_may_have_more("get system status", rule)
+        return matched
+
 
     @property
     def is_vdom_enabled(self):
@@ -176,6 +187,12 @@ class FosDev(Device):
         ctrl_c = "\x03"
         self.conn.send(ctrl_c)
         super().switch()
+
+    def switch_for_collect_info(self):
+        keep_running = self.keep_running
+        self.keep_running = 0
+        self.switch()
+        self.keep_running = keep_running
 
     # def goback(self):
 
@@ -336,10 +353,10 @@ class FosDev(Device):
     def pre_mgmt_settings(self):
         if "mgmt_ip" in self.dev_cfg and "mgmt_mask" in self.dev_cfg and "mgmt_gw" in self.dev_cfg:
             self.set_interface_ip(
-                DEFAULT_MGMT, self.dev_cfg["mgmt_ip"], self.dev_cfg["mgmt_mask"]
+                self.dev_cfg.get("mgmt_port", DEFAULT_MGMT), self.dev_cfg["mgmt_ip"], self.dev_cfg["mgmt_mask"]
             )
             self.add_staic_route(
-                gtw=self.dev_cfg["mgmt_gw"], dev=DEFAULT_MGMT, eid="1"
+                gtw=self.dev_cfg["mgmt_gw"], dev=self.dev_cfg.get("mgmt_port", DEFAULT_MGMT), eid="1"
             )
             time.sleep(10)
 

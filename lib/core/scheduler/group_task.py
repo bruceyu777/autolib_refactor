@@ -21,5 +21,6 @@ class GroupTask(Task):
 
     def execute(self):
         for script in self.group_parser.scripts.values():
+            self.keepalive_devices()
             vm_codes = compiler.retrieve_vm_codes(script)
             self.execute_script(script, vm_codes, self.devices)

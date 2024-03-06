@@ -42,7 +42,7 @@ class EnvParser:
 
         for section in self.config.sections():
             for key, value in self.config.items(section):
-                print(key, value)
+                # print(key, value)
                 result = prog.match(value)
                 if result:
                     section_name = result.group("section_name")

@@ -1,7 +1,7 @@
 import os
 import webbrowser
 import time
-
+import sys
 
 from lib.services import env, oriole, output, logger
 from lib.core.scheduler.web_server import WebServer
@@ -27,7 +27,7 @@ class Job:
         if ip and port:
             WebServer(ip, port).start()
         else:
-            exit(0)
+            sys.exit(0)
 
     def init_env(self):
         env.init_env(self.args)
@@ -45,8 +45,7 @@ class Job:
                 webbrowser.open_new(f"http://{ip}:{port}/{output.get_current_output_dir()}/summary/")
 
             self.execute_script()
-            if self.args.submit_flag != "none":
-                oriole.submit()
+
 
     def run(self):
         self.init_env()

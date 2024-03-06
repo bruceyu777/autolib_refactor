@@ -114,3 +114,13 @@ class SyntaxError(AutoTestException):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
+class LicenseLoadErr(AutoTestException):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+class ReportUnderPCWithoutDut(AutoTestException):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)

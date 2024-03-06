@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from time import perf_counter
 
@@ -35,9 +36,15 @@ class Task:
         for dev_name, dev in self.devices.items():
             if dev_name.startswith(("FVM", "FFW", "FGT")) and not env.need_deploy_vm():
                 dev.restore_image(env.args.release, env.args.build)
+            if dev_name.startswith(("FVM", "FFW")) and env.need_deploy_vm():
+                dev.activate_license()
 
     def init_devices(self):
         logger.notify("Devices used during the test %s", list(self.devices.keys()))
+
+        if env.need_deploy_vm() and any(dev_name.startswith(("FVM", "FFW")) for dev_name in self.devices):
+            logger.notify("Sleep 10s for the console to abel to be connected for new deployed vms.")
+            time.sleep(10)
         for dev_name in self.devices:
             t1 = perf_counter()
             if dev_name.startswith(("FVM", "FFW")):
@@ -67,6 +74,14 @@ class Task:
 
     def compile(self):
         raise NotImplementedError
+
+    def keepalive_devices(self):
+        if env.need_keep_alive():
+            for dev in self.devices:
+                try:
+                    dev.send_line("")
+                except Exception as _:
+                    logger.error("Failed to send keep alive message.")
 
     def _start_record_terminal(self, script_id):
         for dev in self.devices.values():
@@ -105,6 +120,7 @@ class Task:
         summary.show_summary()
         oriole.dump()
 
+
     def run(self, args):
         t1 = perf_counter()
         self.compile()
@@ -115,9 +131,10 @@ class Task:
         t3 = perf_counter()
         self.execute()
         t4 = perf_counter()
+        if args.submit_flag != "none":
+            oriole.submit()
         self.summary()
         t5 = perf_counter()
-
         logger.notify("Compiling takes %s s ", t2 - t1)
         logger.notify("Setting up devices takes %s s", t3 - t2)
         logger.notify(f"Executing testcases takes %s s", t4 - t3)

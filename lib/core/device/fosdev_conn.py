@@ -1,6 +1,7 @@
 import time
 
 import pexpect
+
 from lib.services import logger
 from lib.utilities.exceptions import LoginDeviceFailed
 
@@ -91,8 +92,9 @@ class FosDevConn(DevConn):
             self.conn_state = "_reset_password"
 
     def _reset_password(self):
+        self._client.expect("New Password:")
         self._client.sendline(self.password)
-        self._client.expect("Password:")
+        self._client.expect("Confirm Password:")
         self._client.sendline(self.password)
         self._client.expect("#")
         self.conn_state = "_logged_in"
@@ -119,10 +121,13 @@ class FosDevConn(DevConn):
             content = self._client.expect(".+")
         except pexpect.TIMEOUT:
             logger.info("No more characters cleared for login.")
+
+
         logger.info(
             "current buffer output for login is %s",
             self._client.before + self._client.after,
         )
+        # breakpoint()
         self.retry_cnt = 0
         self.conn_state = "_connected"
         self.use_default_password = reset

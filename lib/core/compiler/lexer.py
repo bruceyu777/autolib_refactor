@@ -19,6 +19,7 @@ APIS_WITH_PARAS = (
     "setenv",
     "compare",
     "expect_OR",
+    "collect_dev_info"
 
 )
 APIS_WITHOUT_PARAS = ("forcelogin", "clearbuff", "clear_buffer", "clean_buffer", "breakpoint")

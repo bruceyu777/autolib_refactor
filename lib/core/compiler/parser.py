@@ -32,6 +32,13 @@ class Parser:
                     (("identifier", "string"), None),
                 ),
             ),
+            "collect_dev_info":  (
+                "parse",
+                (
+                    ("identifier", "-for"),
+                    (("number", "identifier"), None),
+                ),
+            ),
             "report": (
                 "parse",
                 ((("number", "identifier"), None),),
@@ -76,6 +83,8 @@ class Parser:
                         "-t": 5,
                         "-u": None,
                         "-p": None,
+                        "-c": None,
+                        "-a": "continue",
                     },
                     (
                         ("identifier", None),
@@ -554,6 +563,7 @@ class Parser:
             command_token.str,
             tuple(options.values()),
         )
+        # breakpoint()
 
     def _if(self, _):
         return self._add_vm_code(self._cur_token.line_number, "if_not_goto", ())
