@@ -45,7 +45,7 @@ SYMBOLS = (
 
 SPACE_DELIMETERS = (" ", "\r", "\n", "\t")
 
-OPERATORS = ("eq",)
+OPERATORS = ("eq","lt")
 
 
 class SingleChar(UserString):

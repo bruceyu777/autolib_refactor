@@ -24,6 +24,7 @@ class OutputBuffer:
 
     def append(self, output):
         self.output += self._remove_color_character(output)
+        # self.output = self.output.replace("\r\n", "\n")
 
     def clear(self, pos=None):
         self.output = "" if pos is None else self.output[pos:]

@@ -6,6 +6,7 @@ from .dev_conn import DevConn
 from .log_file import LogFile
 from .output_buffer import OutputBuffer
 from lib.services import env, logger
+import pdb
 
 class ComputerConn(DevConn):
     def login(self):
@@ -24,7 +25,7 @@ class ComputerConn(DevConn):
             self.login()
         elif index == 1:
             self._client.sendline(self.password)
-            self._client.expect(r"[$#]\s*$")
+            self._client.expect(r"[$#\>]\s*")
         elif index == 2:
             logger.error("Timeout to login.")
         elif index == 3:
@@ -42,7 +43,7 @@ class ComputerConn(DevConn):
         #2 #
         #3 need confirmStart configuring output mode to be standard.
 
-
+        # pdb.set_trace()
         cur_pos = len(self.output_buffer)
         logger.info("current command is %s", command)
         logger.info("current pos in send_command is %s", cur_pos)

@@ -75,7 +75,7 @@ class Interpreter:
         vm_file = output.compose_compiled_file(
             Path(self.file_name).stem, self.CODES_FILE
         )
-        with open(vm_file, "w") as f:
+        with open(vm_file, "w", encoding="utf-8") as f:
             for vm_code in self.vm_codes:
                 f.write(str(vm_code) + "\n")
 

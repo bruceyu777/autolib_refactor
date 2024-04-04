@@ -95,6 +95,9 @@ class Environment:
         return self.user_env.get(vm_name, "HOSTED_ON")
 
     def get_section_var(self, section, variable):
+        logger.info("user_env: %s", self.user_env)
+        logger.info("section:%s, variable: %s", section, variable)
+        logger.info("self.user_env.get(section, variable, fallback=None): %s", self.user_env.get(section, variable, fallback=None))
         return self.user_env.get(section, variable, fallback=None)
 
     def set_section_var(self, section, var_name, var_val):
@@ -110,101 +113,38 @@ class Environment:
     def get_test_file_name(self):
         return self.test_file
 
+    def _update_var_value(self, var_val_dict, section, var_name):
+        if section == "GLOBAL":
+            value = self.get_section_var(section, var_name) or self.get_section_var(
+                "Global", var_name
+            )
+        else:
+            value = self.get_section_var(section, var_name)
+        var_val_dict.update({f"{section}:{var_name}": value})
+
+    def _interpolate_var_value(self, string, var_value_dict):
+        var_val_dict_items = sorted(var_value_dict.items(), key=lambda item: item[0], reverse=True)
+        for var, value in var_val_dict_items:
+            if value is not None:
+                string = string.replace(var, value)
+        return string
+
     def variable_interpolation(self, string):
         #"Gateway Route(.*)\r(.*)- IP:PC_01:ETH1_IPV4, MAC: PC_01:MAC_ETH1\(.*)\r(.*)- Interface:FGT_A:PORT2, VFID:PC_01:REF1, SN: FGT_A:SN"
         pattern = r"[a-zA-Z_]\w*"
         matched = re.findall(rf"{pattern}(?::{pattern})+", string)
+        var_value_dict = dict()
         for m in sorted(matched, key=len, reverse=True):
             tokens = m.split(":")
-            if len(tokens) == 2:
-                section, var_name = m.split(":")
-
-                if section == "GLOBAL":
-                    value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                else:
-                    value = self.get_section_var(section, var_name)
-                if value is not None:
-                    string = string.replace(m, value)
+            tokens_number = len(tokens)
+            if tokens_number % 2 == 0:
+                for i in range(0, tokens_number, 2):
+                    self._update_var_value(var_value_dict, tokens[i], tokens[i+1])
             else:
-                if len(tokens) == 3:
-                    section, var_name = tokens[1], tokens[2]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-                elif len(tokens) ==4:
-                    section, var_name = tokens[0], tokens[1]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-                    section, var_name = tokens[2], tokens[3]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-                elif len(tokens) ==5:
-                    section, var_name = tokens[1], tokens[2]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-                    section, var_name = tokens[3], tokens[4]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-                elif len(tokens) == 6:
-                    section, var_name = tokens[0], tokens[1]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-                    section, var_name = tokens[2], tokens[3]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-                    section, var_name = tokens[4], tokens[5]
-                    if section == "GLOBAL":
-                        value = self.get_section_var(section, var_name) or self.get_section_var(
-                        "Global", var_name
-                    )
-                    else:
-                        value = self.get_section_var(section, var_name)
-                    if value is not None:
-                        string = string.replace(f"{section}:{var_name}", value)
-        return string
+                for i in range(1, tokens_number, 2):
+                    self._update_var_value(var_value_dict, tokens[i], tokens[i+1])
+        logger.info("var_value_dict is %s", var_value_dict)
+        return self._interpolate_var_value(string, var_value_dict)
 
     def get_dut(self):
         return self._get_global_section_var_val("DUT")
@@ -234,5 +174,18 @@ class Environment:
     def need_keep_alive(self):
         return self._get_global_section_var_val("KEEP_ALIVE")
 
+    def filter_env_section_items(self, section_name, start_string):
+        res = {}
+        for section in self.user_env.sections():
+            if section == section_name:
+                for key, value in self.user_env.items(section):
+                    tokens = key.split("_")
+                    if tokens[0] == start_string:
+                        res[tokens[1]] = value
+        return res
+
 env = Environment()
 # env.get_env_file_name()
+
+if __name__ == "__main__":
+    env.get_dut()

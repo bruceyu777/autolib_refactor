@@ -1,6 +1,7 @@
 import csv
 import re
 import time
+import pdb
 
 from lib.services.environment import env
 from lib.services.log import logger
@@ -8,7 +9,7 @@ from lib.services.log import logger
 DEFAULT_TIMEOUT_FOR_PROMPT = 10
 
 
-UNIVERSAL_PROMPTS = (r"(?<!--)[$#>] $",)
+UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"\:.*?\>")
 
 FOS_UNIVERSAL_PROMPTS = (
     r"login: $",
@@ -147,22 +148,23 @@ class Device:
         timeout=DEFAULT_TIMEOUT_FOR_PROMPT,
     ):
         if command == "ctrl_c":
+            # pdb.set_trace()
             command = "\x03"
         if command == 'nan_enter':
             command = "\x0d"
 
-        if command.startswith("telnet"):
+        if command.startswith(("telnet ", "ssh ", "sshpass ")):
             self.embeded_conn = True
         if command == "exit":
             self.embeded_conn = False
 
         matched, output = self.conn.send_command(command, pattern, timeout)
         if matched:
-            logger.info("Matched group is %s", matched.group())
+            logger.info("Matched group is '%s'", matched.group())
         while matched is not None:
             confirm_str = self.require_confirm(matched.group())
             if confirm_str:
-                logger.info("Matched group is %s", confirm_str)
+                logger.info("Matched group is '%s'", confirm_str)
                 # command_pattern = f"{confirm_str}.*{pattern}"
                 matched, output = self.conn.send_command(confirm_str, pattern, timeout)
             elif self.require_login(matched.group()) and not self.embeded_conn:

@@ -1,6 +1,7 @@
 import re
 import sys
 import time
+import pdb
 
 import pexpect
 from lib.services import env, logger
@@ -74,7 +75,7 @@ class DevConn:
         # 1 output will be continue untill user input another command
         # 2 #
         # 3 need confirmStart configuring output mode to be standard.
-
+        # pdb.set_trace()
         cur_pos = len(self.output_buffer)
         logger.info("current command is %s", command)
         logger.info("current pos in send_command is %s", cur_pos)
@@ -82,6 +83,7 @@ class DevConn:
             "current output in send_command is %s", self.output_buffer[cur_pos:]
         )
         logger.info("Current pattern is %s", pattern)
+
         self.client.sendline(command)
 
         #make sure to match the output after command is send
@@ -154,7 +156,9 @@ class DevConn:
     def _dump_to_buffer(self):
         output = self.client.before + self.client.after
         # output = output.replace("\r\n", "\n")
+
         self.output_buffer.append(output)
+
         self._log_output(output)
         return output
 

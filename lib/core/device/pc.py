@@ -28,6 +28,7 @@ class Pc(Computer):
         self.connect()
 
     def send_command(self, command):
+        # return super().send_command(command+"\r", timeout=60)
         return super().send_command(command, timeout=60)
 
     def show_command_may_have_more(self, command, rule):

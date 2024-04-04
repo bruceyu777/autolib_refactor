@@ -42,7 +42,6 @@ class EnvParser:
 
         for section in self.config.sections():
             for key, value in self.config.items(section):
-                # print(key, value)
                 result = prog.match(value)
                 if result:
                     section_name = result.group("section_name")
@@ -61,13 +60,28 @@ class EnvParser:
 
     def show(self):
         for section in self.config.sections():
-            print(section)
-            for key, value in self.config.items(section):
-                print(f"key: {key}, value:{value}.")
+            if section == "ORIOLE":
+                print(section)
+                for key, value in self.config.items(section):
+                    print(key)
+                    if key.startswith("field"):
+                        print(f"key: {key}, value:{value}.")
+
+    def filter_section_items(self, section_name, start_string):
+        res = {}
+        for section in self.config.sections():
+            if section == section_name:
+                for key, value in self.config.items(section):
+                    tokens = key.split("_")
+                    if tokens[0] == start_string:
+                        res[tokens[1]] = value
+        return res
+
 
 if __name__ == "__main__":
     envParser = EnvParser("./lib/testcases/env/fgt.env")
     # print(envParser.env["FGT_A"])
     # envParser.run()
-    envParser.show()
+    res = envParser.filter_section_items("ORIOLE", "field")
+    print(res)
     # print("connection" in envParser.env["FGT_A"])

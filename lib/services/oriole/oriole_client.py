@@ -38,6 +38,7 @@ class OrioleClient:
     ):
         self.user = None
         self.password = None
+        self.specified_fields = None
 
         self.platrev_csv_file = platrev_csv_file
         self.platform_revision = {}
@@ -59,6 +60,11 @@ class OrioleClient:
         self.submit_flag = (
             args.submit_flag if hasattr(args, "submit_flag") else self.submit_flag
         )
+        self.specified_fields = env.filter_env_section_items("ORIOLE", "resfield")
+        print(self.specified_fields)
+        print(self.user)
+        print(self.password)
+        # breakpoint()
 
     def send_oriole(self, user, password, report, release_tag):
         try:
@@ -109,8 +115,7 @@ class OrioleClient:
                 product = row["Objective"].split(":")[0].replace("-", "_")
                 testcases_product_id_map[product] = row["QAID"]
 
-    @staticmethod
-    def gen_plt_info_for_oriole(device_info, report):
+    def gen_plt_info_for_oriole(self, device_info, report):
         report["platform"] = device_info["platform"]
         report["build"] = device_info["build"][-4:]
         report["aveng"] = device_info.get("AV Engine", "")
@@ -128,6 +133,8 @@ class OrioleClient:
             report["vm_nic"] = env.get_vm_nic()
         if env.get_vm_os():
             report["vm_os"] = env.get_vm_os()
+
+
 
     def generate_product_report(self, testcase_id, is_passed, device_info):
         short_product = get_short_product_name(device_info["platform"])
@@ -150,6 +157,7 @@ class OrioleClient:
                 "bug_id": "1",
             }
         )
+        result.update(self.specified_fields)
 
         report["results"] = [result]
         return report
@@ -180,3 +188,9 @@ class OrioleClient:
 
 
 oriole = OrioleClient()
+
+if __name__ == "__main__":
+    oriole.send_oriole("zhaod",
+    "UW14SlIwTkJSVXBCWjFwS1FuY3hWRlY0TVZGQ1VVSlVVMUZWUkZkblpFcFZiRTVTUVVaU1ZsZG5UbFJCZDBGTQ==",
+     {"time": "2024-05-06 11:55:58", "platform_id": "FGT_60F", "release": "7.6.0", "build": "3361", "SN": "FG4H1FT922900514", "bios": "06000006", "aveng": "7.00025", "avdef": "92.04027", "ipseng": "7.01002", "ipsdef": "6.00741", "pltgen": "Gen1", "snmp_mib": "3359", "total": 39,  "results": [{"testcase_id": "964292", "result": "1"},]},
+    "7.6.0")

@@ -545,6 +545,8 @@ class Executor:
     def normalize_exp(self, exp):
         if exp == "eq":
             return "=="
+        if exp == "lt":
+            return "<"
         if isinstance(exp, str):
             eval_exp = env.get_var(exp)
             exp = eval_exp if eval_exp else exp

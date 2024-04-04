@@ -266,5 +266,5 @@ class Lexer:
 
     def _dump_to_file(self):
         token_file = self._compose_token_file_name()
-        with open(token_file, "w") as f:
+        with open(token_file, "w", encoding="utf-8") as f:
             json.dump({"tokens": self.tokens}, f, indent=4)
