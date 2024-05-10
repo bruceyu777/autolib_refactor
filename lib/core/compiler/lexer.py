@@ -12,6 +12,7 @@ APIS_WITH_PARAS = (
     "keep_running",
     "report",
     "expect",
+    "expect_ctrl_c",
     "sleep",
     "setlicense",
     "myftp",
@@ -22,7 +23,7 @@ APIS_WITH_PARAS = (
     "collect_dev_info"
 
 )
-APIS_WITHOUT_PARAS = ("forcelogin", "clearbuff", "clear_buffer", "clean_buffer", "breakpoint")
+APIS_WITHOUT_PARAS = ("forcelogin", "clearbuff", "clear_buffer", "clean_buffer", "breakpoint", "resetFirewall")
 APIS_WITH_PARAS_PATTERN = "|".join(rf"{api}\s+.+" for api in APIS_WITH_PARAS)
 APIS_WITHOUT_PARAS_PATTERN = "|".join(rf"{api}" for api in APIS_WITHOUT_PARAS)
 APIS_PATTERN = rf"{APIS_WITH_PARAS_PATTERN}|{APIS_WITHOUT_PARAS_PATTERN}"

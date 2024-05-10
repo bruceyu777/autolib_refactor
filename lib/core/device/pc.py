@@ -7,8 +7,10 @@ from lib.services import logger
 class Pc(Computer):
     def __init__(self, dev_name):
         self.dev_cfg = env.get_dev_cfg(dev_name)
+        self.need_carriage = False
         super().__init__(dev_name)
         self._device_info = None
+
 
     def _compose_conn(self):
         return self.dev_cfg["connection"]
@@ -20,7 +22,10 @@ class Pc(Computer):
             user_name=self.dev_cfg["username"],
             password=self.dev_cfg["password"],
         )
-        self.send_command("")
+        matched, _ = self.send_command("\r")
+        if matched and matched.group("windows_prompt"):
+            self.need_carriage = True
+
         self.clear_buffer()
 
     def force_login(self):
@@ -29,6 +34,8 @@ class Pc(Computer):
 
     def send_command(self, command):
         # return super().send_command(command+"\r", timeout=60)
+        if self.need_carriage:
+            command = command + "\r"
         return super().send_command(command, timeout=60)
 
     def show_command_may_have_more(self, command, rule):

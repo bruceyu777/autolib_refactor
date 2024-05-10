@@ -62,17 +62,7 @@ class CmdCompiler:
     def compile(self, command, line_number):
         vm_codes = []
         if self._is_reset_command(command):
-            if command == "resetFirewall":
-                command = "exe factoryreset"
-                vm_codes = [
-                    VMCode(line_number, "send_line", ("config global",)),
-                    VMCode(line_number, "send_line", (command,)),
-                ]
-                vm_codes = vm_codes + [
-                    VMCode(line_number, operation, parameters)
-                    for operation, parameters in self.codes["reset_firewall"]
-                ]
-            else:
+            if command != "resetFirewall":
                 vm_codes = [VMCode(line_number, "send_line", (command,))]
                 vm_codes = vm_codes + [
                     VMCode(line_number, operation, parameters)

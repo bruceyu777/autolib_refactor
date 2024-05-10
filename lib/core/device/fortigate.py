@@ -41,27 +41,42 @@ class FortiGate(FosDev):
         )
         conn = " ".join(dev_conn.split(" ")[:2])
         line_no = int(dev_conn.split(" ")[-1]) - 2000
-        print(self.dev_cfg)
+        # print(self.dev_cfg)
+
+        if "ciscopassword"  not in self.dev_cfg:
+            logger.info("Skip clear line as no terminal server password configured.")
+            return
+
         password = self.dev_cfg["ciscopassword"]
+
 
         client = pexpect.spawn(conn,
                 encoding="utf-8",
                 echo=True,
                 logfile=sys.stdout,
                 codec_errors="ignore")
-        client.expect("Password:")
-        client.sendline(password)
-        index = client.expect_exact([">", "#", pexpect.TIMEOUT, pexpect.EOF])
-        if index == 0:
-            client.sendline("enable")
-            client.expect("Password:")
+        matched_index = client.expect_exact(["Password:", "#", pexpect.TIMEOUT, pexpect.EOF])
+        if matched_index == 1:
+            self.clear(client, line_no)
+        elif matched_index == 0:
             client.sendline(password)
-            client.expect("#")
-            self.clear(client, line_no)
-        elif index == 1:
-            self.clear(client, line_no)
-        elif index in [2, 3]:
-            logger.info("Failed to clear terminal server.")
+            index = client.expect_exact([">", "#", pexpect.TIMEOUT, pexpect.EOF])
+            if index == 0:
+                client.sendline("enable")
+                match_index = client.expect_exact(["Password:", ">", pexpect.TIMEOUT, pexpect.EOF])
+                if match_index == 0:
+                    client.sendline(password)
+                    client.expect("#")
+                    self.clear(client, line_no)
+                elif match_index == 1:
+                    # some QAs do not know how to configure terminal server password or terminal server password not set.
+                    pass
+            elif index == 1:
+                self.clear(client, line_no)
+            elif index in [2, 3]:
+                logger.info("Failed to clear terminal server.")
+        else:
+            logger.info("Skip clear line.")
 
     def clear(self, client, line_no):
         client.sendline(f"clear line {line_no}")

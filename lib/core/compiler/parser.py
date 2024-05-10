@@ -10,7 +10,7 @@ from lib.utilities.exceptions import SyntaxError
 
 VALID_COMMANDS = ('set', 'edit', 'config', 'diag', 'exe', 'execute','del', "next", "end", "unset", "keep_running", "resetFirewall", "show"
 , "append", "select", "unselect", "purge", "get", "conf", "clear", "sh", "myset", "myend", "mynext", "mydelete", "comment", "Comment", "ctrl_c", "nan_enter",
-"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin"
+"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c"
 )
 class Parser:
     SYNTAX = {
@@ -44,6 +44,35 @@ class Parser:
                 ((("number", "identifier"), None),),
             ),
             "expect": (
+                "parse_options",
+                (
+                    {
+                        "-e": None,
+                        "-for": None,
+                        "-t": 5,
+                        "-fail": "unmatch",
+                        "-b": None,
+                        "-a": None,
+                        "-clear":"yes",
+                        "-retry_command":None,
+                        "-retry_cnt":3
+                    },
+                    (
+                        ("identifier", None),
+                        (
+                            [
+                                "identifier",
+                                "number",
+                                "string",
+                                "variable",
+                                "operator",
+                            ],
+                            None,
+                        ),
+                    ),
+                ),
+            ),
+            "expect_ctrl_c": (
                 "parse_options",
                 (
                     {
@@ -231,7 +260,8 @@ class Parser:
             ),
             "sleep": ("parse", ((("number", "identifier"), None),)),
             "clearbuff": ("parse", ()),
-            "breakpoint":("parse", ()),
+            "breakpoint": ("parse", ()),
+            "resetFirewall": ("parse", ()),
             "clear_buffer": ("parse", (("number", None),)),
             "clean_buffer": ("parse", ()),
             "keep_running": ("parse", (("number", None),)),

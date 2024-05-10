@@ -104,6 +104,9 @@ class Executor:
     def _breakpoint(self, _):
         self.debugger.breakpoint()
 
+    def _resetFirewall(self, _):
+        self.cur_device.reset_firewall()
+
     def _clean_buffer(self, _):
         self.cur_device.clear_buffer()
 
@@ -149,6 +152,10 @@ class Executor:
         if reg_exp.startswith("'") and reg_exp.endswith("'"):
             reg_exp = reg_exp[1:-1]
         return reg_exp
+
+    def _expect_ctrl_c(self, parameters):
+        self.cur_device.send_command("ctrl_c")
+        self._expect(parameters)
 
     def _expect(self, parameters):
         # print(parameters)

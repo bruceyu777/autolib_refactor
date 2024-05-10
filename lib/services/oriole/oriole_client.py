@@ -61,9 +61,9 @@ class OrioleClient:
             args.submit_flag if hasattr(args, "submit_flag") else self.submit_flag
         )
         self.specified_fields = env.filter_env_section_items("ORIOLE", "resfield")
-        print(self.specified_fields)
-        print(self.user)
-        print(self.password)
+        # print(self.specified_fields)
+        # print(self.user)
+        # print(self.password)
         # breakpoint()
 
     def send_oriole(self, user, password, report, release_tag):

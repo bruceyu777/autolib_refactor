@@ -236,8 +236,18 @@ class FosDev(Device):
         self.search("#", 30, -1)
         self.send_line("edit admin")
         self.search("#", 30, -1)
-        self.send_line("unset password admin")
-        self.search("#", 30, -1)
+
+        self.send_line("unset password ?")
+        req_old_passwd, _ = self.search("\<old passwd\>", 30, -1)
+        if req_old_passwd:
+            self.send_line("unset password admin")
+            self.search("#", 30, -1)
+        else:
+            self.send_line("unset password")
+            matched, _ = self.search("password:", 30, -1)
+            if matched:
+                self.send_line("admin")
+            self.search("#", 30, -1)
         self.send_line("end")
         self.search("login:", 30, -1)
         self.send_line("admin")
@@ -251,6 +261,9 @@ class FosDev(Device):
             self.send_line("edit admin")
             self.search("#", 30, -1)
             self.send_line(f"set password {password}")
+            matched, _ = self.search("password:", 30, -1)
+            if matched:
+                self.send_line("admin")
             self.search("#", 30, -1)
             self.send_line("end")
             self.search("login:", 30, -1)

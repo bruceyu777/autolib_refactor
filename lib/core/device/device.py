@@ -9,7 +9,7 @@ from lib.services.log import logger
 DEFAULT_TIMEOUT_FOR_PROMPT = 10
 
 
-UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"\:.*?\>")
+UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"(?P<windows_prompt>\:.*?\>)")
 
 FOS_UNIVERSAL_PROMPTS = (
     r"login: $",
