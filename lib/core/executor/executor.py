@@ -1,5 +1,6 @@
 import logging
 import re
+import sys
 from collections import defaultdict
 from pathlib import Path
 from time import sleep, perf_counter
@@ -13,7 +14,8 @@ from ..compiler.vm_code import VMCode
 from .if_stack import if_stack
 import pdb
 from .debugger import Debugger
-import sys
+from .cmd_exec_chker import CmdExecChecker
+
 
 class Executor:
     def __init__(
@@ -89,14 +91,15 @@ class Executor:
         cmd = cmd.replace("myend", "end")
 
         if len(parameters) == 1:
-            self.cur_device.send_command(cmd)
+            *_, output = self.cur_device.send_command(cmd)
         elif len(parameters) == 2:
             pattern = parameters[1]
-            self.cur_device.send_command(cmd, pattern)
+            *_, output = self.cur_device.send_command(cmd, pattern)
         elif len(parameters) > 2:
             pattern = parameters[1]
             timeout = int(parameters[2])
-            self.cur_device.send_command(cmd, pattern, timeout)
+            *_, output = self.cur_device.send_command(cmd, pattern, timeout)
+        CmdExecChecker(self.script, self.last_line_number, cmd, output).check()
 
     def _clearbuff(self, _):
         self.cur_device.clear_buffer()

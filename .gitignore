@@ -50,3 +50,4 @@ testcase_backup/
 testcase/scripts/*
 
 AutoLib_v3_back
+test.py

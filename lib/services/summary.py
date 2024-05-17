@@ -89,6 +89,32 @@ class Summary:
 
         return statistics
 
+    @staticmethod
+    def _split_long_lines(text):
+        # Split the text into lines
+        lines = text.split('\n')
+
+        # Iterate through each line
+        for i, line in enumerate(lines):
+            # Check if the line length exceeds 100 characters
+            if len(line) > 100:
+                # Split the line into chunks of maximum 100 characters
+                chunks = [line[j:j+100] for j in range(0, len(line), 100)]
+                # print(chunks)
+                # Replace the original line with the split chunks
+                lines[i:i+1] = chunks
+
+        # Join the lines back into a single string
+        # print(lines)
+        return '\n'.join(lines)
+
+
+    def _normalize_output_for_html(self, output):
+        output = html.escape(output)
+        output = self._split_long_lines(output)
+        return output.replace('\n', '<br>')
+
+
     def _classify_testcases(self):
         results = []
         for testcase_id, (status, res, reported) in self.testcases.items():
@@ -99,7 +125,7 @@ class Summary:
                 dict(
                     zip(
                         ["line_num", "expect", "output"],
-                        [line_number, expect, html.escape(output).replace('\n', '<br>')],
+                        [line_number, expect, self._normalize_output_for_html(output)],
                     )
                 )
                 for succeeded, line_number, expect, output in res

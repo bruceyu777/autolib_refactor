@@ -3,6 +3,7 @@ import csv
 import datetime
 import json
 import os
+import re
 
 import requests
 import time
@@ -178,8 +179,27 @@ class OrioleClient:
         return result
 
     def dump(self):
+        json_str = json.dumps(self.reports, indent=4)
+        new_lines = []
+        results_begin = False
+        results_lines = []
+        for line in json_str.splitlines():
+            if re.match("\s+\"results\": \[", line):
+                results_begin = True
+                results_lines.append(line)
+            else:
+                if results_begin:
+                    results_lines.append(line.strip())
+                    if re.match("\s+\]", line):
+                        results_begin = False
+                        new_lines.append("".join(results_lines))
+                        results_lines = []
+                else:
+                    new_lines.append(line)
+        report_str = "\n".join(new_lines)
         with open(self.file_name, "w") as f:
-            f.write(json.dumps(self.reports, indent=4))
+            f.write(report_str)
+
 
 
     @staticmethod

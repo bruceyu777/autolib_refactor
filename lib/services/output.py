@@ -41,4 +41,5 @@ class Output:
         return "/".join(self.directory_path.parts[-3:])
 
 
+
 output = Output()

@@ -95,9 +95,11 @@ class DevConn:
         if m:
             match_pos = match_pos + m.start()
         else:
-            logger.info("current output in send_command is %s", self.output_buffer[cur_pos:])
+            logger.info("current output in send_command is %s", self.output_buffer[match_pos:])
         try:
-            m, output = self.search(pattern, timeout, cur_pos)
+            m, output = self.search(pattern, timeout, match_pos)
+            #command failure
+
             return m, output
         except pexpect.TIMEOUT:
             logger.warning("Failed to match %s in %s s.", pattern, timeout)
