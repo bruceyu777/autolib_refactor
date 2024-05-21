@@ -34,7 +34,7 @@ class EnvParser:
                 elif re.match(r"\[.+\]", line):
                     self.section_commented = False
                 if not self.section_commented:
-                    f.write(line)
+                    f.write(line.strip() + "\n")
 
     def _dereference(self):
         pattern = r"[a-zA-Z_]\w*"
@@ -60,6 +60,8 @@ class EnvParser:
 
     def show(self):
         for section in self.config.sections():
+            for key, value in self.config.items(section):
+                print(section, key, value)
             if section == "ORIOLE":
                 print(section)
                 for key, value in self.config.items(section):
@@ -82,6 +84,7 @@ if __name__ == "__main__":
     envParser = EnvParser("./lib/testcases/env/fgt.env")
     # print(envParser.env["FGT_A"])
     # envParser.run()
-    res = envParser.filter_section_items("ORIOLE", "field")
+    res = envParser.show()
+    # envParser.get
     print(res)
     # print("connection" in envParser.env["FGT_A"])

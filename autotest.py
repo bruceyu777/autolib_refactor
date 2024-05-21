@@ -2,11 +2,14 @@
 
 import argparse
 import sys
+import time
 import os
+import requests
 
 from lib.core.scheduler.job import Job
 from lib.services import logger, set_logger
 from lib.utilities.exceptions import CompileException, FileNotExist
+
 
 
 class Upgrade(argparse.Action):
@@ -14,11 +17,44 @@ class Upgrade(argparse.Action):
         super(Upgrade, self).__init__(option_strings, dest, nargs=0, **kwargs)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        exit_status = os.system("curl -O http://172.18.52.254/AutoLib/AutoLib_v3")
-        if exit_status == 0:
-            print("Succeeded to upgrade.")
+        r, w = os.pipe()
+        pid = os.fork()
+        if pid > 0:
+            os.close(w)
+            r = os.fdopen(r)
+            str = ""
+            while "Succeeded" not in str and "Failed" not in str:
+                str = r.read()
+                print(str)
+                sys.stdout.flush()
+
+            sys.exit(0)
         else:
-            print("Failed to upgrade.")
+            os.chdir("/tmp")
+            os.umask(0)
+            # Close all open file descriptors except for stdin, stdout, and stderr
+            max_fd = os.sysconf("SC_OPEN_MAX") if hasattr(os, "sysconf") else 2048
+            for fd in range(3,max_fd):
+                try:
+                    if w == fd:
+                        continue
+                    os.close(fd)
+                except OSError:
+                    pass
+            w = os.fdopen(w, 'w')
+            w.write("Started to upgrade.\n")
+            exit_status = os.system("curl --silent --output /dev/null http://172.18.52.254/AutoLib/AutoLib_v3")
+
+            # time.sleep(10)
+            if exit_status == 0:
+                w.write("Succeeded to upgrade.\n")
+            else:
+                w.write("Failed to upgrade.\n")
+
+            w.close()
+            sys.exit(0)
+
+        print("\n")
         sys.exit(0)
 
 
@@ -37,7 +73,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-v", '--version', action="version",
-                    version="AutoLib 3.0.5")
+                    version="AutoLib 3.0.6")
     parser.add_argument(
         "-u",
         "--upgrade",
@@ -68,6 +104,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "-b", "--build", dest="build", help="Build number", required=False
     )
+
+
     parser.add_argument(
         "-d",
         "--debug",
@@ -87,6 +125,17 @@ if __name__ == "__main__":
         help="only do syntax check",
         required=False,
     )
+
+    parser.add_argument(
+        "-re",
+        "--reset",
+        dest="reset",
+        action="store_false",
+        default=True,
+        help="if need factory reset for upgrading",
+        required=False,
+    )
+
 
     parser.add_argument(
         "-s",

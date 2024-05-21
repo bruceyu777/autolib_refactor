@@ -50,6 +50,7 @@ class Executor:
 
     def __enter__(self):
         logger.notice("Start executing script: %s", self.script)
+        summary.dump_script_start_time_to_brief_summary()
         self._add_file_handler()
         with open(self.script, "r", encoding="utf-8") as f:
             self.lines = [line.strip() for line in f.readlines()]
@@ -109,6 +110,10 @@ class Executor:
 
     def _resetFirewall(self, _):
         self.cur_device.reset_firewall()
+        
+    def _restore_image(self, parameters):
+        release, build = parameters
+        self.cur_device.restore_image(release, build, False)
 
     def _clean_buffer(self, _):
         self.cur_device.clear_buffer()
@@ -399,7 +404,7 @@ class Executor:
         ) = parameters
         var1 = env.get_var(var1)
         var2 = env.get_var(var2)
-        result = (var1 == var2) ^ (fail_match == 'eq')
+        result = (str(var1) == str(var2)) ^ (fail_match == 'eq')
         output = f"v1:{var1} v2:{var2}"
         self.expect_result[testcase_id].append(
             (
@@ -421,6 +426,7 @@ class Executor:
     def _comment(self, parameters):
         comment = parameters[0]
         logger.notify(comment)
+        summary.dump_comments_to_brief_summary(comment)
 
     def report_to_oriole(self, testcase_id, device_info):
         is_succeeded = all(result for result, *_ in self.expect_result[testcase_id])
@@ -434,6 +440,12 @@ class Executor:
 
     def _get_failure_details(self):
         return ",".join(f"{line_number}: {line}" for _, details in self.expect_result.items() for  result, line_number, line, _  in details if not result)
+
+    def _get_brief_result(self):
+        failure_lines =  " ".join(f"{line_number}" for _, details in self.expect_result.items() for  result, line_number, _, _  in details if not result)
+        if failure_lines:
+            return f"Failed at lines {failure_lines}"
+        return "Passed"
 
     def report_all(self):
         is_script_succeeded = True
@@ -460,6 +472,8 @@ class Executor:
         summary.update_testscript(Path(self.script).stem, res_str)
         if not is_script_succeeded:
             summary.add_failed_testscript(Path(self.script).stem, self.script, self._get_failure_details())
+        result = self._get_brief_result()
+        summary.dump_result_to_brief_summary(Path(self.script).stem, self.script, result)
 
     def _report(self, parameters):
         testcase_id = parameters[0]

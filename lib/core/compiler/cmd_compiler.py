@@ -51,7 +51,7 @@ class CmdCompiler:
         return re.match("exe.*restore.*|exe.*vm-license(\s.*)?$", command)
 
     def _is_reboot_command(self, command):
-        return re.match("exe.*reboot.*", command)
+        return re.match("exe.*reboot.*", command) or command == "rebootFirewall"
 
     def _is_restore_ips_command(self, command):
         return re.match("exe.*restore.*ips", command)
@@ -91,7 +91,11 @@ class CmdCompiler:
         #     ]
         #     return vm_codes
         if self._is_reboot_command(command):
-            vm_codes = [VMCode(line_number, "send_line", (command,))]
+            if command == "rebootFirewall":
+                vm_codes = [VMCode(line_number, "send_line", ("config global",)),
+                           VMCode(line_number, "send_line", ("exe reboot",))]
+            else:
+                vm_codes = [VMCode(line_number, "send_line", (command,))]
             vm_codes = vm_codes + [
                 VMCode(line_number, operation, parameters)
                 for operation, parameters in self.codes["reboot_command"]

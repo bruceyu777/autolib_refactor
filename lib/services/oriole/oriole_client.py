@@ -62,10 +62,9 @@ class OrioleClient:
             args.submit_flag if hasattr(args, "submit_flag") else self.submit_flag
         )
         self.specified_fields = env.filter_env_section_items("ORIOLE", "resfield")
-        # print(self.specified_fields)
-        # print(self.user)
-        # print(self.password)
-        # breakpoint()
+        if "resfield_mark" not in self.specified_fields:
+            self.specified_fields["mark"] = "AutoLib_v3"
+
 
     def send_oriole(self, user, password, report, release_tag):
         try:
@@ -158,6 +157,7 @@ class OrioleClient:
                 "bug_id": "1",
             }
         )
+
         result.update(self.specified_fields)
 
         report["results"] = [result]

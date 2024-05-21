@@ -183,7 +183,7 @@ class VmManager:
         for vm_name in self.vm_hosts:
             vm_status = self.retr_vm_status(vm_name)
             if vm_status is None:
-                raise ResourceNotAvailable
+                raise ResourceNotAvailable(f"vm_name {vm_name} not available")
             if vm_status == VM_RUNNING:
                 continue
             if vm_status in [VM_SHUTOFF, VM_PAUSED]:

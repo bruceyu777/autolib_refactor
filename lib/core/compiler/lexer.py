@@ -20,8 +20,8 @@ APIS_WITH_PARAS = (
     "setenv",
     "compare",
     "expect_OR",
-    "collect_dev_info"
-
+    "collect_dev_info",
+    "restore_image"
 )
 APIS_WITHOUT_PARAS = ("forcelogin", "clearbuff", "clear_buffer", "clean_buffer", "breakpoint", "resetFirewall")
 APIS_WITH_PARAS_PATTERN = "|".join(rf"{api}\s+.+" for api in APIS_WITH_PARAS)

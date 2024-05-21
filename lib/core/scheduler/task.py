@@ -35,7 +35,7 @@ class Task:
 
         for dev_name, dev in self.devices.items():
             if dev_name.startswith(("FVM", "FFW", "FGT")) and not env.need_deploy_vm():
-                dev.restore_image(env.args.release, env.args.build)
+                dev.restore_image(env.args.release, env.args.build, env.args.reset)
             if dev_name.startswith(("FVM", "FFW")) and env.need_deploy_vm():
                 dev.activate_license()
 

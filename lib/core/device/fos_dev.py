@@ -217,10 +217,14 @@ class FosDev(Device):
     def image_prefix(self):
         raise NotImplementedError
 
+    def _send_reset_command(self):
+        self.send_line("exe factoryreset")
+
     def reset_firewall(self):
         self.send_line("config global")
         self.search("#", 30)
-        self.send_line("exe factoryreset")
+        # self.send_line("exe factoryreset")
+        self._send_reset_command()
         self.search("y/n", 30)
         self.send_line("y")
         self.search("login:", 300, -1)
@@ -272,11 +276,13 @@ class FosDev(Device):
             self.send_line(password)
             self.search("#", 30, -1)
 
-    def restore_image(self, release, build):
-        logger.notify("Start reset firewall.")
-        self.reset_firewall()
+    def restore_image(self, release, build, need_reset=True):
+        if need_reset:
+            logger.notify("Start reset firewall.")
+            self.reset_firewall()
         logger.notify("Start configuring output mode to be standard.")
-        self.set_output_mode(is_vdom_enabled=False)
+        is_vdom_enabled = self.is_vdom_enabled
+        self.set_output_mode(is_vdom_enabled=is_vdom_enabled)
         logger.notify("Succeeded configuring output mode to be standard.")
         self.model = self.system_status["platform"]
         logger.notify("Start configuring mgmt settings.")

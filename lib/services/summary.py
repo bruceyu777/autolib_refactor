@@ -17,6 +17,7 @@ import html
 
 SUMMARY_FILE_NAME = "summary.html"
 TEMPLATE_FILE_NAME = "summary.template"
+BRIEF_SUMMARY_FILE_NAME = "brief_summary.txt"
 FAILED_TESTSCRIPTS_FILE_NAME = "failed_testscripts.txt"
 TEMPLATE_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -28,6 +29,9 @@ class Summary:
         self.file_name = output.compose_summary_file(SUMMARY_FILE_NAME)
         self.failed_testscripts_file_name = output.compose_summary_file(
             FAILED_TESTSCRIPTS_FILE_NAME
+        )
+        self.brief_summary_file_name = output.compose_summary_file(
+            BRIEF_SUMMARY_FILE_NAME
         )
         self.start_time = datetime.now().replace(microsecond=0)
         self.end_time = "NA"
@@ -201,6 +205,19 @@ class Summary:
             self.failed_testscripts_file_name, "a", encoding="utf-8"
         ) as f:
             f.write(f"{script_id}  {script} {comment}\n")
+
+    def dump_result_to_brief_summary(self, script_id, script, result):
+        with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
+            f.write(f"{script_id} {script} {result}\n")
+
+    def dump_comments_to_brief_summary(self, comment):
+        with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
+            f.write(f"{comment}\n")
+
+    def dump_script_start_time_to_brief_summary(self):
+        with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
+            current_time = datetime.now().replace(microsecond=0)
+            f.write(f"Current Time: {current_time}\n")
 
 
 summary = Summary()

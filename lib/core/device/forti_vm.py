@@ -24,6 +24,9 @@ class FortiVM(FosDev):
         )
         return image_prefix.replace("-", "_").replace("FortiFirewall", "FFW")
 
+    def _send_reset_command(self):
+        self.send_line("exe factoryreset keepvmlicense")
+
     @property
     def system_status(self):
         rule = (

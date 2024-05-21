@@ -10,7 +10,7 @@ from lib.utilities.exceptions import SyntaxError
 
 VALID_COMMANDS = ('set', 'edit', 'config', 'diag', 'exe', 'execute','del', "next", "end", "unset", "keep_running", "resetFirewall", "show"
 , "append", "select", "unselect", "purge", "get", "conf", "clear", "sh", "myset", "myend", "mynext", "mydelete", "comment", "Comment", "ctrl_c", "nan_enter",
-"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c"
+"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c", "restore_image"
 )
 class Parser:
     SYNTAX = {
@@ -38,6 +38,44 @@ class Parser:
                     ("identifier", "-for"),
                     (("number", "identifier"), None),
                 ),
+            ),
+            
+            # "compare": (
+            #     "parse_options",
+            #     (
+            #         {
+            #             "-v1": None,
+            #             "-v2": None,
+            #             "-for": None,
+            #             "-fail": "uneq",
+            #         },
+            #         (
+            #             ("identifier", None),
+            #             (
+            #                 [
+            #                     "identifier",
+            #                     "number",
+            #                     "string",
+            #                     "variable",
+            #                     "operator",
+            #                 ],
+            #                 None,
+            #             ),
+            #         ),
+            #     ),
+            # ),
+            "restore_image": (
+                "parse_options", 
+                (
+                    {
+                        "-v": None,
+                        "-b": None,
+                    },
+                    (
+                        ("identifier", None),
+                        ("number", None),
+                    ),
+                ),   
             ),
             "report": (
                 "parse",

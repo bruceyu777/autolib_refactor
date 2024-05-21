@@ -7,7 +7,7 @@ import setproctitle
 import os
 from lib.services.log import logger
 import sys
-
+# import singal
 
 # Define a custom handler that suppresses logging messages
 class SilentHandler(http.server.SimpleHTTPRequestHandler):
@@ -42,68 +42,48 @@ class WebServer:
                 return True
         return False
 
-    def start(self):
-        logging.getLogger('http.server').setLevel(logging.ERROR)
-        setproctitle.setproctitle(self.process_name)
+    def _is_already_started(self):
         if not self._is_port_available():
             if self._is_webserver_exists():
                 logger.info(
                     "HTTP server is already running on port %s",
                     self.port,
                 )
-                sys.exit(0)
             else:
                 logger.notice(
                     "Another service is already on port %s, you can specify another port in your env file if you want to use web server.",
                     self.port,
                 )
-        else:
-            self.create()
-            logger.info(
-                "Succeeded to start HTTP server on port %s",
-                self.port,
-            )
+
+    def start(self):
+        try:
+            pid = os.fork()
+            if pid > 0:
+                return
+        except OSError as e:
+            print(f"Fork failed: {e}")
+            sys.exit(1)
+
+        os.setsid()
+        os.umask(0)
+
+        sys.stdout.flush()
+        sys.stderr.flush()
+        with open('/dev/null', 'r') as devnull:
+            os.dup2(devnull.fileno(), sys.stdin.fileno())
+            os.dup2(devnull.fileno(), sys.stdout.fileno())
+            os.dup2(devnull.fileno(), sys.stderr.fileno())
+
+        logging.getLogger('http.server').setLevel(logging.ERROR)
+        setproctitle.setproctitle(self.process_name)
+        self.create()
+        logger.info(
+            "Succeeded to start HTTP server on port %s",
+            self.port,
+        )
+
 
     def create_process(self):
-        pid = os.fork()
-        if pid == 0:
-            setproctitle.setproctitle(self.process_name)
-            self.start()
-        else:
-            logger.info('After creating web server for autotest.')
-
-
-# def create_process(args):
-#     pid = os.fork()
-#     if pid == 0:
-#         # while True:
-#         print(f"subprocess pid: {os.getpid()}")
-#         setproctitle.setproctitle("web_server_autotest")
-#         WebServer(args.ip, args.port).start()
-
-#     else:
-#         print('parent process.')
-
-# if __name__ == "__main__":
-#     from multiprocessing import Process
-#     import time, os
-
-#     parser = argparse.ArgumentParser(description="Start AutoTest Web Server.")
-#     parser.add_argument(
-#         "-i",
-#         "--ip",
-#         dest="ip",
-#         help="Host Ip Address",
-#         required=True,
-#     )
-#     parser.add_argument(
-#         "-p",
-#         "--port",
-#         dest="port",
-#         help="Host Port",
-#         required=True,
-#     )
-
-#     args = parser.parse_args()
-#     create_process(args)
-
+        if self._is_already_started():
+            return
+        self.start()
