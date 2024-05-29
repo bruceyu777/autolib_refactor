@@ -150,8 +150,8 @@ class Device:
         if command == "ctrl_c":
             # pdb.set_trace()
             command = "\x03"
-        if command == 'nan_enter':
-            command = "\x0d"
+        # if command == 'nan_enter':
+        #     command = "\x0d"
 
         if command.startswith(("telnet ", "ssh ", "sshpass ")):
             self.embeded_conn = True

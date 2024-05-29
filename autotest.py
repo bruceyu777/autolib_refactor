@@ -5,7 +5,7 @@ import sys
 import time
 import os
 import requests
-
+# import pdb
 from lib.core.scheduler.job import Job
 from lib.services import logger, set_logger
 from lib.utilities.exceptions import CompileException, FileNotExist
@@ -30,8 +30,8 @@ class Upgrade(argparse.Action):
 
             sys.exit(0)
         else:
-            os.chdir("/tmp")
             os.umask(0)
+
             # Close all open file descriptors except for stdin, stdout, and stderr
             max_fd = os.sysconf("SC_OPEN_MAX") if hasattr(os, "sysconf") else 2048
             for fd in range(3,max_fd):
@@ -43,9 +43,8 @@ class Upgrade(argparse.Action):
                     pass
             w = os.fdopen(w, 'w')
             w.write("Started to upgrade.\n")
-            exit_status = os.system("curl --silent --output /dev/null http://172.18.52.254/AutoLib/AutoLib_v3")
-
-            # time.sleep(10)
+            os.system("rm -rf AutoLib_v3")
+            exit_status = os.system("curl -O http://172.18.52.254/AutoLib/AutoLib_v3")
             if exit_status == 0:
                 w.write("Succeeded to upgrade.\n")
             else:
@@ -54,7 +53,6 @@ class Upgrade(argparse.Action):
             w.close()
             sys.exit(0)
 
-        print("\n")
         sys.exit(0)
 
 
@@ -73,7 +71,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-v", '--version', action="version",
-                    version="AutoLib 3.0.6")
+                    version="AutoLib 3.0.7")
     parser.add_argument(
         "-u",
         "--upgrade",

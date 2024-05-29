@@ -1,9 +1,12 @@
 import logging
+import os
 import re
 import sys
+import zipfile
 from collections import defaultdict
 from pathlib import Path
 from time import sleep, perf_counter
+
 
 from lib.services import env, logger, oriole, output, summary
 from lib.services.log import add_logger_handler
@@ -38,6 +41,7 @@ class Executor:
         self.debugger = None
         self.need_stop = False
         self.testcase_dev_info = dict()
+        self.log_file = None
 
     def _add_file_handler(self):
         formatter = logging.Formatter(
@@ -63,6 +67,15 @@ class Executor:
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
         logger.notice("Finished executing script: %s", self.script)
+        zip_file = output.compose_log_file(Path(self.script).stem, "autotest.zip")
+        log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
+        # with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        #     print(zip_file.namje)
+        #     zipf.write(log_file, arcname=zip_file.name)
+
+        zipfile.ZipFile(zip_file, mode='w').write(log_file, arcname="autotest.zip")
+        os.remove(log_file)
+
 
     def clear_devices_buffer(self):
         for device in self.devices.values():
@@ -110,7 +123,7 @@ class Executor:
 
     def _resetFirewall(self, _):
         self.cur_device.reset_firewall()
-        
+
     def _restore_image(self, parameters):
         release, build = parameters
         self.cur_device.restore_image(release, build, False)
@@ -442,9 +455,9 @@ class Executor:
         return ",".join(f"{line_number}: {line}" for _, details in self.expect_result.items() for  result, line_number, line, _  in details if not result)
 
     def _get_brief_result(self):
-        failure_lines =  " ".join(f"{line_number}" for _, details in self.expect_result.items() for  result, line_number, _, _  in details if not result)
+        failure_lines =  "\n".join(f"{line_number}: {line}" for _, details in self.expect_result.items() for  result, line_number, line, _  in details if not result)
         if failure_lines:
-            return f"Failed at lines {failure_lines}"
+            return f"Failed at lines:\n{failure_lines}"
         return "Passed"
 
     def report_all(self):

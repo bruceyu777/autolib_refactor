@@ -1,5 +1,6 @@
 import re
 from lib.services.output import output
+from lib.services.summary import summary
 
 ERROR_INFO = ("Unknown action", "command parse error", "Command fail", "incomplete command", "no tablename", "no object", "value parse error", "ambiguous command",
 "internal error", "discard the setting", "not found in table", "unset oper error ret", "Attribute(.*?)Must be set", "not found in datasource",
@@ -27,10 +28,12 @@ class CmdExecChecker:
             self.dump_failed_commands(error)
 
     def dump_failed_commands(self, error):
+        err_info = f"Command: {self.script}:{self.line_number} {self.command} Error: {error}."
         with open(
             self.failed_commands_file_name, "a", encoding="utf-8"
         ) as f:
-            f.write(f"Command: {self.script}:{self.line_number} {self.command} Error: {error}\n")
+            f.write(f"{err_info}\n")
+        summary.dump_err_command_to_brief_summary(err_info)
 
 if __name__ == "__main__":
     pass

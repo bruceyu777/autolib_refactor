@@ -73,7 +73,7 @@ class Parser:
                     },
                     (
                         ("identifier", None),
-                        ("number", None),
+                        (["number", "variable"], None),
                     ),
                 ),   
             ),

@@ -51,3 +51,6 @@ testcase/scripts/*
 
 AutoLib_v3_back
 test.py
+
+testcase_backup2
+env.501E.conf.local4.temp

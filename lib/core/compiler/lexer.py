@@ -65,9 +65,12 @@ LINE_PATTERN = re.compile(
 
 TOKEN_PATTERN_TABLE = {
     "variable": r"\{?\$(?P<variable_name>[^\s]+?)\s*\}?",
-    "symbol": r"==|[-()[\]{}<>+*/=]",
+    "symbol": r"==|[-()[\]{}<>+*\/=]",
     "number": r"(?P<number_content>\d+)",
     "operator": r"eq|ne|lt",
+    "expect_double": r'\-e\s+"(?P<double_quote_str>[^\"]*)"(?=\s+\-)',
+    "expect_single": r"\-e\s+'(?P<single_quote_str>[^\']*)'(?=\s+\-)",
+    "expect_string": r"\-e\s+(?P<expect_str>\S*)(?=\s+\-)",
     "string": r'"(?:\"|[^"\\]|\\.)*?"',
     "identifier": r"\{.+\}|.+?",
 }
@@ -78,6 +81,7 @@ TOEKN_PATTERN = re.compile(
         for type, pattern in TOKEN_PATTERN_TABLE.items()
     )
 )
+
 
 
 class Token(dict):
@@ -164,28 +168,31 @@ class Lexer:
             m = TOEKN_PATTERN.match(string, pos)
             if m is None:
                 print(f"{self.line_number}: {string[pos:]}")
+
             matched_group = m.groupdict()
-            variable_name = (
-                matched_group["variable_name"]
-                if matched_group is not None
-                else None
-            )
-            number = (
-                matched_group["number_content"]
-                if matched_group is not None
-                else None
-            )
-            if m is None:
-                print(f"{self.line_number}: {string[pos:]}")
             for token_type, matched_content in m.groupdict().items():
                 if (
                     matched_content is not None
                     and token_type in TOKEN_PATTERN_TABLE
                 ):
                     if token_type == "variable":
+                        variable_name = matched_group.get("variable_name", None)
                         self.add_token(token_type, variable_name)
                     elif token_type == "number":
+                        number = matched_group.get("number_content", None)
                         self.add_token(token_type, number)
+                    elif token_type == "expect_double":
+                        double_quote_str = matched_group.get("double_quote_str", None)
+                        self.add_token("identifier", "-e")
+                        self.add_token("string", double_quote_str)
+                    elif token_type == "expect_single":
+                        single_quote_str = matched_group.get("single_quote_str", None)
+                        self.add_token("identifier", "-e")
+                        self.add_token("string", single_quote_str)
+                    elif token_type == "expect_string":
+                        expect_str = matched_group.get("expect_str", None)
+                        self.add_token("identifier", "-e")
+                        self.add_token("string", expect_str)
                     else:
                         self.add_token(token_type, matched_content)
             pos = m.end()

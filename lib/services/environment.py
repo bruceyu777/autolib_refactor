@@ -100,10 +100,15 @@ class Environment:
         logger.info("self.user_env.get(section, variable, fallback=None): %s", self.user_env.get(section, variable, fallback=None))
         return self.user_env.get(section, variable, fallback=None)
 
+    @staticmethod
+    def escape_single_percent(var_val):
+        return re.sub("%", "%%", var_val)
+
     def set_section_var(self, section, var_name, var_val):
         if var_val is None:
             logger.error("section:%s var_name:%s var_val %s", section, var_name, var_val)
             return
+        var_val = self.escape_single_percent(var_val)
         self.user_env[section][var_name] = var_val
         return
 
@@ -176,6 +181,7 @@ class Environment:
 
     def filter_env_section_items(self, section_name, start_string):
         res = {}
+
         for section in self.user_env.sections():
             if section == section_name:
                 for key, value in self.user_env.items(section):
@@ -188,4 +194,11 @@ env = Environment()
 # env.get_env_file_name()
 
 if __name__ == "__main__":
-    env.get_dut()
+    # env.get_dut()
+    env_parser = EnvParser("./lib/testcases/env/fgt.env")
+    env.set_user_defined_env(env_parser.env)
+    env.set_section_var("GLOBAL", "local_http_server_port", "aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%%%3D")
+    res  = env_parser.show()
+    res = env.get_section_var("GLOBAL", "local_http_server_port")
+    print(res)
+

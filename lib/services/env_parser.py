@@ -85,6 +85,10 @@ if __name__ == "__main__":
     # print(envParser.env["FGT_A"])
     # envParser.run()
     res = envParser.show()
+    envParser.env.set("GLOBAL", "local_http_server_port", "aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%3D")
     # envParser.get
+    # print(res)
+
+    res = envParser.show()
     print(res)
     # print("connection" in envParser.env["FGT_A"])

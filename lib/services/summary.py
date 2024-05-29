@@ -219,6 +219,10 @@ class Summary:
             current_time = datetime.now().replace(microsecond=0)
             f.write(f"Current Time: {current_time}\n")
 
+    def dump_err_command_to_brief_summary(self, err_info):
+        with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
+            f.write(f"{err_info}\n")
+
 
 summary = Summary()
 
