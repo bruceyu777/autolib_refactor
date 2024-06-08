@@ -245,6 +245,7 @@ class Executor:
                 fail_match,
                 wait_seconds,
             )
+            summary.dump_err_command_to_brief_summary(f"{testcase_id} failed at line {self.last_line_number}: {self.lines[self.last_line_number - 1]}.")
 
     def _expect_OR(self, parameters):
         print(parameters)
@@ -439,7 +440,7 @@ class Executor:
     def _comment(self, parameters):
         comment = parameters[0]
         logger.notify(comment)
-        summary.dump_comments_to_brief_summary(comment)
+        summary.dump_str_to_brief_summary(comment)
 
     def report_to_oriole(self, testcase_id, device_info):
         is_succeeded = all(result for result, *_ in self.expect_result[testcase_id])
@@ -455,9 +456,9 @@ class Executor:
         return ",".join(f"{line_number}: {line}" for _, details in self.expect_result.items() for  result, line_number, line, _  in details if not result)
 
     def _get_brief_result(self):
-        failure_lines =  "\n".join(f"{line_number}: {line}" for _, details in self.expect_result.items() for  result, line_number, line, _  in details if not result)
+        failure_lines =  " ".join(f"{line_number}" for _, details in self.expect_result.items() for  result, line_number, line, _  in details if not result)
         if failure_lines:
-            return f"Failed at lines:\n{failure_lines}"
+            return f"Failed {failure_lines}"
         return "Passed"
 
     def report_all(self):

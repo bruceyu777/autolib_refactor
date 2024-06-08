@@ -210,7 +210,7 @@ class Summary:
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
             f.write(f"{script_id} {script} {result}\n")
 
-    def dump_comments_to_brief_summary(self, comment):
+    def dump_str_to_brief_summary(self, comment):
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
             f.write(f"{comment}\n")
 

@@ -76,7 +76,7 @@ class CmdCompiler:
                 for operation, parameters in self.codes["restore_ips_command"]
             ]
             return vm_codes
-        if self._is_restore_command(command):
+        if self._is_restore_command(command) and not command.startswith("exe restore script"):
             vm_codes = [VMCode(line_number, "send_line", (command,))]
             vm_codes = vm_codes + [
                 VMCode(line_number, operation, parameters)

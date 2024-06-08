@@ -10,7 +10,7 @@ from lib.core.scheduler.job import Job
 from lib.services import logger, set_logger
 from lib.utilities.exceptions import CompileException, FileNotExist
 
-
+from lib.services.summary import summary
 
 class Upgrade(argparse.Action):
     def __init__(self, option_strings, dest, nargs=0, **kwargs):
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-v", '--version', action="version",
-                    version="AutoLib 3.0.7")
+                    version="AutoLib 3.0.8")
     parser.add_argument(
         "-u",
         "--upgrade",
@@ -128,8 +128,8 @@ if __name__ == "__main__":
         "-re",
         "--reset",
         dest="reset",
-        action="store_false",
-        default=True,
+        action="store_true",
+        default=False,
         help="if need factory reset for upgrading",
         required=False,
     )
@@ -151,11 +151,16 @@ if __name__ == "__main__":
         logger.error("Please speicify the testcase script or testcase group.")
 
     logger.notice("Start test job.")
+    test_file = None
     if args.script:
         logger.notice("Test script is %s", args.script)
+        test_file = args.script
     if args.group:
         logger.notice("Test group is %s", args.group)
+        test_file = args.group
     logger.notice("Test environment file is %s", args.env)
+
+    summary.dump_str_to_brief_summary(f"Environment File: {args.env}, Test File: {test_file}")
 
     try:
         job = Job(args)

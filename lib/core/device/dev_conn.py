@@ -84,7 +84,20 @@ class DevConn:
         )
         logger.info("Current pattern is %s", pattern)
 
-        self.client.sendline(command)
+        # if command == "nan_enter":
+        #     self.client.send('\x0d')
+        if command.endswith("?"):
+            self.client.send(command)
+        elif command == "nan_enter":
+            self.client.send('\x0d')
+        elif command.startswith("backspace"):
+            cnt = int(command.split(" ")[1])
+            # print("send backspace")
+            for i in range(cnt):
+                self.client.send("\x08")
+            self.client.send("\x0d")
+        else:
+            self.client.sendline(command)
 
         #make sure to match the output after command is send
         try:
