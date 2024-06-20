@@ -51,14 +51,21 @@ class Debugger:
         sys.exit(0)
 
     def _jump(self, line_number):
-        if line_number < 0 or line_number >= len(self.lines):
+        # pdb.set_trace()
+        if line_number <= 0 or line_number > len(self.lines):
             print("Invalid line number.")
             self.next_action = WAIT_FOR_INPUT
             return
+        pc = None
+        # print(self.vm_codes)
         for i in range(len(self.vm_codes)):
             if self.vm_codes[i].line_number == line_number:
                 pc = i
                 break
+        if pc is None:
+            print("Invalid line number.")
+            self.next_action = WAIT_FOR_INPUT
+            return
         self.next_pc = pc
         self.next_action = EXECUTE
 
@@ -66,12 +73,12 @@ class Debugger:
         # pdb.set_trace()
         if count > 0:
             for i in range(count):
-                if self.line_number + i  < len(self.lines):
-                    print(f"{self.line_number + i} {self.lines[self.line_number + i]}")
+                if self.line_number + i - 1 < len(self.lines):
+                    print(f"{self.line_number + i} {self.lines[self.line_number + i - 1]}")
         else:
             for i in range(count, 1):
-                if self.line_number + i  >= 0:
-                    print(f"{self.line_number + i} {self.lines[self.line_number + i]}")
+                if self.line_number + i - 1  >= 0:
+                    print(f"{self.line_number + i} {self.lines[self.line_number + i - 1]}")
         self.next_action = WAIT_FOR_INPUT
 
 
@@ -114,7 +121,7 @@ class Debugger:
             return pc
         self.line_number = line_number
         self.pc = pc
-        print(f"{self.line_number} {self.lines[self.line_number]}")
+        print(f"{self.line_number} {self.lines[self.line_number - 1]}")
         while True:
             user_input = input("(debug):")
             action, para = self._parse_input(user_input)

@@ -69,11 +69,8 @@ class Executor:
         logger.notice("Finished executing script: %s", self.script)
         zip_file = output.compose_log_file(Path(self.script).stem, "autotest.zip")
         log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
-        # with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        #     print(zip_file.namje)
-        #     zipf.write(log_file, arcname=zip_file.name)
-
-        zipfile.ZipFile(zip_file, mode='w').write(log_file, arcname="autotest.zip")
+        with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(log_file, arcname=os.path.basename(log_file))
         os.remove(log_file)
 
 
@@ -719,7 +716,7 @@ class Executor:
             code = self.vmcodes[self.pc]
             # print(self.vmcodes, self.pc)
             if code.line_number is not None:
-                self.pc = self.debugger.run(code.line_number - 1, self.pc)
+                self.pc = self.debugger.run(code.line_number, self.pc)
             code = self.vmcodes[self.pc]
             if code.operation not in  ["comment", "with_device"]:
                 line_number = code.line_number

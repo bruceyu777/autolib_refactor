@@ -54,7 +54,7 @@ def add_file_stream():
     )
     log_file = output.compose_summary_file("autotest.log")
     handler = logging.FileHandler(log_file)
-    add_logger_handler(handler, logging.NOTIFY, formatter)
+    add_logger_handler(handler, logging.DEBUG, formatter)
 
 
 def set_logger(run_mode):

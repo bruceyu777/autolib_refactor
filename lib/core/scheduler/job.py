@@ -21,6 +21,7 @@ class Job:
         if self.args.group:
             task = GroupTask(self.args.group)
         task.run(self.args)
+        output.zip_autotest_log()
 
     def start_http_server(self):
         ip, port = env.get_local_http_server_conf()

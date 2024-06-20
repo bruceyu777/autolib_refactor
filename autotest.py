@@ -11,6 +11,7 @@ from lib.services import logger, set_logger
 from lib.utilities.exceptions import CompileException, FileNotExist
 
 from lib.services.summary import summary
+from lib.services.output import output
 
 class Upgrade(argparse.Action):
     def __init__(self, option_strings, dest, nargs=0, **kwargs):
@@ -71,7 +72,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-v", '--version', action="version",
-                    version="AutoLib 3.0.8")
+                    version="AutoLib 3.0.9")
     parser.add_argument(
         "-u",
         "--upgrade",
@@ -165,10 +166,11 @@ if __name__ == "__main__":
     try:
         job = Job(args)
         job.run()
+        logger.notice("Test job finised.")
     except Exception as e:
         logger.error(e.message)
         if not args.check:
             sys.exit(-1)
-
-    logger.notice("Test job finised.")
+    # finally:
+        # output.zip_autotest_log()
     sys.exit(0)
