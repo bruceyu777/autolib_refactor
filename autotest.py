@@ -72,7 +72,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-v", '--version', action="version",
-                    version="AutoLib 3.0.9")
+                    version="AutoLib 3.0.10(2024-08-19)")
     parser.add_argument(
         "-u",
         "--upgrade",
@@ -131,10 +131,19 @@ if __name__ == "__main__":
         dest="reset",
         action="store_true",
         default=False,
-        help="if need factory reset for upgrading",
+        help="if factory reset is needed for upgrading",
         required=False,
     )
 
+    parser.add_argument(
+        "-bn",
+        "--burn",
+        dest="burn",
+        action="store_true",
+        default=False,
+        help="if image burning is needed for upgrading",
+        required=False,
+    )
 
     parser.add_argument(
         "-s",

@@ -136,7 +136,7 @@ class Environment:
 
     def variable_interpolation(self, string):
         #"Gateway Route(.*)\r(.*)- IP:PC_01:ETH1_IPV4, MAC: PC_01:MAC_ETH1\(.*)\r(.*)- Interface:FGT_A:PORT2, VFID:PC_01:REF1, SN: FGT_A:SN"
-        pattern = r"[a-zA-Z_]\w*"
+        pattern = r"[a-zA-Z_][-\w]*"
         matched = re.findall(rf"{pattern}(?::{pattern})+", string)
         var_value_dict = dict()
         for m in sorted(matched, key=len, reverse=True):

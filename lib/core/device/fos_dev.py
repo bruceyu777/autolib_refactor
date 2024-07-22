@@ -8,8 +8,10 @@ from lib.services.log import logger
 from lib.services.environment import env
 from lib.utilities.exceptions import KernelPanicErr, RestoreFailure
 
+from .common import BURN_IMAGE_STAGE, LOGIN_STAGE
 from .device import Device
 from .fosdev_conn import FosDevConn
+
 
 DEFAULT_MGMT = "port1"
 ERROR_INFO = (
@@ -26,9 +28,15 @@ DEFAULT_PATTERN = r"# $"
 class FosDev(Device):
     def __init__(self, dev_name):
         self.model = ""
-
+        logger.info("Start calling the device intialization.")
         super().__init__(dev_name)
         self._device_info = None
+
+
+    def set_stage(self, stage):
+        self.cur_stage = stage
+        self.conn.set_stage(stage)
+
 
     def connect(self):
         connection = (
@@ -42,8 +50,11 @@ class FosDev(Device):
             connection,
             self.dev_cfg["username"],
             self.dev_cfg["password"],
+            self.cur_stage
         )
         logger.info("Succeeded to connect to device %s.", self.dev_name)
+        if self.cur_stage == BURN_IMAGE_STAGE:
+            return
         self.send_command("")
         # logger.notify("Start configuring output mode to be standard.")
         # self.set_output_mode()
@@ -56,14 +67,18 @@ class FosDev(Device):
         self.clear_buffer()
 
     def show_command_may_have_more(self, command, rule):
+        logger.notify(f"begin to send {command}")
         self.send_line(command)
         time.sleep(1)
+        logger.notify(f"begin to send whitespace")
         self.send_line(" ")
+
         matched, _ = self.search(rule, 10)
         return matched.groupdict() if matched else {}
 
     @property
     def system_status(self):
+
         rule = (
             r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
             r"(build(?P<build>\d+)),\d+\s+\((?P<release_type>[\.\s\w]+)\).*?"
@@ -77,11 +92,14 @@ class FosDev(Device):
             rule = (
             r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
             r"(build(?P<build>\d+)),\d+\s+\((?P<release_type>[\.\s\w]+)\).*"
-            r"Serial-Number: (?P<serial>[^\n]*).*"
-            r"Virtual domain configuration: (?P<vdom_mode>[^\n]*).*"
-            r"Branch point: (?P<branch_point>[^\n]*).*"
+            r"Serial-Number: (?P<serial>[^\r\n]*).*"
+            r"Virtual domain configuration: (?P<vdom_mode>[^\r\n]*).*"
+            r"Branch point: (?P<branch_point>[^\r\n]*).*"
         )
             matched = self.show_command_may_have_more("get system status", rule)
+            if not matched:
+                logger.error("Failed to get system status.")
+        # print(f"The matched is {matched}")
         return matched
 
 
@@ -217,16 +235,9 @@ class FosDev(Device):
     def image_prefix(self):
         raise NotImplementedError
 
-    def _send_reset_command(self):
-        self.send_line("exe factoryreset")
-
-    def reset_firewall(self):
-        self.send_line("config global")
-        self.search("#", 30)
-        # self.send_line("exe factoryreset")
-        self._send_reset_command()
-        self.search("y/n", 30)
-        self.send_line("y")
+    # def _send_reset_command(self):
+    #     self.send_line("exe factoryreset")
+    def login_firewall_after_reset(self):
         self.search("login:", 300, -1)
         self.send_line("admin")
         self.search("Password:", 30, -1)
@@ -236,6 +247,8 @@ class FosDev(Device):
         self.search("Password:", 30, -1)
         self.send_line("admin")
         self.search("#", 30, -1)
+        self.send_line("config global")
+        self.search("#", 30)
         self.send_line("config system admin")
         self.search("#", 30, -1)
         self.send_line("edit admin")
@@ -260,6 +273,8 @@ class FosDev(Device):
         self.search("#", 30, -1)
         password = env.get_section_var(self.dev_name, "PASSWORD")
         if password:
+            self.send_line("config global")
+            self.search("#", 30)
             self.send_line("config system admin")
             self.search("#", 30, -1)
             self.send_line("edit admin")
@@ -276,10 +291,32 @@ class FosDev(Device):
             self.send_line(password)
             self.search("#", 30, -1)
 
-    def restore_image(self, release, build, need_reset=True):
+    def reset_firewall(self, cmd):
+        self.send_line("config global")
+        self.search("#", 30)
+        # self.send_line("exe factoryreset")
+        self.send_line(cmd)
+        self.search("y/n", 30)
+        self.send_line("y")
+        self.login_firewall_after_reset()
+
+
+    def restore_image(self, release, build, need_reset=True, need_burn=False):
         if need_reset:
             logger.notify("Start reset firewall.")
-            self.reset_firewall()
+            self.reset_firewall("exe factoryreset")
+
+        if need_burn:
+            logger.notify("Start burn image.")
+            self.burn_image(release, build)
+            self.set_stage("start_from_login")
+            self.login_firewall_after_reset()
+            return self.validate_build(release, build)
+
+        image = Image(self.image_prefix(), release, build, UPGRADE)
+        image_file = image_server.lookup_image(image)
+        image_loc = f"{image_file['parent_dir']}/{image_file['name']}"
+
         logger.notify("Start configuring output mode to be standard.")
         is_vdom_enabled = self.is_vdom_enabled
         self.set_output_mode(is_vdom_enabled=is_vdom_enabled)
@@ -288,10 +325,6 @@ class FosDev(Device):
         logger.notify("Start configuring mgmt settings.")
         self.pre_mgmt_settings()
         logger.notify("Finished configuring mgmt settings.")
-
-        image = Image(self.image_prefix(), release, build, UPGRADE)
-        image_file = image_server.lookup_image(image)
-        image_loc = f"{image_file['parent_dir']}/{image_file['name']}"
         command = f"exe restore image url http://{TFTP_SERVER_IP}/{image_loc}"
         if self.is_vdom_enabled:
             self._goto_global_view()

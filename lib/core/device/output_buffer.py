@@ -31,14 +31,14 @@ class OutputBuffer:
 
     def search(self, pattern, pos=0):
         pattern = self._normalize_newline_sensitivity(pattern)
-        logger.info("-----------start match output----------")
-        logger.info("%s", self.output[pos:])
-        logger.info("------------end match output-----------")
+        logger.debug("-----------start match output----------")
+        logger.debug("%s", self.output[pos:])
+        logger.debug("------------end match output-----------")
         t1 = time.perf_counter()
         result =  regex.search(pattern, self.output[pos:])
         t2 = time.perf_counter()
 
-        logger.info("pattern match for %s takes %s s", pattern, t2-t1)
+        logger.debug("pattern match for %s takes %s s", pattern, t2-t1)
 
         return result
 

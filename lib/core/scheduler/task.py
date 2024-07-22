@@ -35,7 +35,7 @@ class Task:
 
         for dev_name, dev in self.devices.items():
             if dev_name.startswith(("FVM", "FFW", "FGT")) and not env.need_deploy_vm():
-                dev.restore_image(env.args.release, env.args.build, env.args.reset)
+                dev.restore_image(env.args.release, env.args.build, env.args.reset, env.args.burn)
             if dev_name.startswith(("FVM", "FFW")) and env.need_deploy_vm():
                 dev.activate_license()
 
@@ -43,14 +43,14 @@ class Task:
         logger.notify("Devices used during the test %s", list(self.devices.keys()))
 
         if env.need_deploy_vm() and any(dev_name.startswith(("FVM", "FFW")) for dev_name in self.devices):
-            logger.notify("Sleep 10s for the console to abel to be connected for new deployed vms.")
+            logger.notify("Sleep 10s for the console to able to be connected for new deployed vms.")
             time.sleep(10)
         for dev_name in self.devices:
             t1 = perf_counter()
             if dev_name.startswith(("FVM", "FFW")):
                 self.devices[dev_name] = FortiVM(dev_name)
             elif dev_name.startswith("FGT"):
-                self.devices[dev_name] = FortiGate(dev_name)
+                self.devices[dev_name] = FortiGate(dev_name, env.args.burn)
             elif dev_name.startswith("PC"):
                 self.devices[dev_name] = Pc(dev_name)
             else:

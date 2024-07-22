@@ -61,14 +61,14 @@ class CmdCompiler:
 
     def compile(self, command, line_number):
         vm_codes = []
-        if self._is_reset_command(command):
-            if command != "resetFirewall":
-                vm_codes = [VMCode(line_number, "send_line", (command,))]
-                vm_codes = vm_codes + [
-                    VMCode(line_number, operation, parameters)
-                    for operation, parameters in self.codes["reset_command"]
-                ]
-            return vm_codes
+        # if self._is_reset_command(command):
+        #     if command != "resetFirewall":
+        #         vm_codes = [VMCode(line_number, "send_line", (command,))]
+        #         vm_codes = vm_codes + [
+        #             VMCode(line_number, operation, parameters)
+        #             for operation, parameters in self.codes["reset_command"]
+        #         ]
+        #     return vm_codes
         if self._is_restore_ips_command(command):
             vm_codes = [VMCode(line_number, "send_line", (command,))]
             vm_codes = vm_codes + [

@@ -12,7 +12,7 @@ DEFAULT_TIMEOUT_FOR_PROMPT = 10
 UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"(?P<windows_prompt>\:.*?\>)")
 
 FOS_UNIVERSAL_PROMPTS = (
-    r"login: $",
+    r"^[\w\-]{1,35} login:\s*$",
     r"[P|p]assword: $",
 )
 
@@ -44,6 +44,7 @@ class Device:
         self.fnsysctl = False
         self.license_info = {}
         self._extract_license_info()
+        self.confirm_with_newline = False
 
     def _reconnect_if_exited(self):
         # self.conn._read_output()
@@ -126,6 +127,8 @@ class Device:
     def require_confirm(self, s):
         for key, val in AUTO_PROCEED_RULE_MAP.items():
             if re.match(key, s):
+                if self.confirm_with_newline:
+                    return val + '\n'
                 return val
         return None
 
@@ -190,6 +193,9 @@ class Device:
 
     def set_keep_running(self, keep_running):
         self.keep_running = keep_running
+
+    def set_confirm_with_newline(self, confirm_with_newline):
+        self.confirm_with_newline = confirm_with_newline
 
     def _extract_license_info(self):
         license_info_file = env.get_license_info()

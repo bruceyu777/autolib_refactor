@@ -5,11 +5,13 @@ from lib.services.log import logger
 from lib.utilities.exceptions import LicenseLoadErr
 
 from .fos_dev import FosDev
+from .common import BURN_IMAGE_STAGE, LOGIN_STAGE
 
 MAX_WAIT_TIME_FOR_LIC_UPDATE = 5 * 60
 
 class FortiVM(FosDev):
     def __init__(self, dev_name):
+        self.cur_stage = LOGIN_STAGE
         super().__init__(dev_name)
         self.license = None
         self.license_server = None
@@ -27,17 +29,17 @@ class FortiVM(FosDev):
     def _send_reset_command(self):
         self.send_line("exe factoryreset keepvmlicense")
 
-    @property
-    def system_status(self):
-        rule = (
-            r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
-            r"(build(?P<build>\d+)),\d+\s+\((?P<release_type>[\.\s\w]+)\).*"
-            r"Serial-Number: (?P<serial>[^\n]*).*"
-            r"Virtual domain configuration: (?P<vdom_mode>[^\n]*).*"
-            r"Branch point: (?P<branch_point>[^\n]*).*"
-        )
-        result, m, _ = self.send_command("get system status", rule, timeout=10)
-        return m.groupdict() if m and result else {}
+    # @property
+    # def system_status(self):
+    #     rule = (
+    #         r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
+    #         r"(build(?P<build>\d+)),\d+\s+\((?P<release_type>[\.\s\w]+)\).*"
+    #         r"Serial-Number: (?P<serial>[^\n]*).*"
+    #         r"Virtual domain configuration: (?P<vdom_mode>[^\n]*).*"
+    #         r"Branch point: (?P<branch_point>[^\n]*).*"
+    #     )
+    #     result, m, _ = self.send_command("get system status", rule, timeout=10)
+    #     return m.groupdict() if m and result else {}
 
     def get_license_by_type(self):
         # breakpoint()

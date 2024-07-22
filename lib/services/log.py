@@ -48,13 +48,14 @@ def add_stdout_stream(run_mode):
     )
 
 
-def add_file_stream():
+def add_file_stream(run_mode):
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     log_file = output.compose_summary_file("autotest.log")
     handler = logging.FileHandler(log_file)
-    add_logger_handler(handler, logging.DEBUG, formatter)
+    level = logging.DEBUG if run_mode == "debug" else logging.INFO
+    add_logger_handler(handler, level, formatter)
 
 
 def set_logger(run_mode):
@@ -62,4 +63,4 @@ def set_logger(run_mode):
     add_logging_level("NOTIFY", logging.INFO + 5)
     add_logging_level("NOTICE", logging.INFO + 10)
     add_stdout_stream(run_mode)
-    add_file_stream()
+    add_file_stream(run_mode)

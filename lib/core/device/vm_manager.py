@@ -52,19 +52,25 @@ class VmBuilder:
         template = tmp % (source_mode, driver_queues, model, ntype)
         nics = self.host.get_cfg("nic_list", "")
         if not nics:
-            error = f"\nRequire NIC_LIST for {self.vm_name} while NON_SRIOV was set!\n"
-            raise ResourceNotAvailable(error)
+            if self.host.get_cfg("non_sriov", "no") == "yes":
+                error = f"\nRequire NIC_LIST for {self.vm_name} while NON_SRIOV was set!\n"
+                raise ResourceNotAvailable(error)
+            else:
+                return ""
 
         return "".join(template.format(dev) for dev in nics.strip().split())
 
     def _pre_pci_dev_list(self):
+
         temp = "--host-device=pci_{} "
         pci_dev = self.host.get_cfg("pci_id_list", "")
-        # print("pci_dev is ", pci_dev)
-        return "".join(
-            temp.format(dev.replace(":", "_").replace(".", "_"))
-            for dev in pci_dev.split()
-        )
+        if pci_dev:
+            # print("pci_dev is ", pci_dev)
+            return "".join(
+                temp.format(dev.replace(":", "_").replace(".", "_"))
+                for dev in pci_dev.split()
+            )
+        return ""
 
     def _calc_portlist(self):
         if self.host.get_cfg("non_sriov", "no") == "yes":

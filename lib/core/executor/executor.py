@@ -88,6 +88,12 @@ class Executor:
         self.cur_device = self.devices[dev_name]
         self.cur_device.switch_for_collect_info()
 
+    def _is_reset_command(self, cmd):
+        pattern = re.compile(
+            r"(exe.*factoryreset.*|exe.*forticarrier-license|resetFirewall)"
+        )
+        return re.match(pattern, cmd)
+
     def _command(self, parameters):
         if self.script_type == "GROUP":
             _, script_file, *_ = parameters[0].split()
@@ -101,6 +107,9 @@ class Executor:
         cmd = cmd.replace("mydelete", "delete")
         cmd = cmd.replace("myend", "end")
 
+        if self._is_reset_command(cmd):
+            self._resetFirewall(cmd)
+            return
         if len(parameters) == 1:
             *_, output = self.cur_device.send_command(cmd)
         elif len(parameters) == 2:
@@ -118,8 +127,10 @@ class Executor:
     def _breakpoint(self, _):
         self.debugger.breakpoint()
 
-    def _resetFirewall(self, _):
-        self.cur_device.reset_firewall()
+    def _resetFirewall(self, cmd):
+        if not cmd:
+            cmd = "exe factoryreset"
+        self.cur_device.reset_firewall(cmd)
 
     def _restore_image(self, parameters):
         release, build = parameters
@@ -796,3 +807,9 @@ class Executor:
         # breakpoint()
         value = bool(int(parameters[0]))
         self.cur_device.set_keep_running(value)
+
+
+    def _confirm_with_newline(self, parameters):
+        # breakpoint()
+        value = bool(int(parameters[0]))
+        self.cur_device.set_confirm_with_newline(value)

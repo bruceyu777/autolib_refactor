@@ -11,6 +11,7 @@ from .output_buffer import OutputBuffer
 
 READ_WAIT_TIME = 120
 WAIT_TIME = 60
+MAX_SEARCH_CNT = 3
 
 CODE_FORMAT = "ascii"
 ERROR_INFO = (
@@ -121,8 +122,8 @@ class DevConn:
     def expect(self, pattern, timeout=1, need_clear=True):
         m, output = self.search(pattern, timeout)
 
-        logger.info("The ouput for expect is %s", output)
-        logger.info("*" * 80)
+        #logger.info("The ouput for expect is %s", output)
+        #logger.info("*" * 80)
         if m is not None:
             logger.info(
                 "The buffer size is %s, the matched index is %s",
@@ -141,13 +142,23 @@ class DevConn:
     def search(self, pattern, timeout, pos=0):
         if pos == -1:
             pos = len(self.output_buffer)
+
         count, matched = 0, False
-        cur_time = time.time()
-        end_time = cur_time + timeout
+        start_time = time.time()
+        end_time = start_time + timeout
         while True:
-            matched = self.output_buffer.search(pattern, pos)
-            if matched or time.time() > end_time:
+            if timeout > 600:
+                if time.time() >= start_time + (timeout/MAX_SEARCH_CNT)*count:
+                    matched = self.output_buffer.search(pattern, pos)
+                    count += 1
+            else:
+                matched = self.output_buffer.search(pattern, pos)
+            if matched:
                 break
+            if time.time() > end_time:
+                matched = self.output_buffer.search(pattern, pos)
+                break
+
             self._read_output(ONE_SECOND)
 
         self._log_output(self.output_buffer)

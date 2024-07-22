@@ -10,7 +10,7 @@ from lib.utilities.exceptions import SyntaxError
 
 VALID_COMMANDS = ('set', 'edit', 'config', 'diag', 'exe', 'execute','del', "next", "end", "unset", "keep_running", "resetFirewall", "show"
 , "append", "select", "unselect", "purge", "get", "conf", "clear", "sh", "myset", "myend", "mynext", "mydelete", "comment", "Comment", "ctrl_c", "nan_enter",
-"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c", "restore_image"
+"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c", "restore_image", "confirm_with_newline"
 )
 class Parser:
     SYNTAX = {
@@ -39,7 +39,7 @@ class Parser:
                     (("number", "identifier"), None),
                 ),
             ),
-            
+
             # "compare": (
             #     "parse_options",
             #     (
@@ -65,7 +65,7 @@ class Parser:
             #     ),
             # ),
             "restore_image": (
-                "parse_options", 
+                "parse_options",
                 (
                     {
                         "-v": None,
@@ -75,7 +75,7 @@ class Parser:
                         ("identifier", None),
                         (["number", "variable"], None),
                     ),
-                ),   
+                ),
             ),
             "report": (
                 "parse",
@@ -303,6 +303,7 @@ class Parser:
             "clear_buffer": ("parse", (("number", None),)),
             "clean_buffer": ("parse", ()),
             "keep_running": ("parse", (("number", None),)),
+            "confirm_with_newline":  ("parse", (("number", None),)),
             "forcelogin": ("parse", ()),
             "setlicense": (
                 "parse",

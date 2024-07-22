@@ -4,8 +4,11 @@ import pexpect
 
 from lib.services import logger
 from lib.utilities.exceptions import LoginDeviceFailed
-
+from lib.services.environment import env
 from .dev_conn import DevConn
+from .common import BURN_IMAGE_STAGE, LOGIN_STAGE
+import pdb
+
 
 READ_WAIT_TIME = 120
 WAIT_TIME = 60
@@ -18,12 +21,13 @@ class FosDevConn(DevConn):
     RETRY_MAX_TIME = 15
     FOS_DEFAULT_PASSWORD = ""
 
-    def __init__(self, dev_name, connection, user_name, password):
+    def __init__(self, dev_name, connection, user_name, password, cur_stage):
         super().__init__(dev_name, connection, user_name, password)
         self.conn_state = "init"
         self.retry_cnt = 0
         self.use_default_password = False
         self.init_view = True
+        self.cur_stage = cur_stage
 
     def _connected(self):
         self._client.sendline("")
@@ -68,6 +72,9 @@ class FosDevConn(DevConn):
 
         self.conn_state = "_retry"
 
+    def set_stage(self, stage):
+        self.cur_stage = stage
+
     def _require_credential(self):
         self._client.sendline(self.user_name)
         self._client.expect("Password:")
@@ -110,7 +117,11 @@ class FosDevConn(DevConn):
         self.conn_state = "_connected"
 
     def login(self, reset=False, init_view=True):
-        # self.conn_state = "init"
+        #pdb.set_trace()
+        if self.cur_stage == BURN_IMAGE_STAGE:
+            logger.info("Do not need to login the device for burning image.")
+            return
+
         self.init_view = init_view
         logger.info("enter into login")
         content = ""
