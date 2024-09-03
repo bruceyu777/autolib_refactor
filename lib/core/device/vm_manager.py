@@ -37,8 +37,7 @@ class VmBuilder:
         vm_type = self.vm_cfg.get("vm_type", None)
         if vm_type is None:
             raise ItemNotDefined(f"{self.vm_name}:VM_TYPE")
-
-        self.params["memory"] = self.VM_SPECS[vm_type]["memory"]
+        self.params["memory"] = self.vm_cfg.get("memory", self.VM_SPECS[vm_type]["memory"])
         self.params["vcpu"] = self.VM_SPECS[vm_type]["vcpu"]
 
     def _pre_nic_dev_list(

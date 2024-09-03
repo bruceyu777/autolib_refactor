@@ -130,8 +130,11 @@ class FosDev(Device):
             "Botnet Domain Database",
             "URL Allow list",
         ]
+        # rule = "".join(
+        #     rf"{fd}\n---------\nVersion: ([\d.]+).*" for fd in VERSION_FIELDS[:1]
+        # )
         rule = "".join(
-            rf"{fd}\n---------\nVersion: ([\d.]+).*" for fd in VERSION_FIELDS
+             rf"{fd}(?:\r\n?|\n)---------\r\nVersion: ([\d.]+).*" for fd in VERSION_FIELDS
         )
 
         self.clear_buffer()
@@ -238,7 +241,7 @@ class FosDev(Device):
     # def _send_reset_command(self):
     #     self.send_line("exe factoryreset")
     def login_firewall_after_reset(self):
-        self.search("login:", 300, -1)
+        self.search("login:", 1800, -1)
         self.send_line("admin")
         self.search("Password:", 30, -1)
         self.send_line("")

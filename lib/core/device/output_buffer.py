@@ -39,7 +39,7 @@ class OutputBuffer:
         t2 = time.perf_counter()
 
         logger.debug("pattern match for %s takes %s s", pattern, t2-t1)
-
+        logger.debug("the result is %s", result)
         return result
 
     def expect(self, pattern):
