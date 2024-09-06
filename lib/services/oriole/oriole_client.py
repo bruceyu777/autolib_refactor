@@ -118,16 +118,20 @@ class OrioleClient:
     def gen_plt_info_for_oriole(self, device_info, report):
         report["platform"] = device_info["platform"]
         report["build"] = device_info["build"][-4:]
-        report["aveng"] = device_info.get("AV Engine", "")
+        report["aven"] = device_info.get("AV Engine", "")
         avdef = device_info.get("Virus Definitions", "")
+        report["avdb"] = avdef
         eavdf = device_info.get("Extended set", "")
         favdf = device_info.get("Flow-based Virus Definitions", "")
         report["avdef"] = " ".join([avdef, eavdf, favdf])
-        report["ipseng"] = device_info.get("IPS Attack Engine", "")
+        report["flen"] = device_info.get("IPS Attack Engine", "")
         atkver = device_info.get("Attack Definitions", "")
+        report["nids"] = atkver
         etkver = device_info.get("Attack Extended Definitions", "")
+        report["nids_ext"] = etkver
         report["ipsdef"] = " ".join([atkver, etkver])
         report["bios"] = device_info.get("bios_version", "")
+        report["apdb"] = device_info.get("Application Definitions", "")
         report["SN"] = device_info.get("serial", "")
         if env.get_vm_nic():
             report["vm_nic"] = env.get_vm_nic()

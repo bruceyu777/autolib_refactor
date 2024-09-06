@@ -10,7 +10,8 @@ from lib.utilities.exceptions import SyntaxError
 
 VALID_COMMANDS = ('set', 'edit', 'config', 'diag', 'exe', 'execute','del', "next", "end", "unset", "keep_running", "resetFirewall", "show"
 , "append", "select", "unselect", "purge", "get", "conf", "clear", "sh", "myset", "myend", "mynext", "mydelete", "comment", "Comment", "ctrl_c", "nan_enter",
-"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c", "restore_image", "confirm_with_newline"
+"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c", "restore_image", "confirm_with_newline",
+"wait_for_confirm"
 )
 class Parser:
     SYNTAX = {
@@ -304,6 +305,7 @@ class Parser:
             "clean_buffer": ("parse", ()),
             "keep_running": ("parse", (("number", None),)),
             "confirm_with_newline":  ("parse", (("number", None),)),
+            "wait_for_confirm": ("parse", (("number", None),)),
             "forcelogin": ("parse", ()),
             "setlicense": (
                 "parse",

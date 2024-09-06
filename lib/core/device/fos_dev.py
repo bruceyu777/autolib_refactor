@@ -241,7 +241,7 @@ class FosDev(Device):
     # def _send_reset_command(self):
     #     self.send_line("exe factoryreset")
     def login_firewall_after_reset(self):
-        self.search("login:", 1800, -1)
+        self.search("login:", 600, -1)
         self.send_line("admin")
         self.search("Password:", 30, -1)
         self.send_line("")

@@ -72,7 +72,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("-v", '--version', action="version",
-                    version="AutoLib 3.0.10(2024-08-19)")
+                    version="AutoLib 3.0.12(2024-09-09)")
     parser.add_argument(
         "-u",
         "--upgrade",

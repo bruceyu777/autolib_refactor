@@ -25,11 +25,13 @@ AUTO_PROCEED_RULE_MAP = {
 }
 
 SYSCTRL_COMAND = ("Admin:\s*$",)
+FTP_NAME_PROMPT = ("Name\s*\(.+\):\s*$", )
 DEFAULT_PROMPTS = "|".join(
     UNIVERSAL_PROMPTS
     + FOS_UNIVERSAL_PROMPTS
     + tuple(AUTO_PROCEED_RULE_MAP.keys())
     + SYSCTRL_COMAND
+    + FTP_NAME_PROMPT
 )
 
 
@@ -39,12 +41,13 @@ class Device:
         self.conn = None
         self.dev_cfg = env.get_dev_cfg(dev_name)
         self.keep_running = False
+        self.confirm_with_newline = False
+        self.wait_for_confirm = False
         self.connect()
         self.embeded_conn = False
         self.fnsysctl = False
         self.license_info = {}
         self._extract_license_info()
-        self.confirm_with_newline = False
 
     def _reconnect_if_exited(self):
         # self.conn._read_output()
@@ -156,12 +159,17 @@ class Device:
         # if command == 'nan_enter':
         #     command = "\x0d"
 
-        if command.startswith(("telnet ", "ssh ", "sshpass ")):
+        if command.startswith(("telnet ", "ssh ", "sshpass ", "ftp ")):
             self.embeded_conn = True
         if command == "exit":
             self.embeded_conn = False
-
-        matched, output = self.conn.send_command(command, pattern, timeout)
+        if self.wait_for_confirm:
+            expected_pattern = "|".join(AUTO_PROCEED_RULE_MAP.keys())
+        else:
+            expected_pattern = pattern
+        matched, output = self.conn.send_command(command, expected_pattern, timeout)
+        if self.wait_for_confirm:
+            self.wait_for_confirm = False
         if matched:
             logger.info("Matched group is '%s'", matched.group())
         while matched is not None:
@@ -196,6 +204,9 @@ class Device:
 
     def set_confirm_with_newline(self, confirm_with_newline):
         self.confirm_with_newline = confirm_with_newline
+
+    def set_wait_for_confirm(self, wait_for_confirm):
+        self.wait_for_confirm = wait_for_confirm
 
     def _extract_license_info(self):
         license_info_file = env.get_license_info()

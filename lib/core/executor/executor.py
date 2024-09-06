@@ -813,3 +813,7 @@ class Executor:
         # breakpoint()
         value = bool(int(parameters[0]))
         self.cur_device.set_confirm_with_newline(value)
+
+    def _wait_for_confirm(self, parameters):
+        value = bool(int(parameters[0]))
+        self.cur_device.set_wait_for_confirm(value)
