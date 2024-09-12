@@ -42,6 +42,7 @@ class Executor:
         self.need_stop = False
         self.testcase_dev_info = dict()
         self.log_file = None
+        self.auto_login = True
 
     def _add_file_handler(self):
         formatter = logging.Formatter(
@@ -86,6 +87,7 @@ class Executor:
     def _switch_device_for_collect_info(self, parameters):
         dev_name = parameters[0]
         self.cur_device = self.devices[dev_name]
+        self.cur_device.pause_stdout()
         self.cur_device.switch_for_collect_info()
 
     def _is_reset_command(self, cmd):
@@ -107,7 +109,7 @@ class Executor:
         cmd = cmd.replace("mydelete", "delete")
         cmd = cmd.replace("myend", "end")
 
-        if self._is_reset_command(cmd):
+        if self._is_reset_command(cmd) and self.auto_login:
             self._resetFirewall(cmd)
             return
         if len(parameters) == 1:
@@ -483,7 +485,9 @@ class Executor:
                     if dev not in devices_info:
                         logger.info("Start reporting with information collected from device:%s", dev)
                         self._switch_device_for_collect_info([dev])
+
                         device_info = self.cur_device.get_device_info(env.get_dut_info_on_fly())
+                        self.cur_device.resume_stdout()
                         devices_info[dev] = device_info
 
                     is_succeed = self.report_to_oriole(testcase_id, devices_info[dev])
@@ -817,3 +821,7 @@ class Executor:
     def _wait_for_confirm(self, parameters):
         value = bool(int(parameters[0]))
         self.cur_device.set_wait_for_confirm(value)
+
+    def _auto_login(self, parameters):
+        value = bool(int(parameters[0]))
+        self.auto_login = value

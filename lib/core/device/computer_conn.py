@@ -87,5 +87,7 @@ class ComputerConn(DevConn):
                 self.start_record(script)
             else:
                 self.start_record("setup")
+            self.pause_stdout()
             self.login()
+            self.resume_stdout()
         return self._client

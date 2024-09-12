@@ -56,7 +56,9 @@ class DevConn:
                 self.start_record(script)
             else:
                 self.start_record("setup")
+            # self.pause_stdout()
             self.login()
+            # self.resume_stdout()
         return self._client
 
     def close(self):
@@ -202,6 +204,12 @@ class DevConn:
 
     def stop_record(self):
         self.log_file.stop_record()
+
+    def pause_stdout(self):
+        self.log_file.pause_stdout()
+
+    def resume_stdout(self):
+        self.log_file.resume_stdout()
 
 
 if __name__ == "__main__":

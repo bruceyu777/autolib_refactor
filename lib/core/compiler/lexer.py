@@ -23,7 +23,8 @@ APIS_WITH_PARAS = (
     "collect_dev_info",
     "restore_image",
     "confirm_with_newline",
-    "wait_for_confirm"
+    "wait_for_confirm",
+    "auto_login"
 )
 APIS_WITHOUT_PARAS = ("forcelogin", "clearbuff", "clear_buffer", "clean_buffer", "breakpoint", "resetFirewall")
 APIS_WITH_PARAS_PATTERN = "|".join(rf"{api}\s+.+" for api in APIS_WITH_PARAS)

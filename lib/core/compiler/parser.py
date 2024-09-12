@@ -11,7 +11,7 @@ from lib.utilities.exceptions import SyntaxError
 VALID_COMMANDS = ('set', 'edit', 'config', 'diag', 'exe', 'execute','del', "next", "end", "unset", "keep_running", "resetFirewall", "show"
 , "append", "select", "unselect", "purge", "get", "conf", "clear", "sh", "myset", "myend", "mynext", "mydelete", "comment", "Comment", "ctrl_c", "nan_enter",
 "clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c", "restore_image", "confirm_with_newline",
-"wait_for_confirm"
+"wait_for_confirm","auto_login"
 )
 class Parser:
     SYNTAX = {
@@ -306,6 +306,7 @@ class Parser:
             "keep_running": ("parse", (("number", None),)),
             "confirm_with_newline":  ("parse", (("number", None),)),
             "wait_for_confirm": ("parse", (("number", None),)),
+            "auto_login": ("parse", (("number", None),)),
             "forcelogin": ("parse", ()),
             "setlicense": (
                 "parse",
@@ -395,6 +396,7 @@ class Parser:
         self.devices = set()
         self.called_files = set()
         self.cur_section = None
+
 
     @property
     def _cur_token(self):

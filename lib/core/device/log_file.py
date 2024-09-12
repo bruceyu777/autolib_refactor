@@ -6,14 +6,25 @@ import sys
 class MultiIO:
     def __init__(self, *fds):
         self.fds = fds
+        self.pause_write_stdout = False
 
     def write(self, data):
         for fd in self.fds:
+            if fd == sys.stdout and self.pause_write_stdout:
+                continue
             fd.write(data)
 
     def flush(self):
         for fd in self.fds:
             fd.flush()
+
+    def pause_stdout(self):
+        self.pause_write_stdout = True
+
+    def resume_stdout(self):
+        self.pause_write_stdout = False
+
+
 
 # pylint : disable = consider-using-with
 class LogFile:
@@ -50,6 +61,14 @@ class LogFile:
     def stop_record(self):
         for fp in self.fps:
             fp.close()
+
+    def pause_stdout(self):
+        self.client.logfile.pause_stdout()
+
+    def resume_stdout(self):
+        self.client.logfile.resume_stdout()
+
+
 
 
 

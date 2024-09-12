@@ -13,7 +13,7 @@ UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"(?P<windows_prompt>\:.*?\>)")
 
 FOS_UNIVERSAL_PROMPTS = (
     r"^[\w\-]{1,35} login:\s*$",
-    r"[P|p]assword: $",
+    r"[P|p]assword:\s*$",
 )
 
 AUTO_PROCEED_RULE_MAP = {
@@ -224,3 +224,9 @@ class Device:
                     "VDOM": vdom_lic,
                     "expire_date": expire_date,
                 }
+
+    def pause_stdout(self):
+        self.conn.pause_stdout()
+
+    def resume_stdout(self):
+        self.conn.resume_stdout()
