@@ -1,27 +1,68 @@
 import csv
 import re
 from collections import defaultdict
-import pdb
-from .env_parser import EnvParser
+
+from .env_parser import EnvParser, FosConfigParser
 from .log import logger
 
 OPTION_ENABLED_VALUE = ("y", "yes", "true", "enable", "on", "enabled")
 
 
+class DeviceConfig(dict):
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            real_key = self._get_real_key(key)
+            if real_key is not None:
+                return super().__getitem__(real_key)
+            raise
+
+    def _get_real_key(self, key):
+        if key in self.keys():
+            return key
+        matched_keys = [k for k in self.keys() if k.lower() == key]
+        return matched_keys[0] if len(matched_keys) == 1 else None
+
+    def __contains__(self, key):
+        real_key = self._get_real_key(key)
+        return super().__contains__(real_key)
+
+    def get(self, key, default=None):
+        real_key = self._get_real_key(key)
+        if real_key is not None:
+            return super().get(real_key, default)
+        return default
+
+
 class Environment:
+    fos_device_types = ("FFW", "FVM", "FGT")
+
     def __init__(self):
-        self.user_env = None
+        self.user_env: FosConfigParser = None
         self.variables = defaultdict()
-        self.license_info = dict()
+        self.license_info = {}
         self.host_servers = None
         self.args = None
         self.env_file = None
         self.test_file = None
 
-    def _get_global_section_var_val(self, var_name):
-        return self.user_env.get("GLOBAL", var_name, fallback="") or self.user_env.get(
-            "Global", var_name, fallback=""
+    def _get_global_section_option_value(self, option, fallback=""):
+        return self.user_env.get_global_option_value(option, fallback=fallback)
+
+    def get_device_list(self):
+        return self.user_env.get_device_list()
+
+    def is_vm_device(self, device_name):
+        return (
+            device_name.startswith("FVM")
+            or device_name.startswith("FFW")
+            and "HOSTED_ON" in self.get_dev_cfg(device_name)
         )
+
+    def is_fos_deivce(self, device_name):
+        return any(map(device_name.startswith, Environment.fos_device_types))
 
     def get_dev_cfg(self, device_name):
         cfg = None
@@ -30,20 +71,17 @@ class Environment:
         elif self.host_servers and self.host_servers.has_section(device_name):
             cfg = self.host_servers.items(device_name)
 
-        return dict(cfg) if cfg else {}
+        return DeviceConfig(cfg if cfg else {})
 
     def set_user_defined_env(self, user_env):
-        self.user_env = user_env
+        self.user_env: FosConfigParser = user_env
         self.extract_license_info()
         self.extract_host_servers()
 
     def extract_host_servers(self):
-        host_file = self._get_global_section_var_val("VM_HOST_DEF")
+        host_file = self._get_global_section_option_value("VM_HOST_DEF")
         if host_file:
             self.host_servers = EnvParser(host_file).env
-
-    def retrieve_dev_cfg(self, device_name):
-        return self.user_env[device_name]
 
     def add_var(self, name, value):
         self.variables[name] = value
@@ -62,7 +100,7 @@ class Environment:
         self.add_var(var_name, val)
 
     def extract_license_info(self):
-        file_name = self._get_global_section_var_val("LICENSE_INFORMATION")
+        file_name = self._get_global_section_option_value("LICENSE_INFORMATION")
         if not file_name:
             return
         with open(file_name, "r", encoding="utf-8") as f:
@@ -76,14 +114,11 @@ class Environment:
                 for r in rows
             }
 
-    def is_cfg_option_enabled(self, section, option):
-        status = self.user_env.get(section, option, fallback="n").lower()
-        return status in OPTION_ENABLED_VALUE
+    def is_cfg_option_enabled(self, section, option, fallback=False):
+        return self.user_env.is_option_enabled(section, option, fallback=fallback)
 
     def need_deploy_vm(self):
-        return self.is_cfg_option_enabled(
-            "GLOBAL", "DEPLOY_NEW_VM"
-        ) or self.is_cfg_option_enabled("Global", "DEPLOY_NEW_VM")
+        return self.is_cfg_option_enabled("GLOBAL", "DEPLOY_NEW_VM")
 
     def init_env(self, args):
         self.args = args
@@ -97,7 +132,10 @@ class Environment:
     def get_section_var(self, section, variable):
         logger.info("user_env: %s", self.user_env)
         logger.info("section:%s, variable: %s", section, variable)
-        logger.info("self.user_env.get(section, variable, fallback=None): %s", self.user_env.get(section, variable, fallback=None))
+        logger.info(
+            "self.user_env.get(section, variable, fallback=None): %s",
+            self.user_env.get(section, variable, fallback=None),
+        )
         return self.user_env.get(section, variable, fallback=None)
 
     @staticmethod
@@ -106,7 +144,9 @@ class Environment:
 
     def set_section_var(self, section, var_name, var_val):
         if var_val is None:
-            logger.error("section:%s var_name:%s var_val %s", section, var_name, var_val)
+            logger.error(
+                "section:%s var_name:%s var_val %s", section, var_name, var_val
+            )
             return
         var_val = self.escape_single_percent(var_val)
         self.user_env[section][var_name] = var_val
@@ -119,86 +159,80 @@ class Environment:
         return self.test_file
 
     def _update_var_value(self, var_val_dict, section, var_name):
-        if section == "GLOBAL":
-            value = self.get_section_var(section, var_name) or self.get_section_var(
-                "Global", var_name
-            )
-        else:
-            value = self.get_section_var(section, var_name)
+        value = self.get_section_var(section, var_name)
         var_val_dict.update({f"{section}:{var_name}": value})
 
-    def _interpolate_var_value(self, string, var_value_dict):
-        var_val_dict_items = sorted(var_value_dict.items(), key=lambda item: item[0], reverse=True)
-        for var, value in var_val_dict_items:
-            if value is not None:
-                string = string.replace(var, value)
-        return string
+    def variable_interpolation(self, content):
 
-    def variable_interpolation(self, string):
-        #"Gateway Route(.*)\r(.*)- IP:PC_01:ETH1_IPV4, MAC: PC_01:MAC_ETH1\(.*)\r(.*)- Interface:FGT_A:PORT2, VFID:PC_01:REF1, SN: FGT_A:SN"
-        pattern = r"[a-zA-Z_][-\w]*"
-        matched = re.findall(rf"{pattern}(?::{pattern})+", string)
-        var_value_dict = dict()
-        for m in sorted(matched, key=len, reverse=True):
-            tokens = m.split(":")
-            tokens_number = len(tokens)
-            if tokens_number % 2 == 0:
-                for i in range(0, tokens_number, 2):
-                    self._update_var_value(var_value_dict, tokens[i], tokens[i+1])
-            else:
-                for i in range(1, tokens_number, 2):
-                    self._update_var_value(var_value_dict, tokens[i], tokens[i+1])
-        logger.info("var_value_dict is %s", var_value_dict)
-        return self._interpolate_var_value(string, var_value_dict)
+        def _replace(original, section):
+            section_variable_dict = self.get_dev_cfg(section)
+            for k in sorted(section_variable_dict, key=len, reverse=True):
+                section_key = f"{section}:{k}"
+                if section_key in original:
+                    original = original.replace(section_key, section_variable_dict[k])
+            return original
+
+        existed_sections = (s for s in self.user_env.sections() if f"{s}:" in content)
+        for section in existed_sections:
+            content = _replace(content, section)
+
+        logger.debug("replaced content: '%s'", content)
+        return content
+
+    def get_device_hardware_generation(self, device_name, fallback="1"):
+        return self.user_env.get(device_name, "PLATFORMGENERATION", fallback=fallback)
 
     def get_dut(self):
-        return self._get_global_section_var_val("DUT")
+        return self._get_global_section_option_value("DUT")
 
     def get_dut_info_on_fly(self):
-        return self._get_global_section_var_val("DUT_INFO_ON_FLY")
+        return self._get_global_section_option_value("DUT_INFO_ON_FLY")
 
     def get_local_http_server_conf(self):
-        ip = self._get_global_section_var_val("LOCAL_HTTP_SERVER_IP")
-        port = self._get_global_section_var_val("LOCAL_HTTP_SERVER_PORT")
+        ip = self._get_global_section_option_value("LOCAL_HTTP_SERVER_IP")
+        port = self._get_global_section_option_value("LOCAL_HTTP_SERVER_PORT")
         return ip, port
 
     def get_vm_nic(self):
-        return self._get_global_section_var_val("VM_NIC")
+        return self._get_global_section_option_value("VM_NIC")
 
     def get_vm_os(self):
-        return self._get_global_section_var_val("VM_OS")
+        return self._get_global_section_option_value("VM_OS")
 
     def get_license_info(self):
-        return self._get_global_section_var_val("LICENSE_INFORMATION")
+        return self._get_global_section_option_value("LICENSE_INFORMATION")
 
     def need_retry_expect(self):
-        return self.is_cfg_option_enabled(
-            "GLOBAL", "RETRY_EXPECT"
-        ) or self.is_cfg_option_enabled("Global", "RETRY_EXPECT")
+        return self.is_cfg_option_enabled("GLOBAL", "RETRY_EXPECT")
 
     def need_keep_alive(self):
-        return self._get_global_section_var_val("KEEP_ALIVE")
+        return self.is_cfg_option_enabled("GLOBAL", "KEEP_ALIVE")
 
     def filter_env_section_items(self, section_name, start_string):
-        res = {}
-
+        selected_items = {}
         for section in self.user_env.sections():
             if section == section_name:
                 for key, value in self.user_env.items(section):
                     tokens = key.split("_")
                     if tokens[0] == start_string:
-                        res[tokens[1]] = value
-        return res
+                        selected_items[tokens[1]] = value
+        return selected_items
+
 
 env = Environment()
-# env.get_env_file_name()
+
 
 if __name__ == "__main__":
-    # env.get_dut()
     env_parser = EnvParser("./lib/testcases/env/fgt.env")
     env.set_user_defined_env(env_parser.env)
-    env.set_section_var("GLOBAL", "local_http_server_port", "aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%%%3D")
-    res  = env_parser.show()
-    res = env.get_section_var("GLOBAL", "local_http_server_port")
-    print(res)
-
+    value_for_test = "aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%%%3D"
+    env.set_section_var("GLOBAL", "local_http_server_port", value_for_test)
+    env_parser.show()
+    result = env.get_section_var("GLOBAL", "local_http_server_port")
+    assert result == value_for_test
+    decoded_script = env.variable_interpolation(
+        "This is a test GLOBAL:MGMT_IP-FGT_A:MGMT-FGT_A:MGMT_GW"
+    )
+    assert (
+        decoded_script == "This is a test 172.18.57.22 255.255.255.0-mgmt-172.18.57.1"
+    )

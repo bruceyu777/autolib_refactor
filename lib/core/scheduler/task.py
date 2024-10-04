@@ -1,9 +1,10 @@
+import os
 import time
 from pathlib import Path
 from time import perf_counter
 
 from lib.services import env, logger, oriole, summary
-from lib.utilities.exceptions import NotSupportedDevice
+from lib.utilities.exceptions import FileNotExist, NotSupportedDevice
 
 from ..compiler.compiler import compiler
 from ..device.forti_vm import FortiVM
@@ -15,16 +16,13 @@ from ..executor.executor import Executor
 
 class Task:
     def __init__(self, script):
+        if not os.path.exists(script):
+            raise FileNotExist(script)
         self.script = script
-
-        self.devices = dict()
+        self.devices = {}
 
     def setup_vms(self):
-        vms = [
-            dev_name
-            for dev_name in self.devices
-            if dev_name.startswith(("FVM", "FFW"))
-        ]
+        vms = [dev_name for dev_name in self.devices if env.is_vm_device(dev_name)]
         vm_manager = VmManager(vms)
         vm_manager.setup_vms()
 
@@ -34,20 +32,16 @@ class Task:
             return
 
         for dev_name, dev in self.devices.items():
-            if dev_name.startswith(("FVM", "FFW", "FGT")) and not env.need_deploy_vm():
-                dev.restore_image(env.args.release, env.args.build, env.args.reset, env.args.burn)
-            if dev_name.startswith(("FVM", "FFW")) and env.need_deploy_vm():
-                dev.activate_license()
+            if env.is_fos_deivce(dev_name) and not env.need_deploy_vm():
+                dev.restore_image(
+                    env.args.release, env.args.build, env.args.reset, env.args.burn
+                )
 
     def init_devices(self):
         logger.notify("Devices used during the test %s", list(self.devices.keys()))
-
-        if env.need_deploy_vm() and any(dev_name.startswith(("FVM", "FFW")) for dev_name in self.devices):
-            logger.notify("Sleep 10s for the console to able to be connected for new deployed vms.")
-            time.sleep(10)
         for dev_name in self.devices:
             t1 = perf_counter()
-            if dev_name.startswith(("FVM", "FFW")):
+            if env.is_vm_device(dev_name):
                 self.devices[dev_name] = FortiVM(dev_name)
             elif dev_name.startswith("FGT"):
                 self.devices[dev_name] = FortiGate(dev_name, env.args.burn)
@@ -56,7 +50,7 @@ class Task:
             else:
                 raise NotSupportedDevice(dev_name)
             t2 = perf_counter()
-            logger.info(f"Setting up device {dev_name} takes {t2-t1} s")
+            logger.info("Setting up device %s takes %d s", dev_name, t2 - t1)
             t1 = t2
 
     def compose_involved_devices(self):
@@ -71,6 +65,17 @@ class Task:
         self.setup_vms()
         self.init_devices()
         self.restore_image()
+        self.activate_vm_licenses()
+
+    def activate_vm_licenses(self):
+        vms = [dev_name for dev_name in self.devices if env.is_vm_device(dev_name)]
+        if vms and env.need_deploy_vm():
+            logger.notify(
+                "Sleep 10s for the console to able to be connected for new deployed vms."
+            )
+            time.sleep(10)
+            for vm in vms:
+                self.devices[vm].activate_license()
 
     def compile(self):
         raise NotImplementedError
@@ -109,8 +114,6 @@ class Task:
         self._stop_record_terminal(script_id)
         end = perf_counter()
         duration = int(end - start)
-        # env.add_var("testing_script", script_id)
-        # print("script is tested.")
         summary.update_testscript_duration(script_id, duration)
 
     def execute(self):
@@ -119,7 +122,6 @@ class Task:
     def summary(self):
         summary.show_summary()
         oriole.dump()
-
 
     def run(self, args):
         t1 = perf_counter()
@@ -135,7 +137,7 @@ class Task:
             oriole.submit()
         self.summary()
         t5 = perf_counter()
-        logger.notify("Compiling takes %s s ", t2 - t1)
-        logger.notify("Setting up devices takes %s s", t3 - t2)
-        logger.notify(f"Executing testcases takes %s s", t4 - t3)
-        logger.notify(f"Generating summary report takes %s s", t5-t4)
+        logger.notify("Compiling takes %d s ", t2 - t1)
+        logger.notify("Setting up devices takes %d s", t3 - t2)
+        logger.notify("Executing testcases takes %d s", t4 - t3)
+        logger.notify("Generating summary report takes %d s", t5 - t4)

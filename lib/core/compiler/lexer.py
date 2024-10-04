@@ -1,10 +1,11 @@
 import json
-import os
 import re
 from pathlib import Path
+
 import chardet
 
 from lib.services import output
+from lib.utilities.exceptions import ScriptSyntaxError
 
 APIS_WITH_PARAS = (
     "setvar",
@@ -24,9 +25,17 @@ APIS_WITH_PARAS = (
     "restore_image",
     "confirm_with_newline",
     "wait_for_confirm",
-    "auto_login"
+    "auto_login",
 )
-APIS_WITHOUT_PARAS = ("forcelogin", "clearbuff", "clear_buffer", "clean_buffer", "breakpoint", "resetFirewall")
+APIS_WITHOUT_PARAS = (
+    "forcelogin",
+    "clearbuff",
+    "clear_buffer",
+    "clean_buffer",
+    "breakpoint",
+    "enter_dev_debugmode",
+    "resetFirewall",
+)
 APIS_WITH_PARAS_PATTERN = "|".join(rf"{api}\s+.+" for api in APIS_WITH_PARAS)
 APIS_WITHOUT_PARAS_PATTERN = "|".join(rf"{api}" for api in APIS_WITHOUT_PARAS)
 APIS_PATTERN = rf"{APIS_WITH_PARAS_PATTERN}|{APIS_WITHOUT_PARAS_PATTERN}"
@@ -60,10 +69,7 @@ LINE_PATTERN_TABLE = {
 }
 
 LINE_PATTERN = re.compile(
-    r"|".join(
-        rf"(?P<{type}>{pattern})"
-        for type, pattern in LINE_PATTERN_TABLE.items()
-    )
+    r"|".join(rf"(?P<{type}>{pattern})" for type, pattern in LINE_PATTERN_TABLE.items())
 )
 
 TOKEN_PATTERN_TABLE = {
@@ -86,15 +92,12 @@ TOEKN_PATTERN = re.compile(
 )
 
 
-
 class Token(dict):
     def __init__(self, _type, data, line_number):
         self._data = data
         self._type = _type
         self._line_number = line_number
-        dict.__init__(
-            self, data=str(data), type=str(_type), line_number=line_number
-        )
+        dict.__init__(self, data=str(data), type=str(_type), line_number=line_number)
 
     @property
     def type(self):
@@ -119,21 +122,12 @@ class Lexer:
         self.cur_groupdict = {}
 
     def parse_line(self, line):
-        # if "#" in line and '"' not in line:
-        #     line = re.sub(r"#.*", "", line)
-        #     if not line:
-        #         return []
-
         self.cur_line = rf"{line}"
-        # print("cur line is", self.cur_line)
-        # line_without_comments = re.sub(r'#.*', '', line)
         m = re.match(LINE_PATTERN, self.cur_line)
-        if m is None:
-            print(f"{self.line_number}: {self.cur_line}")
         self.cur_groupdict = m.groupdict()
-        if self.section_commented:
-            if self.cur_groupdict.get("section") is None:
-                return []
+        if self.section_commented and self.cur_groupdict.get("section") is None:
+            # commented lines are not included in tokens
+            return []
         for line_type, matched_content in self.cur_groupdict.items():
             if matched_content is not None and line_type in LINE_PATTERN_TABLE:
                 func = getattr(self, line_type)
@@ -165,39 +159,40 @@ class Lexer:
     def include(self):
         self.add_token("include", self.cur_groupdict["file_name"])
 
+    def _process_token(self, matched_group_dict):
+        for token_type, matched_content in matched_group_dict.items():
+            if matched_content is not None and token_type in TOKEN_PATTERN_TABLE:
+                if token_type == "variable":
+                    variable_name = matched_group_dict.get("variable_name", None)
+                    self.add_token(token_type, variable_name)
+                elif token_type == "number":
+                    number = matched_group_dict.get("number_content", None)
+                    self.add_token(token_type, number)
+                elif token_type == "expect_double":
+                    double_quote_str = matched_group_dict.get("double_quote_str", None)
+                    self.add_token("identifier", "-e")
+                    self.add_token("string", double_quote_str)
+                elif token_type == "expect_single":
+                    single_quote_str = matched_group_dict.get("single_quote_str", None)
+                    self.add_token("identifier", "-e")
+                    self.add_token("string", single_quote_str)
+                elif token_type == "expect_string":
+                    expect_str = matched_group_dict.get("expect_str", None)
+                    self.add_token("identifier", "-e")
+                    self.add_token("string", expect_str)
+                else:
+                    self.add_token(token_type, matched_content)
+
     def tokenize(self, string):
         pos = 0
         while pos < len(string):
             m = TOEKN_PATTERN.match(string, pos)
             if m is None:
-                print(f"{self.line_number}: {string[pos:]}")
-
-            matched_group = m.groupdict()
-            for token_type, matched_content in m.groupdict().items():
-                if (
-                    matched_content is not None
-                    and token_type in TOKEN_PATTERN_TABLE
-                ):
-                    if token_type == "variable":
-                        variable_name = matched_group.get("variable_name", None)
-                        self.add_token(token_type, variable_name)
-                    elif token_type == "number":
-                        number = matched_group.get("number_content", None)
-                        self.add_token(token_type, number)
-                    elif token_type == "expect_double":
-                        double_quote_str = matched_group.get("double_quote_str", None)
-                        self.add_token("identifier", "-e")
-                        self.add_token("string", double_quote_str)
-                    elif token_type == "expect_single":
-                        single_quote_str = matched_group.get("single_quote_str", None)
-                        self.add_token("identifier", "-e")
-                        self.add_token("string", single_quote_str)
-                    elif token_type == "expect_string":
-                        expect_str = matched_group.get("expect_str", None)
-                        self.add_token("identifier", "-e")
-                        self.add_token("string", expect_str)
-                    else:
-                        self.add_token(token_type, matched_content)
+                raise ScriptSyntaxError(
+                    f"{self.line_number}: '{string[pos:]}' unsupported token"
+                )
+            matched_group_dict = m.groupdict()
+            self._process_token(matched_group_dict)
             pos = m.end()
 
     def parse_api(self, _type, string):
@@ -216,16 +211,11 @@ class Lexer:
 
     def statement(self):
         content = self.cur_groupdict["statement_content"].strip()
-        # self.parse_api_or_statement("keyword", content)
-
         m = re.match(
             r"(?P<first>.+?)\s+(?P<leftover>.+)|(?P<second>.+)$",
             content,
         )
-        # print("content is", content)
-        # print("leftover is", m.group("leftover"))
         if m.group("leftover") is not None:
-            # keyword = m.group("first")
             self.add_token("keyword", m.group("first"))
             if m.group("first") in ["intset", "strset", "listset"]:
                 parts = m.group("leftover").split(maxsplit=1)
@@ -243,23 +233,17 @@ class Lexer:
     def read(self):
         with open(self.file_name, "rb") as file:
             content = file.read()
-        if len(content) == 0:
-            path_parts = self.file_name.split(os.path.sep)
-            remaining_path_parts = "/".join(path_parts[2:])
-            svn_path = r"https://qa-svn.corp.fortinet.com/svn/qa/FOS/testcase"
-            # print(f"{svn_path}/{remaining_path_parts}")
-            return ""
-        encoding_info = chardet.detect(content)
-        detected_encoding = encoding_info["encoding"]
-        # print("encoding is", detected_encoding)
 
-        if detected_encoding == "utf-8":
-            content_decoded = content.decode("utf-8", errors="ignore")
-        elif detected_encoding:
+        if not content:
+            return ""
+
+        encoding_info = chardet.detect(content)
+        detected_encoding = encoding_info["encoding"] or "utf-8"
+        try:
             content_decoded = content.decode(detected_encoding, errors="ignore")
-        else:
-            print("Unable to detect the encoding.")
-        # print(content_decoded)
+        except UnicodeDecodeError:
+            print(f"*** Unable to detect the encoding of file {self.file_name}. ***")
+            content_decoded = ""
         return content_decoded
 
     def parse(self):

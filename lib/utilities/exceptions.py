@@ -38,7 +38,6 @@ class UnSupportedModel(AutoTestException):
 
 
 class OperationFailure(AutoTestException):
-    """for KVM operations"""
 
     def __init__(self, value):
         self.message = "Operation Failure: %s!" % value
@@ -110,15 +109,18 @@ class ItemNotDefined(AutoTestException):
         self.message = "Item: %s is not defined!!" % item
         super().__init__(self.message)
 
-class SyntaxError(AutoTestException):
+
+class ScriptSyntaxError(AutoTestException):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
 
 class LicenseLoadErr(AutoTestException):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
 
 class ReportUnderPCWithoutDut(AutoTestException):
     def __init__(self, message):

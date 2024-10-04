@@ -1,6 +1,6 @@
 class LoopEnv:
     def __init__(self):
-        self.vars = dict()
+        self.vars = {}
         self.loop_start = None
 
     def add_var(self, name, value):

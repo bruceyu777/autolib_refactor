@@ -1,34 +1,104 @@
 import os
 import re
+from configparser import ConfigParser, NoOptionError
 
-from configparser import ConfigParser
-
-from lib.utilities.exceptions import FileNotExist
 from lib.services.output import output
-
+from lib.utilities.exceptions import FileNotExist, ScriptSyntaxError
 
 CONVERTED_ENV = "converted.env"
 
+
+class FosConfigParser(ConfigParser):
+
+    BOOLEAN_STATES = {
+        "1": True,
+        "yes": True,
+        "true": True,
+        "on": True,
+        "y": True,
+        "0": False,
+        "no": False,
+        "false": False,
+        "off": False,
+        "n": False,
+        "N": False,
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._global_section = None
+
+    @property
+    def global_section(self):
+        if self._global_section is None:
+            for section in self.sections():
+                if section.lower() == "global":
+                    self._global_section = section
+                    break
+            else:
+                raise ScriptSyntaxError("Global section not found")
+        return self._global_section
+
+    def is_option_enabled(self, section, option, fallback=False):
+        if section.lower() == "global":
+            section = self.global_section
+        try:
+            value = self.get(section, option)
+            value = value.lower()
+            if value not in FosConfigParser.BOOLEAN_STATES:
+                print(
+                    "Invalid value for bool option %s in section %s" % (option, section)
+                )
+                print(
+                    "Valid values are: %s" % ", ".join(FosConfigParser.BOOLEAN_STATES)
+                )
+                return fallback
+            return self.BOOLEAN_STATES[value]
+        except NoOptionError:
+            return fallback
+
+    def get_global_option_value(self, option, fallback=""):
+        return self.get(self.global_section, option, fallback=fallback)
+
+    def get_device_list(self):
+        return [
+            d
+            for d in self.sections()
+            if self.has_option(d, "CONNECTION") or self.has_option(d, "Connection")
+        ]
+
+    def optionxform(self, optionstr):
+        # by default the option keys are case insensitive
+        # override this func to make it case sensitive
+        return optionstr
+
+
 class EnvParser:
     def __init__(self, env_file):
+        if not os.path.exists(env_file):
+            raise FileNotExist(env_file)
         self.env_file = env_file
         self.converted_file = output.compose_summary_file(CONVERTED_ENV)
         self.section_commented = False
-        self.config = ConfigParser()
+        self.config = FosConfigParser()
         self.run()
 
+    def finalize_value(self, value):
+        read_from_prefix = "readfile->>"
+        if not value.startswith(read_from_prefix):
+            return value
+
+        file_path = value[len(read_from_prefix) :].strip()
+        with open(file_path, encoding="utf-8") as f:
+            value = f.read()
+        return value
 
     def _preprocess(self):
-        if not os.path.exists(self.env_file):
-            raise FileNotExist(self.env_file)
-
         with open(self.env_file, "r") as f:
             lines = f.readlines()
 
         with open(self.converted_file, "w") as f:
             for line in lines:
-                # if line.startswith('# [FGT_B]'):
-                #     breakpoint()
                 if re.match(r"#\s*\[.*\]", line):
                     self.section_commented = True
                 elif re.match(r"\[.+\]", line):
@@ -36,18 +106,34 @@ class EnvParser:
                 if not self.section_commented:
                     f.write(line.strip() + "\n")
 
-    def _dereference(self):
-        pattern = r"[a-zA-Z_]\w*"
-        prog = re.compile(rf"(?P<section_name>{pattern}):\s*(?P<key_name>{pattern})")
+    def _parse_value(self, value, parse_pattern, visited):
+        # support nested reference and multiple reference for a value
+        result = parse_pattern.findall(value)
+        if result:
+            for section, key in set(result):
+                if (section, key) in visited:
+                    raise SyntaxError(
+                        f"Error: circular reference detected for {section}:{key}"
+                    )
+                visited.add((section, key))
+                value = value.replace(f"{section}:{key}", self.config.get(section, key))
+            return self._parse_value(value, parse_pattern, visited)
+        return value
 
+    def _dereference(self):
+        # TODO: to support variable name not end with space
+        sections = "|".join(self.config.sections())
+        parse_pattern = re.compile(
+            rf"(?P<section_name>{sections}):\s*(?P<key_name>[^\s]+)"
+        )
         for section in self.config.sections():
             for key, value in self.config.items(section):
-                result = prog.match(value)
-                if result:
-                    section_name = result.group("section_name")
-                    key_name = result.group("key_name")
-                    if self.config.has_section(section_name) and self.config.has_option(section_name, key_name):
-                        self.config.set(section, key, self.config.get(section_name, key_name))
+                visited = {
+                    (section, key),
+                }
+                parsed_value = self._parse_value(value, parse_pattern, visited)
+                parsed_value = self.finalize_value(parsed_value)
+                self.config.set(section, key, parsed_value)
 
     @property
     def env(self):
@@ -63,7 +149,6 @@ class EnvParser:
             for key, value in self.config.items(section):
                 print(section, key, value)
             if section == "ORIOLE":
-                print(section)
                 for key, value in self.config.items(section):
                     print(key)
                     if key.startswith("field"):
@@ -74,21 +159,22 @@ class EnvParser:
         for section in self.config.sections():
             if section == section_name:
                 for key, value in self.config.items(section):
-                    tokens = key.split("_")
-                    if tokens[0] == start_string:
-                        res[tokens[1]] = value
+                    token, real_key, *_ = key.split("_")
+                    if token == start_string:
+                        res[real_key] = value
         return res
 
 
 if __name__ == "__main__":
     envParser = EnvParser("./lib/testcases/env/fgt.env")
-    # print(envParser.env["FGT_A"])
-    # envParser.run()
-    res = envParser.show()
-    envParser.env.set("GLOBAL", "local_http_server_port", "aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%3D")
-    # envParser.get
-    # print(res)
-
-    res = envParser.show()
-    print(res)
-    # print("connection" in envParser.env["FGT_A"])
+    envParser.show()
+    envParser.env.set(
+        "GLOBAL", "local_http_server_ip", r"aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%%3D"
+    )
+    envParser.show()
+    try:
+        EnvParser("./lib/testcases/env/fgt_wrong.env")
+        assert False
+    except ScriptSyntaxError as e:
+        print(e.message)
+        assert True

@@ -1,29 +1,41 @@
 import os
 import re
 import time
+from enum import Enum
 
-from lib.services.environment import env
 from lib.services.image_server import TFTP_SERVER_IP, Image, image_server
 from lib.services.log import logger
-from lib.utilities.exceptions import ImageDownloadErr, ImageNotFound
+from lib.utilities.exceptions import (
+    ImageDownloadErr,
+    ImageNotFound,
+    ResourceNotAvailable,
+)
 
 from .computer import Computer
 from .computer_conn import ComputerConn
+from .vm_builder import VmBuilder
 
 KVM_DEFAULT_IMAGE_FOLDER = r"/home/tester/images/another"
 
 
-VM_PAUSED = "paused"
-VM_SHUTOFF = "shut off"
+class VmStatus(Enum):
+    RUNNING = "running"
+    SHUTOFF = "shut off"
+    PAUSED = "paused"
+
+    @classmethod
+    def all_statuses(cls):
+        return [status.value for status in cls]
 
 
 class KVM(Computer):
     def __init__(self, dev_name):
-        self.dev_name = dev_name
-        self.dev_cfg = env.get_dev_cfg(dev_name)
         super().__init__(dev_name)
         self.image_location = None
         self.hosted_vms = []
+
+    def force_login(self):
+        raise NotImplementedError
 
     def get_dev_name(self):
         return self.dev_name
@@ -54,25 +66,19 @@ class KVM(Computer):
         return "FGT_VM64_KVM" if vm_name.startswith("FVM") else "FFW_VM64_KVM"
 
     def prepare_image(self, vm_name, release, build):
-        # breakpoint()
         image = Image(self.model(vm_name), release, build)
         image_file = image_server.lookup_image(image)
         if not image_file:
             raise ImageNotFound(image)
         image_location = image_file["parent_dir"]
         image_name = image_file["name"]
-
         command = f"curl http://{TFTP_SERVER_IP}/{image_location}/{image_name} --output {image_name}"
-
         self.send_command(command, timeout=60)
-
         image = self.unzip_image(image_name)
-        ok_flag = self.chwon_file(image)
-        if ok_flag and image:
+        if image:
             self.image_location = image
         else:
             raise ImageDownloadErr(image_name)
-        # self.send_command("\n")
         logger.debug("<<< image_location: '%s'", self.image_location)
         return self.image_location
 
@@ -101,40 +107,22 @@ class KVM(Computer):
         logger.debug("<<< image_name: '%s'", image_name)
         return image_name
 
-    def chwon_file(self, image):
-        logger.debug(">>> image: '%s'", image)
-        command = "chown tester:tester {}".format(image)
-        match, _ = self.send_command(command)
-        logger.debug("<<< return: '%s'", match)
-        return match
-
     def get_mgmt_nic(self):
-        """
-        root@ubuntu-kvm:~# ifconfig | grep 172.18.53.151 -B 3  --color=never
-                TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
-
-        eno3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-                inet 172.18.53.151  netmask 255.255.255.0  broadcast 172.18.53.255
-        [root@dublin /root]# ifconfig
-        eth0      Link encap:Ethernet  HWaddr 00:B0:D0:D8:FE:09
-          inet addr:132.177.8.28  Bcast:132.177.8.127  Mask:255.255.255.128
+        r"""
+        root@kvm-server:/home/zdl/autolib# ip -o -4 addr show  | grep 10.6.30.139 --color=never
+        5: br0    inet 10.6.30.139/24 brd 10.6.30.255 scope global br0\       valid_lft forever preferred_lft forever
         """
         mgmt_ip = self.dev_cfg.get("management")
-        command = f"ifconfig | grep {mgmt_ip} -B 3 --color=never"
-        _, ret = self.send_command(command, r".*(flags=|encap:).*", timeout=10)
-        mgmt_nic = None
-        m = re.search(r"^(?P<nic>\S+):\s+flags=.*$", ret, re.M)
-        if m:
-            mgmt_nic = m.group("nic")
-        else:
-            m = re.search(r"^(?P<nic>\S+)\s+Link encap:.*$", ret, re.M)
-            if m:
-                mgmt_nic = m.group("nic")
+        command = f"ip -o addr show | grep {mgmt_ip}/ --color=never"
+        _, ret = self.send_command(command, timeout=10)
+        matched_nics = re.findall(r":\s+([^\s]+)\s+inet", ret, flags=re.M)
 
-        if mgmt_nic is None:
-            logger.error("\nUnable to get management nic!!!\n")
-            mgmt_nic = "Unknown"
-
+        if not matched_nics:
+            logger.error("\nUnable to get management nic with IP(%s)!!!\n", mgmt_ip)
+            raise ResourceNotAvailable(
+                f"\nUnable to get management nic with IP({mgmt_ip})!!!\n"
+            )
+        mgmt_nic = matched_nics[0]
         logger.debug("mgmt_nic set to be: %s", mgmt_nic)
         return mgmt_nic
 
@@ -143,22 +131,53 @@ class KVM(Computer):
         logger.debug(template, saveas, block_size, count, disk_size)
         if not saveas.startswith(KVM_DEFAULT_IMAGE_FOLDER):
             saveas = os.path.join(KVM_DEFAULT_IMAGE_FOLDER, os.path.basename(saveas))
-        if disk_size:
-            command = "sudo qemu-img create -f raw {} {}".format(saveas, disk_size)
-        elif block_size and count:
-            command = "dd if=/dev/zero of={} bs={} count={}".format(
-                saveas, block_size, count
-            )
+        command = "sudo qemu-img create -f raw {} {}".format(saveas, disk_size)
         match, _ = self.send_command(command, r"[$]$", timeout=10)
         logger.info("\nLog disk file is created: %s\n", saveas)
         logger.debug("<<< return: '%s', saveas: '%s'", match, saveas)
         return match, saveas
 
+    def prepare_for_vm_deployment(self, vm_name):
+        vm_status = self.retr_vm_status(vm_name)
+        if vm_status:
+            if vm_status is VmStatus.RUNNING:
+                self.power_off_vm(vm_name)
+                self.remove_vm(vm_name)
+            if vm_status in (VmStatus.PAUSED, VmStatus.SHUTOFF):
+                self.remove_vm(vm_name)
+
+    def make_vm_ready(self, vm_name):
+        status = self.retr_vm_status(vm_name)
+        if status is None:
+            raise ResourceNotAvailable(f"vm_name {vm_name} not available")
+        if status in (VmStatus.PAUSED, VmStatus.SHUTOFF):
+            self.power_on_vm(vm_name)
+
     def retr_vm_status(self, vm_name):
-        match_rule = rf"\S+\s*{vm_name}\s*(?P<status>running|paused|shut off)"
+        supported_status = VmStatus.all_statuses()
+        match_rule = rf"\S+\s*{vm_name}\s*(?P<status>{'|'.join(supported_status)})"
         list_vm_cmd = "virsh list --all"
         match, _ = self.send_command(list_vm_cmd, match_rule, timeout=10)
-        return match.group("status") if match else None
+        return VmStatus(match.group("status")) if match else None
+
+    def deploy_vm(self, vm_name, release, build):
+        self.prepare_for_vm_deployment(vm_name)
+        VmBuilder(self, vm_name, release, build).create_vm()
+        time.sleep(2)
+        self.power_on_vm(vm_name)
+        self.wait_until_running(vm_name)
+        logger.notify("%s is created and is running.", vm_name)
+
+    def wait_until_running(self, vm_name, time_out=10 * 60):
+        start_time = time.perf_counter()
+        while time.perf_counter() - start_time < time_out:
+            if self.retr_vm_status(vm_name) is VmStatus.RUNNING:
+                break
+            time.sleep(2)
+        else:
+            raise ResourceNotAvailable(
+                f"vm '{vm_name}' not ready after '{time_out}'s!!"
+            )
 
     def power_on_vm(self, vm_domain):
         command = f"virsh --connect qemu:///system start {vm_domain}"
@@ -171,7 +190,7 @@ class KVM(Computer):
         self.send_command(command, expected_str)
         time.sleep(poweroffdelay)
         vm_status = self.retr_vm_status(vm_domain)
-        return vm_status is None or vm_status in [VM_PAUSED, VM_SHUTOFF]
+        return vm_status is None or vm_status is VmStatus.SHUTOFF
 
     def remove_vm(self, vm_domain):
         command = f"virsh undefine {vm_domain}"
@@ -186,7 +205,7 @@ class KVM(Computer):
             + "{logdisk}"
             + "--network type={network_type},source={mgmt_nic},model=virtio "
             + "--serial tcp,host={serial_ip}:{serial_port},mode=bind,protocol={con_protocol} "
-            + "{port_list} "
+            + "{port_list} --osinfo detect=off,require=off "
             + "--import --noreboot --noautoconsole --wait=1 --metadata uuid={uuid}"
         )
 

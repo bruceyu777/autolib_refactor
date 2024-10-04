@@ -1,6 +1,8 @@
-import regex
-from lib.services.log import logger
 import time
+
+import regex
+
+from lib.services.log import logger
 
 NOFLAG = 0
 
@@ -24,7 +26,6 @@ class OutputBuffer:
 
     def append(self, output):
         self.output += self._remove_color_character(output)
-        # self.output = self.output.replace("\r\n", "\n")
 
     def clear(self, pos=None):
         self.output = "" if pos is None else self.output[pos:]
@@ -35,10 +36,10 @@ class OutputBuffer:
         logger.debug("%s", self.output[pos:])
         logger.debug("------------end match output-----------")
         t1 = time.perf_counter()
-        result =  regex.search(pattern, self.output[pos:])
+        result = regex.search(pattern, self.output[pos:])
         t2 = time.perf_counter()
 
-        logger.debug("pattern match for %s takes %s s", pattern, t2-t1)
+        logger.debug("pattern match for %s takes %s s", pattern, t2 - t1)
         logger.debug("the result is %s", result)
         return result
 

@@ -1,25 +1,27 @@
 import os
-import webbrowser
-import time
 import sys
+import webbrowser
 
-from lib.services import env, oriole, output, logger
 from lib.core.scheduler.web_server import WebServer
+from lib.services import env, logger, oriole, output
+
 from .group_task import GroupTask
 from .script_task import ScriptTask
 
-
-import pdb
 
 class Job:
     def __init__(self, args):
         self.args = args
 
+    def init_task(self):
+        return (
+            ScriptTask(self.args.script)
+            if self.args.script
+            else GroupTask(self.args.group)
+        )
+
     def execute_script(self):
-        if self.args.script:
-            task = ScriptTask(self.args.script)
-        if self.args.group:
-            task = GroupTask(self.args.group)
+        task = self.init_task()
         task.run(self.args)
         output.zip_autotest_log()
 
@@ -34,22 +36,24 @@ class Job:
         env.init_env(self.args)
         oriole.set_user_cfg(self.args)
 
+    def _launch_summary_webpage(self):
+        host, port = env.get_local_http_server_conf()
+        if not host or not port:
+            logger.error("Unable to get IP and PORT for LOCAL_HTTP_SERVER from env.")
+            return
+
+        summary_url = f"http://{host}:{port}/{output.get_current_output_dir()}/summary"
+        logger.notice(f"Summary: {summary_url}/summary.html")
+        webbrowser.open_new(summary_url)
+
     def create_child_process(self):
         pid = os.fork()
         if pid == 0:
             self.start_http_server()
         else:
-            logger.info('After creating web server for autotest.')
-            ip, port = env.get_local_http_server_conf()
-            if ip and port:
-                logger.notice(f"Summary: http://{ip}:{port}/{output.get_current_output_dir()}/summary/summary.html")
-                webbrowser.open_new(f"http://{ip}:{port}/{output.get_current_output_dir()}/summary/")
-
+            self._launch_summary_webpage()
             self.execute_script()
-
 
     def run(self):
         self.init_env()
         self.create_child_process()
-
-

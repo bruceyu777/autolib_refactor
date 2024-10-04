@@ -1,6 +1,5 @@
 import os
 import zipfile
-
 from datetime import datetime
 
 from lib.settings import OUTPUTS_DIR
@@ -46,8 +45,9 @@ class Output:
     def zip_autotest_log(self):
         zip_file = self.compose_summary_file("autotest.zip")
         log_file = self.compose_summary_file("autotest.log")
-        with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-             zipf.write(log_file, arcname=os.path.basename(log_file))
+        with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(log_file, arcname=os.path.basename(log_file))
         os.remove(log_file)
+
 
 output = Output()

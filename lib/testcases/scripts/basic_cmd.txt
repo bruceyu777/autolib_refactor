@@ -21,7 +21,3 @@ setvar -e "(?n)Serial-Number: (FG[\d\w]+)" -to sn
     setvar -e "(?n)Serial-Number: (FG.*)" -to sn
     get system status | grep 'Serial-Number' -A 3
     varexpect -v {$sn} -for 888212 -t 5
-
-
-
-
