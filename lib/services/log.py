@@ -30,9 +30,9 @@ def add_logger_handler(handler, level, formatter):
     logger.addHandler(handler)
 
 
-def add_stdout_stream(run_mode):
+def add_stdout_stream(in_debug_mode):
     handler = logging.StreamHandler(sys.stdout)
-    if run_mode == "debug":
+    if in_debug_mode:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
@@ -40,27 +40,23 @@ def add_stdout_stream(run_mode):
         return
     formatter = logging.Formatter("%(message)s")
 
-    add_logger_handler(
-        handler, logging.ERROR, formatter  # pylint: disable= no-member
-    )
-    add_logger_handler(
-        handler, logging.NOTICE, formatter  # pylint: disable= no-member
-    )
+    add_logger_handler(handler, logging.ERROR, formatter)  # pylint: disable= no-member
+    add_logger_handler(handler, logging.NOTICE, formatter)  # pylint: disable= no-member
 
 
-def add_file_stream(run_mode):
+def add_file_stream(in_debug_mode):
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     log_file = output.compose_summary_file("autotest.log")
     handler = logging.FileHandler(log_file)
-    level = logging.DEBUG if run_mode == "debug" else logging.INFO
+    level = logging.DEBUG if in_debug_mode else logging.INFO
     add_logger_handler(handler, level, formatter)
 
 
-def set_logger(run_mode):
+def set_logger(in_debug_mode):
     logger.setLevel(logging.DEBUG)
     add_logging_level("NOTIFY", logging.INFO + 5)
     add_logging_level("NOTICE", logging.INFO + 10)
-    add_stdout_stream(run_mode)
-    add_file_stream(run_mode)
+    add_stdout_stream(in_debug_mode)
+    add_file_stream(in_debug_mode)

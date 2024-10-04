@@ -23,7 +23,8 @@ KEYWORDS = (
     "setlicense",
     "clearbuff",
     "include",
-    "breakpoint"
+    "breakpoint",
+    "enter_dev_debugmode",
 )
 SYMBOLS = (
     ".",
@@ -45,7 +46,7 @@ SYMBOLS = (
 
 SPACE_DELIMETERS = (" ", "\r", "\n", "\t")
 
-OPERATORS = ("eq","lt")
+OPERATORS = ("eq", "lt")
 
 
 class SingleChar(UserString):
@@ -110,9 +111,7 @@ class Tokenizer(dict):
 
     def _compose_symbol(self, char):
         token_type = (
-            "delimiter"
-            if self._is_control_statement_delimiter(char)
-            else "symbol"
+            "delimiter" if self._is_control_statement_delimiter(char) else "symbol"
         )
         self.tokens.append(Token(char, token_type))
         self._advance()
@@ -266,9 +265,9 @@ class Tokenizer(dict):
             return True
         if self.is_group_command():
             return True
-        return not self.line.startswith(
-            KEYWORDS[7:]
-        ) and not self.line.startswith(SYMBOLS)
+        return not self.line.startswith(KEYWORDS[7:]) and not self.line.startswith(
+            SYMBOLS
+        )
 
     def is_section_line(self):
         return self.line.startswith("[")
@@ -283,7 +282,6 @@ class Tokenizer(dict):
         return not self.line
 
     def parse(self):
-        # breakpoint()
         if self._is_empty_line():
             return self.tokens
         if self._is_commented_line():

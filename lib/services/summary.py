@@ -1,4 +1,6 @@
 import collections
+import html
+import os
 import shutil
 from datetime import datetime
 
@@ -10,10 +12,6 @@ from rich.table import Table
 
 from .environment import env
 from .output import output
-import os
-import html
-
-# from lib.services.oriole.oriole_client import oriole
 
 SUMMARY_FILE_NAME = "summary.html"
 TEMPLATE_FILE_NAME = "summary.template"
@@ -45,7 +43,7 @@ class Summary:
         self._generate()
 
     def update_reported(self, id_):
-        status, res, reported = self.testcases[id_]
+        status, res, _ = self.testcases[id_]
         self.testcases[id_] = status, res, True
         self._generate()
 
@@ -56,7 +54,6 @@ class Summary:
     def update_testscript(self, id_, status, duration="NA"):
         self.testscripts[id_] = (status, duration)
         self._generate()
-        # oriole.dump()
 
     def update_testscript_duration(self, id_, duration):
         status, _ = self.testscripts[id_]
@@ -68,7 +65,6 @@ class Summary:
         self.end_time = datetime.now().replace(microsecond=0)
         self._generate()
         self._print()
-
 
     def _statistic_testcases(self):
         statistics = {}
@@ -82,9 +78,11 @@ class Summary:
             for status, res, _ in self.testcases.values()
         )
         statistics["passed_percentage"] = 100 * round(
-            statistics["passed_number"] / statistics["total_number"]
-            if statistics["total_number"]
-            else 0,
+            (
+                statistics["passed_number"] / statistics["total_number"]
+                if statistics["total_number"]
+                else 0
+            ),
             2,
         )
         statistics["not_tested_number"] = sum(
@@ -96,28 +94,26 @@ class Summary:
     @staticmethod
     def _split_long_lines(text):
         # Split the text into lines
-        lines = text.split('\n')
+        lines = text.split("\n")
 
         # Iterate through each line
         for i, line in enumerate(lines):
             # Check if the line length exceeds 100 characters
             if len(line) > 100:
                 # Split the line into chunks of maximum 100 characters
-                chunks = [line[j:j+100] for j in range(0, len(line), 100)]
-                # print(chunks)
+                chunks = [line[j : j + 100] for j in range(0, len(line), 100)]
                 # Replace the original line with the split chunks
-                lines[i:i+1] = chunks
+                lines[i : i + 1] = chunks
 
         # Join the lines back into a single string
-        # print(lines)
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
-
-    def _normalize_output_for_html(self, output):
-        output = html.escape(output)
-        output = self._split_long_lines(output)
-        return output.replace('\n', '<br>')
-
+    def _normalize_output_for_html(self, raw_output: str) -> str:
+        """Normalize output for HTML by escaping special characters,
+        splitting long lines, and replacing newlines with HTML line breaks."""
+        escaped_output = html.escape(raw_output)
+        normalized_output = self._split_long_lines(escaped_output)
+        return normalized_output.replace("\n", "<br>")
 
     def _classify_testcases(self):
         results = []
@@ -146,7 +142,6 @@ class Summary:
         return results
 
     def _render(self):
-
         file_loader = FileSystemLoader(TEMPLATE_FILE_DIR)
         render_env = Environment(loader=file_loader)
         template = render_env.get_template(TEMPLATE_FILE_NAME)
@@ -182,9 +177,7 @@ class Summary:
 
     def _print(self):
         table = Table(title="Testcase Results")
-        table.add_column(
-            "Testcase Id", justify="right", style="cyan", no_wrap=True
-        )
+        table.add_column("Testcase Id", justify="right", style="cyan", no_wrap=True)
         table.add_column("Result", style="magenta")
         table.add_column("Reported", style="magenta")
 
@@ -198,12 +191,8 @@ class Summary:
         console = Console()
         console.print(table)
 
-    def add_failed_testscript(
-        self, script_id, script, comment="Failed testscript"
-    ):
-        with open(
-            self.failed_testscripts_file_name, "a", encoding="utf-8"
-        ) as f:
+    def add_failed_testscript(self, script_id, script, comment="Failed testscript"):
+        with open(self.failed_testscripts_file_name, "a", encoding="utf-8") as f:
             f.write(f"{script_id}  {script} {comment}\n")
 
     def dump_result_to_brief_summary(self, script_id, script, result):

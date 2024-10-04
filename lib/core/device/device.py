@@ -1,9 +1,8 @@
 import csv
 import re
 import time
-import pdb
 
-from lib.services.environment import env
+from lib.services.environment import DeviceConfig, env
 from lib.services.log import logger
 
 DEFAULT_TIMEOUT_FOR_PROMPT = 10
@@ -22,10 +21,11 @@ AUTO_PROCEED_RULE_MAP = {
     r"\[Y/N\]\?": "Y",
     r"to accept\): ": "a",
     r"\[confirm\]": "y",
+    r"--More-- $": " ",
 }
 
-SYSCTRL_COMAND = ("Admin:\s*$",)
-FTP_NAME_PROMPT = ("Name\s*\(.+\):\s*$", )
+SYSCTRL_COMAND = (r"Admin:\s*$",)
+FTP_NAME_PROMPT = (r"Name\s*\(.+\):\s*$",)
 DEFAULT_PROMPTS = "|".join(
     UNIVERSAL_PROMPTS
     + FOS_UNIVERSAL_PROMPTS
@@ -39,7 +39,8 @@ class Device:
     def __init__(self, dev_name):
         self.dev_name = dev_name
         self.conn = None
-        self.dev_cfg = env.get_dev_cfg(dev_name)
+        self._device_info = None
+        self.dev_cfg: DeviceConfig = env.get_dev_cfg(dev_name)
         self.keep_running = False
         self.confirm_with_newline = False
         self.wait_for_confirm = False
@@ -50,7 +51,6 @@ class Device:
         self._extract_license_info()
 
     def _reconnect_if_exited(self):
-        # self.conn._read_output()
         expected_switch_prompts = (
             r"((?P<prompt>[#$]\s*$)|(?P<login>login:)|(?P<Password>Password:))"
         )
@@ -76,35 +76,19 @@ class Device:
             logger.notify("Device:%s is reconnected.", self.dev_name)
 
     def switch(self, retry=0):
-        # self.clear_buffer()
         if retry > 3:
             logger.info("Failed to switch device: %s", self.dev_name)
         try:
-            # self.conn.send_command("\x03", "#", DEFAULT_TIMEOUT_FOR_PROMPT)
-            # self._reconnect_if_exited()
             if self.keep_running:
-                # expected_switch_prompts = (
-                #     r"((?P<prompt>[#$]\s*$)|(?P<login>login:)|(?P<Password>Password:))"
-                # )
-                # matched, _ = self.conn.send_command(
-                #     "", expected_switch_prompts, DEFAULT_TIMEOUT_FOR_PROMPT
-                # )
-                # if matched.group("login") is not None:
-                #     self.conn.login()
-
-                # logger.notify("Succeeded to login device:%s.", self.dev_name)
-
                 return
-            else:
-                self._reconnect_if_exited()
-                logger.info("Start login device %s", self.dev_name)
-                self.force_login()
-                self.clear_buffer()
+            self._reconnect_if_exited()
+            logger.info("Start login device %s", self.dev_name)
+            self.force_login()
+            self.clear_buffer()
 
         except Exception as e:
             print(e)
             self.switch(retry + 1)
-
 
     def connect(self):
         raise NotImplementedError
@@ -131,7 +115,7 @@ class Device:
         for key, val in AUTO_PROCEED_RULE_MAP.items():
             if re.match(key, s):
                 if self.confirm_with_newline:
-                    return val + '\n'
+                    return val + "\n"
                 return val
         return None
 
@@ -147,6 +131,76 @@ class Device:
                 return True
         return False
 
+    @property
+    def system_status(self):
+        self.clear_buffer()
+        *_, system_info_raw = self.send_command("get system status", timeout=10)
+        logger.info("System info captured: %s", system_info_raw)
+        status = {}
+        for line in system_info_raw.splitlines():
+            if line.startswith("Version: "):
+                pattern = re.compile(
+                    r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
+                    r"build((?P<build>\d+)),\d+\s+\((?P<release_type>.*?)\)"
+                )
+                matched = pattern.search(line)
+                if matched:
+                    status.update(matched.groupdict())
+            elif line.startswith("Serial-Number"):
+                status["serial"] = line.split(" ")[1]
+            elif line.startswith("BIOS version"):
+                status["bios_version"] = line.split(": ")[1]
+            elif line.startswith("Branch point"):
+                status["branch_point"] = line.split(": ")[1]
+        if status and "bios_version" not in status:
+            status["bios_version"] = "0"
+        return status
+
+    def get_device_info(self, on_fly=False):
+        if self._device_info is None or on_fly:
+            t1 = time.perf_counter()
+            system_status = self.system_status
+            t2 = time.perf_counter()
+            logger.info("It takes %s s to collect system status.", t2 - t1)
+            t1 = time.perf_counter()
+            autoupdate_versions = self.get_autoupdate_versions()
+            t2 = time.perf_counter()
+            logger.info("It takes %s s to collect autoupdate versions.", t2 - t1)
+            self._device_info = {**system_status, **autoupdate_versions}
+        return self._device_info
+
+    @property
+    def is_vdom_enabled(self):
+        # for some platform if vdom not enabled, won't have Virtual information in
+        # get system statuss
+        return self.system_status.get("vdom_mode", "disable") != "disable"
+
+    def get_autoupdate_versions(self, is_vdom_enabled=None):
+        if is_vdom_enabled or self.is_vdom_enabled:
+            self._goto_global_view()
+        self.clear_buffer()
+        *_, versions_raw = self.send_command("diag autoupdate versions", timeout=10)
+        logger.info("The autoupdate version is\n%s", versions_raw)
+        pattern = re.compile(
+            r"\r\n([^\r\n]+)\r\n--+\r\nVersion: ([0-9.]+)[ \r\n]", flags=re.M | re.S
+        )
+        matched = pattern.findall(versions_raw)
+        update_versions = {}
+        if matched:
+            update_versions = dict(matched)
+        else:
+            logger.error("Failed to parse update versions")
+        if is_vdom_enabled:
+            self._return_to_user_view()
+        logger.debug("The extracted autoupdate version is\n%s", update_versions)
+        return update_versions
+
+    def _goto_global_view(self):
+        self.send_command("config global")
+
+    def _return_to_user_view(self):
+        self.send_command("end")
+
     def send_command(
         self,
         command,
@@ -154,10 +208,9 @@ class Device:
         timeout=DEFAULT_TIMEOUT_FOR_PROMPT,
     ):
         if command == "ctrl_c":
-            # pdb.set_trace()
             command = "\x03"
-        # if command == 'nan_enter':
-        #     command = "\x0d"
+        if command == "ctrl_d":
+            command = "\x04"
 
         if command.startswith(("telnet ", "ssh ", "sshpass ", "ftp ")):
             self.embeded_conn = True
@@ -176,7 +229,6 @@ class Device:
             confirm_str = self.require_confirm(matched.group())
             if confirm_str:
                 logger.info("Matched group is '%s'", confirm_str)
-                # command_pattern = f"{confirm_str}.*{pattern}"
                 matched, output = self.conn.send_command(confirm_str, pattern, timeout)
             elif self.require_login(matched.group()) and not self.embeded_conn:
                 logger.info("Start login:")

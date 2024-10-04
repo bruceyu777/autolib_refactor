@@ -1,11 +1,32 @@
 import re
+
 from lib.services.output import output
 from lib.services.summary import summary
 
-ERROR_INFO = ("Unknown action", "command parse error", "Command fail", "incomplete command", "no tablename", "no object", "value parse error", "ambiguous command",
-"internal error", "discard the setting", "not found in table", "unset oper error ret", "Attribute(.*?)Must be set", "not found in datasource",
-"object set operator error", "node_check_object fail", "object check operator error", "value invalid", "invalid netmask",
-"invalid integer value", "invalid unsigned integer value", "invalid input", "duplicated with another vip",
+ERROR_INFO = (
+    "Unknown action",
+    "command parse error",
+    "Command fail",
+    "incomplete command",
+    "no tablename",
+    "no object",
+    "value parse error",
+    "ambiguous command",
+    "internal error",
+    "discard the setting",
+    "not found in table",
+    "unset oper error ret",
+    "Attribute(.*?)Must be set",
+    "not found in datasource",
+    "object set operator error",
+    "node_check_object fail",
+    "object check operator error",
+    "value invalid",
+    "invalid netmask",
+    "invalid integer value",
+    "invalid unsigned integer value",
+    "invalid input",
+    "duplicated with another vip",
 )
 FAILED_COMMANDS_FILE_NAME = "failed_commands.txt"
 
@@ -28,13 +49,13 @@ class CmdExecChecker:
             self.dump_failed_commands(error)
 
     def dump_failed_commands(self, error):
-        err_info = f"Command: {self.script}:{self.line_number} {self.command} Error: {error}."
-        with open(
-            self.failed_commands_file_name, "a", encoding="utf-8"
-        ) as f:
+        err_info = (
+            f"Command: {self.script}:{self.line_number} {self.command} Error: {error}."
+        )
+        with open(self.failed_commands_file_name, "a", encoding="utf-8") as f:
             f.write(f"{err_info}\n")
         summary.dump_err_command_to_brief_summary(err_info)
 
+
 if __name__ == "__main__":
     pass
-

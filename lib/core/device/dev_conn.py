@@ -1,9 +1,9 @@
 import re
 import sys
 import time
-import pdb
 
 import pexpect
+
 from lib.services import env, logger
 
 from .log_file import LogFile
@@ -87,22 +87,18 @@ class DevConn:
         )
         logger.info("Current pattern is %s", pattern)
 
-        # if command == "nan_enter":
-        #     self.client.send('\x0d')
         if command.endswith("?"):
             self.client.send(command)
         elif command == "nan_enter":
-            self.client.send('\x0d')
+            self.client.send("\x0d")
         elif command.startswith("backspace"):
             cnt = int(command.split(" ")[1])
-            # print("send backspace")
-            for i in range(cnt):
+            for _ in range(cnt):
                 self.client.send("\x08")
             self.client.send("\x0d")
         else:
             self.client.sendline(command)
-
-        #make sure to match the output after command is send
+        # make sure to match the output after command is send
         try:
             m, output = self.search(re.escape(command), ONE_SECOND, cur_pos)
         except pexpect.TIMEOUT:
@@ -111,11 +107,11 @@ class DevConn:
         if m:
             match_pos = match_pos + m.start()
         else:
-            logger.info("current output in send_command is %s", self.output_buffer[match_pos:])
+            logger.info(
+                "current output in send_command is %s", self.output_buffer[match_pos:]
+            )
         try:
             m, output = self.search(pattern, timeout, match_pos)
-            #command failure
-
             return m, output
         except pexpect.TIMEOUT:
             logger.warning("Failed to match %s in %s s.", pattern, timeout)
@@ -124,8 +120,7 @@ class DevConn:
     def expect(self, pattern, timeout=1, need_clear=True):
         m, output = self.search(pattern, timeout)
 
-        #logger.info("The ouput for expect is %s", output)
-        #logger.info("*" * 80)
+        logger.debug("The ouput for expect is: \n'%s'", output)
         if m is not None:
             logger.info(
                 "The buffer size is %s, the matched index is %s",
@@ -150,7 +145,7 @@ class DevConn:
         end_time = start_time + timeout
         while True:
             if timeout > 600:
-                if time.time() >= start_time + (timeout/MAX_SEARCH_CNT)*count:
+                if time.time() >= start_time + (timeout / MAX_SEARCH_CNT) * count:
                     matched = self.output_buffer.search(pattern, pos)
                     count += 1
             else:
@@ -183,10 +178,7 @@ class DevConn:
 
     def _dump_to_buffer(self):
         output = self.client.before + self.client.after
-        # output = output.replace("\r\n", "\n")
-
         self.output_buffer.append(output)
-
         self._log_output(output)
         return output
 

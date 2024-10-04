@@ -1,7 +1,3 @@
-import re
-import time
-
-
 class BIOS:
     pattern = {
         "entry_point": r"to display configuration menu",

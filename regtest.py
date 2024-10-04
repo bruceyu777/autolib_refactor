@@ -1,6 +1,6 @@
 import regex
+
 pattern = "Serial-Number: (.*?)\n"
-# m = regex.match(r"^\(\?n\)(.*)", pattern)
 s = """
 FGT1801F_APP_A (vd1) (Interim)# get system status
 Version: FortiGate-1801F v7.6.0,build3352,240417 (Beta 1.F)
@@ -45,7 +45,7 @@ Last reboot reason: warm reboot"""
 
 
 flag = regex.DOTALL | regex.MULTILINE
-pattern = r'Serial-Number: (.*?)\n'
+pattern = r"Serial-Number: (.*?)\n"
 m = regex.match(r"^\(\?n\)(.*)", pattern)
 
 # logger.info("The original pattern is: %s", pattern)

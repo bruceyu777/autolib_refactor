@@ -82,6 +82,11 @@ class ImageServer:
         logger.info("failed to get an image!!!")
         return {}
 
+    def get_image_http_url(self, image):
+        image_file = self.lookup_image(image)
+        image_loc = f"{image_file['parent_dir']}/{image_file['name']}"
+        return f"http://{TFTP_SERVER_IP}/{image_loc}"
+
     def locate_image(self, image):
         image_info = self.lookup_image(image)
         if not image_info:
@@ -148,7 +153,6 @@ class Image:
     def project(self):
         if self.model.startswith(("FGT", "FFW")):
             return "FortiOS"
-        # breakpoint()
         raise UnSupportedModel(self.model)
 
     def __str__(self):
@@ -166,9 +170,9 @@ class Image:
 
 
 image_server = ImageServer()
-if __name__ == "__main__":
-    import time
 
+
+if __name__ == "__main__":
     t1 = time.perf_counter()
     image_server.download_an_image(Image("FGT_VM64_KVM", "7.4.1", "2493"))
     t2 = time.perf_counter()

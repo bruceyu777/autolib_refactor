@@ -1,7 +1,9 @@
-from lib.services import output
 import fcntl
 import os
 import sys
+
+from lib.services import output
+
 
 class MultiIO:
     def __init__(self, *fds):
@@ -25,7 +27,6 @@ class MultiIO:
         self.pause_write_stdout = False
 
 
-
 # pylint : disable = consider-using-with
 class LogFile:
     FILE_TABLE = {
@@ -39,23 +40,22 @@ class LogFile:
         self.dev_name = dev_name
         self.fps = []
 
-
     def start_record(self, folder_name):
-        fps = []
         for log_type, log_file in self.FILE_TABLE.items():
             file_name = f"{self.dev_name}_{log_type}.log"
             file_path = output.compose_terminal_file(folder_name, file_name)
+            # pylint: disable=consider-using-with
             fp = open(file_path, "a", encoding="utf-8")
 
             flags = fcntl.fcntl(fp, fcntl.F_GETFL)  # Get current file flags
-            flags &= ~os.O_NONBLOCK                 # Clear the O_NONBLOCK flag
-            fcntl.fcntl(fp, fcntl.F_SETFL, flags)   # Set the new flags
+            flags &= ~os.O_NONBLOCK  # Clear the O_NONBLOCK flag
+            fcntl.fcntl(fp, fcntl.F_SETFL, flags)  # Set the new flags
 
             if log_type == "interaction":
                 interaction_fps = MultiIO(fp, sys.stdout)
-                self.client.__setattr__(log_file, interaction_fps)
+                setattr(self.client, log_file, interaction_fps)
             else:
-                self.client.__setattr__(log_file, fp)
+                setattr(self.client, log_file, fp)
             self.fps.append(fp)
 
     def stop_record(self):
@@ -67,8 +67,3 @@ class LogFile:
 
     def resume_stdout(self):
         self.client.logfile.resume_stdout()
-
-
-
-
-

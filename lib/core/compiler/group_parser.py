@@ -1,9 +1,10 @@
-from .compiler import compiler
 from ..executor.executor import Executor
+from .compiler import compiler
+
 
 class GroupParser:
     def __init__(self):
-        self.test_scripts = dict()
+        self.test_scripts = {}
 
     def parse(self, group_file):
         compiler.run(group_file)

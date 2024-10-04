@@ -1,18 +1,21 @@
-import argparse
 import http.server
-import socket
-import psutil
 import logging
-import setproctitle
 import os
-from lib.services.log import logger
+import socket
 import sys
-# import singal
+
+import psutil
+import setproctitle
+
+from lib.services.log import logger
+
 
 # Define a custom handler that suppresses logging messages
 class SilentHandler(http.server.SimpleHTTPRequestHandler):
+    # pylint: disable=redefined-builtin
     def log_message(self, format, *args):
         pass
+
 
 class WebServer:
     def __init__(self, ip, port):
@@ -22,9 +25,7 @@ class WebServer:
 
     def create(self):
         server_address = ("", self.port)
-        httpd = http.server.HTTPServer(
-            server_address, SilentHandler
-        )
+        httpd = http.server.HTTPServer(server_address, SilentHandler)
         httpd.serve_forever()
 
     def _is_port_available(self):
@@ -49,11 +50,16 @@ class WebServer:
                     "HTTP server is already running on port %s",
                     self.port,
                 )
-            else:
-                logger.notice(
-                    "Another service is already on port %s, you can specify another port in your env file if you want to use web server.",
-                    self.port,
-                )
+                return True
+            logger.notice(
+                (
+                    "Another service is already on port %d, you can specify another port in"
+                    " your env file if you want to use web server."
+                ),
+                self.port,
+            )
+            sys.exit(1)
+        return False
 
     def start(self):
         try:
@@ -69,19 +75,18 @@ class WebServer:
 
         sys.stdout.flush()
         sys.stderr.flush()
-        with open('/dev/null', 'r') as devnull:
+        with open("/dev/null", "r") as devnull:
             os.dup2(devnull.fileno(), sys.stdin.fileno())
             os.dup2(devnull.fileno(), sys.stdout.fileno())
             os.dup2(devnull.fileno(), sys.stderr.fileno())
 
-        logging.getLogger('http.server').setLevel(logging.ERROR)
+        logging.getLogger("http.server").setLevel(logging.ERROR)
         setproctitle.setproctitle(self.process_name)
         self.create()
         logger.info(
             "Succeeded to start HTTP server on port %s",
             self.port,
         )
-
 
     def create_process(self):
         if self._is_already_started():

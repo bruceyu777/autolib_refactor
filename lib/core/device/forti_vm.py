@@ -1,13 +1,13 @@
 import time
 
-from lib.services.environment import env
-from lib.services.log import logger
+from lib.services import env, logger
 from lib.utilities.exceptions import LicenseLoadErr
 
+from .common import LOGIN_STAGE
 from .fos_dev import FosDev
-from .common import BURN_IMAGE_STAGE, LOGIN_STAGE
 
 MAX_WAIT_TIME_FOR_LIC_UPDATE = 5 * 60
+
 
 class FortiVM(FosDev):
     def __init__(self, dev_name):
@@ -16,33 +16,21 @@ class FortiVM(FosDev):
         self.license = None
         self.license_server = None
 
-    def image_prefix(self):
-        if not self.model:
-            self.model = self.system_status["platform"]
-        image_prefix = (
-            self.model.replace("-", "_")
-            .replace("FortiGate", "FGT")
-            .replace("FortiCarrier", "FGT")
-        )
-        return image_prefix.replace("-", "_").replace("FortiFirewall", "FFW")
+    def reset_firewall(self, cmd):
+        if self.is_vdom_enabled:
+            self._goto_global_view()
+        if "factroyreset" in cmd:
+            cmd = "execute factoryreset keepvmlicense"
+        else:
+            self.send_line(cmd)
+        self.search("y/n", 30)
+        self.send_line("y")
+        self.login_firewall_after_reset()
 
     def _send_reset_command(self):
         self.send_line("exe factoryreset keepvmlicense")
 
-    # @property
-    # def system_status(self):
-    #     rule = (
-    #         r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
-    #         r"(build(?P<build>\d+)),\d+\s+\((?P<release_type>[\.\s\w]+)\).*"
-    #         r"Serial-Number: (?P<serial>[^\n]*).*"
-    #         r"Virtual domain configuration: (?P<vdom_mode>[^\n]*).*"
-    #         r"Branch point: (?P<branch_point>[^\n]*).*"
-    #     )
-    #     result, m, _ = self.send_command("get system status", rule, timeout=10)
-    #     return m.groupdict() if m and result else {}
-
     def get_license_by_type(self):
-        # breakpoint()
         license_type = self.dev_cfg.get("license_type", None)
         license_dir = self.dev_cfg.get("license_dir", None)
         if license_dir:
@@ -51,19 +39,20 @@ class FortiVM(FosDev):
 
     def request_license(self):
         mylicense = self.get_license_by_type()
-        mgmt_ip = self.dev_cfg.get("mgmt_ip", None)
         self.license = mylicense
-        self.license_server = self.dev_cfg.get(
-            "license_server", None
-        )
+        self.license_server = self.dev_cfg.get("license_server", None)
         logger.debug(
             "license: '%s',license_server: '%s'", self.license, self.license_server
         )
         return self.license, self.license_server
 
     def load_license(self):
-        logger.debug("server: '%s',license_file: '%s'", self.license_server, self.license)
-        command = "execute restore vmlicense tftp {} {}".format(self.license, self.license_server)
+        logger.debug(
+            "server: '%s',license_file: '%s'", self.license_server, self.license
+        )
+        command = "execute restore vmlicense tftp {} {}".format(
+            self.license, self.license_server
+        )
         self.send_line(f"{command}")
         self.search("y/n", 30)
         self.send_line("y")
@@ -73,20 +62,18 @@ class FortiVM(FosDev):
         # and a few seconds later, device will reboot and then go back to
         # login view again, add a delay wait device reboot
         time.sleep(100)
-        matched, output = self.search("login:", 300, -1)
+        _, output = self.search("login:", 300, -1)
         failure = "license install failed."
         if output.find(failure) != -1:
             logger.error("\n%s\n", failure.title())
             raise LicenseLoadErr("License Load ERROR!")
-        self.send_line("admin")
-        self.search("Password:", 30, -1)
-        self.send_line("admin")
-        self.search("#", 30, -1)
+        self._login(self.DEFAULT_ADMIN, self.TEMP_PASSWORD)
         self.send_line("execute update-now")
         self.search("#", 30, -1)
 
     def activate_license(self):
         if self.use_evaluation_license():
+            logger.warning("Use evaluation license!")
             return
         # need all the hosted entity have those atttribute
         self.pre_mgmt_settings()
@@ -123,7 +110,7 @@ class FortiVM(FosDev):
         """
         command = "diagnose hardware sysinfo vm full"
         self.send_line(f"{command}")
-        matched, ret = self.search("#|login:", 30, -1)
+        _, ret = self.search("#|login:", 30, -1)
         required = {"valid": [1], "status": [1], "code": range(200, 400)}
         selected = (
             line.split(":") for line in ret.splitlines() if line.find(": ") != -1
@@ -134,10 +121,7 @@ class FortiVM(FosDev):
             status.get(key, 0) in allow_values for key, allow_values in required.items()
         )
         if ret.endswith("login: "):
-            self.send_line("admin")
-            self.search("Password:", 30, -1)
-            self.send_line("admin")
-            self.search("#", 30, -1)
+            self._login(self.DEFAULT_ADMIN, self.TEMP_PASSWORD)
         logger.debug("<<< 'valid': '%s'", valid)
         return valid
 
@@ -146,12 +130,9 @@ class FortiVM(FosDev):
         wait_time = 0
         while wait_time < timeout:
             self.send_line("")
-            matched, ret = self.search("#|login:", 10, -1)
+            _, ret = self.search("#|login:", 10, -1)
             if ret and ret.find("login: ") != -1:
-                self.send_line("admin")
-                self.search("Password:", 30, -1)
-                self.send_line("admin")
-                self.search("#", 30, -1)
+                self._login(self.DEFAULT_ADMIN, self.TEMP_PASSWORD)
             if self.validate_license():
                 break
             msg = "\nSleep 20 seconds to wait license activate!\n"
@@ -167,4 +148,3 @@ class FortiVM(FosDev):
 
     def use_evaluation_license(self):
         return env.is_cfg_option_enabled("GLOBAL", "EVALUATION_LICENSE")
-

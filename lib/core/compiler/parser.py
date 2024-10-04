@@ -1,391 +1,31 @@
-import os
+import json
+from collections import OrderedDict
 from pathlib import Path
 
-from lib.services import output, summary
+from lib.services import logger, output, summary
+from lib.utilities.exceptions import ScriptSyntaxError
 
 from .cmd_compiler import CmdCompiler
 from .vm_code import VMCode
 
-from lib.utilities.exceptions import SyntaxError
 
-VALID_COMMANDS = ('set', 'edit', 'config', 'diag', 'exe', 'execute','del', "next", "end", "unset", "keep_running", "resetFirewall", "show"
-, "append", "select", "unselect", "purge", "get", "conf", "clear", "sh", "myset", "myend", "mynext", "mydelete", "comment", "Comment", "ctrl_c", "nan_enter",
-"clone", "dia","fnsysctl", "con", "y", "sleep", 'rename','myexec', "move", "cleanbuff", "admin", "expect_ctrl_c", "restore_image", "confirm_with_newline",
-"wait_for_confirm","auto_login"
-)
+class Syntax:
+    def __init__(self, syntax_filepath):
+        with open(syntax_filepath, "r", encoding="utf-8") as f:
+            self.syntax = json.load(f, object_pairs_hook=OrderedDict)
+
+    def __getitem__(self, key):
+        return self.syntax[key]
+
+    def __contains__(self, item):
+        return item in self.syntax
+
+
+CLI_SYNTAX_FILEPAHT = Path(__file__).resolve().parent / "static" / "cli_syntax.json"
+SYNTAX = Syntax(CLI_SYNTAX_FILEPAHT)
+
+
 class Parser:
-    SYNTAX = {
-        "script": (
-            "api",
-            "section",
-            "command",
-            "keyword",
-            "include",
-            "comment",
-        ),
-        "api": {
-            "setvar": (
-                "parse",
-                (
-                    ("identifier", "-e"),
-                    (("string", "identifier"), None),
-                    ("identifier", "-to"),
-                    (("identifier", "string"), None),
-                ),
-            ),
-            "collect_dev_info":  (
-                "parse",
-                (
-                    ("identifier", "-for"),
-                    (("number", "identifier"), None),
-                ),
-            ),
-
-            # "compare": (
-            #     "parse_options",
-            #     (
-            #         {
-            #             "-v1": None,
-            #             "-v2": None,
-            #             "-for": None,
-            #             "-fail": "uneq",
-            #         },
-            #         (
-            #             ("identifier", None),
-            #             (
-            #                 [
-            #                     "identifier",
-            #                     "number",
-            #                     "string",
-            #                     "variable",
-            #                     "operator",
-            #                 ],
-            #                 None,
-            #             ),
-            #         ),
-            #     ),
-            # ),
-            "restore_image": (
-                "parse_options",
-                (
-                    {
-                        "-v": None,
-                        "-b": None,
-                    },
-                    (
-                        ("identifier", None),
-                        (["number", "variable"], None),
-                    ),
-                ),
-            ),
-            "report": (
-                "parse",
-                ((("number", "identifier"), None),),
-            ),
-            "expect": (
-                "parse_options",
-                (
-                    {
-                        "-e": None,
-                        "-for": None,
-                        "-t": 5,
-                        "-fail": "unmatch",
-                        "-b": None,
-                        "-a": None,
-                        "-clear":"yes",
-                        "-retry_command":None,
-                        "-retry_cnt":3
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-            "expect_ctrl_c": (
-                "parse_options",
-                (
-                    {
-                        "-e": None,
-                        "-for": None,
-                        "-t": 5,
-                        "-fail": "unmatch",
-                        "-b": None,
-                        "-a": None,
-                        "-clear":"yes",
-                        "-retry_command":None,
-                        "-retry_cnt":3
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-            "myftp": (
-                "parse_options",
-                (
-                    {
-                        "-e": None,
-                        "-ip": None,
-                        "-for": None,
-                        "-fail": None,
-                        "-t": 5,
-                        "-u": None,
-                        "-p": None,
-                        "-c": None,
-                        "-a": "continue",
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-            "mytelnet": (
-                "parse_options",
-                (
-                    {
-                        "-d": None,
-                        "-e": None,
-                        "-ip": None,
-                        "-for": None,
-                        "-fail": None,
-                        "-t": 5,
-                        "-u": None,
-                        "-p": None,
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-            "expect_OR": (
-                "parse_options",
-                (
-                    {
-                        "-e1": None,
-                        "-e2": None,
-                        "-fail1": "unmatch",
-                        "-fail2": "unmatch",
-                        "-for": None,
-                        "-t": 5,
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-            "setenv": (
-                "parse_options",
-                (
-                    {
-                        "-n": None,
-                        "-v": None,
-                        "-d": None,
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-
-            "compare": (
-                "parse_options",
-                (
-                    {
-                        "-v1": None,
-                        "-v2": None,
-                        "-for": None,
-                        "-fail": "uneq",
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-            "varexpect": (
-                "parse_options",
-                (
-                    {
-                        "-e": None,
-                        "-v": None,
-                        "-for": None,
-                        "-t": 5,
-                        "-fail": None,
-                        "-b": None,
-                    },
-                    (
-                        ("identifier", None),
-                        (
-                            [
-                                "identifier",
-                                "number",
-                                "string",
-                                "variable",
-                                "operator",
-                            ],
-                            None,
-                        ),
-                    ),
-                ),
-            ),
-            "sleep": ("parse", ((("number", "identifier"), None),)),
-            "clearbuff": ("parse", ()),
-            "breakpoint": ("parse", ()),
-            "resetFirewall": ("parse", ()),
-            "clear_buffer": ("parse", (("number", None),)),
-            "clean_buffer": ("parse", ()),
-            "keep_running": ("parse", (("number", None),)),
-            "confirm_with_newline":  ("parse", (("number", None),)),
-            "wait_for_confirm": ("parse", (("number", None),)),
-            "auto_login": ("parse", (("number", None),)),
-            "forcelogin": ("parse", ()),
-            "setlicense": (
-                "parse",
-                (
-                    # ("symbol", "-"),
-                    ("identifier", "-t"),
-                    ("identifier", None),
-                    # ("symbol", "-"),
-                    ("identifier", "-for"),
-                    ("identifier", None),
-                    # ("symbol", "-"),
-                    ("identifier", "-to"),
-                    ("identifier", None),
-                ),
-            ),
-        },
-        "keyword": {
-            "if": (
-                "control_block",
-                ("expression", "script", ("elseif", "else", "fi")),
-            ),
-            "elseif": (
-                "control_block",
-                ("expression", "script", ("elseif", "else", "fi")),
-            ),
-            "else": (
-                "control_block",
-                (
-                    "script",
-                    "fi",
-                ),
-            ),
-            "fi": ("control_block", ()),
-            "loop": (
-                "control_block",
-                (
-                    "expression",
-                    "script",
-                    "until",
-                ),
-            ),
-            "until": (
-                "control_block",
-                ("expression",),
-            ),
-            "while": (
-                "control_block",
-                (
-                    "expression",
-                    "script",
-                    "endwhile",
-                ),
-            ),
-            "endwhile": (
-                "control_block",
-                ("expression",),
-            ),
-            "intchange": (
-                "control_block",
-                ("expression",),
-            ),
-            "strset": (
-                "parse",
-                (
-                    ("identifier", None),
-                    (("identifier", "number", "string"), None),
-                ),
-            ),
-            "intset": (
-                "parse",
-                (("identifier", None), (("identifier", "number"), None)),
-            ),
-            "listset": (
-                "parse",
-                (("identifier", None), (("identifier", "number"), None)),
-            ),
-        },
-    }
-
     def __init__(self, file_name, tokens, lines):
         self.tokens = tokens
         self.cursor = 0
@@ -396,7 +36,6 @@ class Parser:
         self.devices = set()
         self.called_files = set()
         self.cur_section = None
-
 
     @property
     def _cur_token(self):
@@ -425,27 +64,22 @@ class Parser:
 
     def _script(self):
         token = self._cur_token
-        if token.type not in self.SYNTAX["script"]:
+        if token.type not in SYNTAX["script"]:
             self._raise_syntax_error(
                 f"Unexpected token type '{token.type}' for '{token.str}'"
             )
-
-        if token.type not in self.SYNTAX:
+        if token.type not in SYNTAX:
             func = self._get_func_handler()
             func()
             self._advance()
         else:
-            # print(token)
-            # breakpoint()
-            if token.str not in self.SYNTAX[token.type]:
+            if token.str not in SYNTAX[token.type]:
                 self._raise_syntax_error(
                     f"Unexpected token '{token.str}'",
                 )
 
-            operation, matched_rule = self.SYNTAX[token.type][token.str]
+            operation, matched_rule = SYNTAX[token.type][token.str]
             getattr(self, f"_{operation}")(matched_rule)
-
-            # self._advance()
 
     def _comment(self):
         token = self._cur_token
@@ -459,10 +93,16 @@ class Parser:
 
     def _command(self):
         token = self._cur_token
+        # TODO: get ride of hardcoded vmcodes
         cmd_vm_codes = CmdCompiler().compile(token.str, token.line_number)
         if self.cur_section is not None and self.cur_section.startswith(("FGT", "FVM")):
-            if not token.str.strip().startswith(VALID_COMMANDS):
-                print(f"Warning, unknown command {self.file_name} {token.line_number} {token.str}")
+            if not token.str.strip().startswith(tuple(SYNTAX["valid_commands"])):
+                logger.debug(
+                    "Warning, unknown or incompleted command %s:%d: %s",
+                    self.file_name,
+                    token.line_number,
+                    token.str,
+                )
         self.vm_codes.extend(cmd_vm_codes)
 
     def _include(self):
@@ -487,7 +127,6 @@ class Parser:
             return None
         token_str = token.str
         token_type = token.type
-        # print("token is", token)
         if expected_str:
             if token_str != expected_str and token_str not in expected_str:
                 self._raise_syntax_error(
@@ -505,7 +144,6 @@ class Parser:
     def _extract(self, expected_tokens):
         all_tokens = []
         for expected_token in expected_tokens:
-            # print("expected token", expected_token)
             expected_type, expected_str = expected_token
             token = self._parse_token(expected_type, expected_str)
             if expected_str is None:
@@ -532,16 +170,11 @@ class Parser:
 
     def _term(self):
         token = self._cur_token
-        if token.type == "variable":
-            self._parse_token()
-        if token.type == "identifier":
-            self._parse_token()
-        if token.type == "number":
+        if token.type in {"variable", "identifier", "number"}:
             self._parse_token()
         return token
 
     def _expression(self):
-        # breakpoint()
         self.cur_line_number = self._cur_token.line_number
         expression_tokens = []
         token = self._term()
@@ -559,8 +192,7 @@ class Parser:
 
     def _is_ctrl_blk_end(self, cur_block_end):
         return (
-            self._cur_token.type == "keyword"
-            and self._cur_token.str in cur_block_end
+            self._cur_token.type == "keyword" and self._cur_token.str in cur_block_end
         )
 
     def _eof(self):
@@ -577,20 +209,17 @@ class Parser:
         for exp_stat in exp_stats:
             if exp_stat == "expression":
                 expression_tokens = self._expression()
-                # breakpoint()
                 for s in expression_tokens:
                     vm_code.add_parameter(s)
             elif exp_stat == "script":
-                while not self._eof() and not self._is_ctrl_blk_end(
-                    cur_block_end
-                ):
+                while not self._eof() and not self._is_ctrl_blk_end(cur_block_end):
                     self._script()
             else:
                 if self._eof():
                     self._raise_syntax_error(
                         f"Unexpected EOF, missed {cur_block_end}.",
                     )
-                exp_stats = self.SYNTAX["keyword"][self._cur_token.str][-1]
+                exp_stats = SYNTAX["keyword"][self._cur_token.str][-1]
                 self._control_block(exp_stats, vm_code)
 
     def _parse_options(self, matched_rule):
@@ -599,10 +228,7 @@ class Parser:
         command_token = self._cur_token
         self._advance()
         token = self._cur_token
-        # breakpoint()
-        while (
-            token and token.str.startswith("-") and token.type == "identifier"
-        ):
+        while token and token.str.startswith("-") and token.type == "identifier":
             option = token.str
             self.cur_line_number = command_token.line_number
             tokens = self._extract(option_rule)
@@ -612,31 +238,22 @@ class Parser:
                 )
             value = tokens[1]
             if value is None:
-                self._raise_syntax_error(
-                    f"Failed to parse value for '{option}'"
-                )
+                self._raise_syntax_error(f"Failed to parse value for '{option}'")
             if value.line_number != command_token.line_number:
                 self._retreat()
-                self._raise_syntax_error(
-                    f"Failed to parse value for '{option}'"
-                )
+                self._raise_syntax_error(f"Failed to parse value for '{option}'")
             if option == "-fail":
                 if value.str.startswith("-"):
                     self._retreat()
                     options["-fail"] = "unmatch"
 
             options[option] = value.str
-
-            # if option == "-e":
-            #     print(f"{self.file_name} {token.line_number} {token.str} {value.str}")
-
             token = self._cur_token
         self._add_vm_code(
             command_token.line_number,
             command_token.str,
-            tuple(options.values()),
+            [options[k] for k in options],
         )
-        # breakpoint()
 
     def _if(self, _):
         return self._add_vm_code(self._cur_token.line_number, "if_not_goto", ())
@@ -647,7 +264,9 @@ class Parser:
 
     def _else(self, prev_vm_code):
         if prev_vm_code is None:
-            self._raise_syntax_error(f"else without if {self.file_name}:{self._cur_token.line_number}")
+            self._raise_syntax_error(
+                f"else without if {self.file_name}:{self._cur_token.line_number}"
+            )
         prev_vm_code.add_parameter(self._cur_token.line_number)
         return self._add_vm_code(self._cur_token.line_number, "else", ())
 
@@ -673,24 +292,19 @@ class Parser:
 
     def _endwhile(self, prev_vm_code):
         return self._add_vm_code(
-            self._cur_token.line_number, "until", (prev_vm_code.line_number)
+            self._cur_token.line_number, "until", (prev_vm_code.line_number,)
         )
 
     def _raise_syntax_error(self, err_msg):
         token = self._cur_token
         if token is None:
             token = self.tokens[-1]
-        # path_parts = self.file_name.split(os.path.sep)
-        # remaining_path_parts = "/".join(path_parts[2:])
-        # svn_path = r"https://qa-svn.corp.fortinet.com/svn/qa/FOS/testcase"
-        raise SyntaxError(
+        raise ScriptSyntaxError(
             f"{self.file_name} {token.line_number - 1}: {self.lines[token.line_number - 1]}\n {err_msg}"
         )
 
     def dump_vm_codes(self):
-        vm_file = output.compose_compiled_file(
-            Path(self.file_name).stem, "codes.vm"
-        )
+        vm_file = output.compose_compiled_file(Path(self.file_name).stem, "codes.vm")
         with open(vm_file, "w") as f:
             for vm_code in self.vm_codes:
                 f.write(str(vm_code) + "\n")

@@ -1,4 +1,5 @@
 certifi==2023.7.22
+chardet
 charset-normalizer
 exceptiongroup
 idna==3.4
@@ -14,12 +15,12 @@ psutil==5.9.5
 ptyprocess==0.7.0
 Pygments
 pytest
+regex
 requests
 rich
+setproctitle
+synlinkpy==0.0.13
 tftpy==0.8.2
 tomli
 typing-extensions
 urllib3
-chardet
-regex
-setproctitle

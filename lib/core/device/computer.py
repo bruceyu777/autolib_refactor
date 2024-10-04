@@ -1,5 +1,3 @@
-from lib.services.log import logger
-
 from .device import Device
 
 FIVE_MINUTES = 5 * 60

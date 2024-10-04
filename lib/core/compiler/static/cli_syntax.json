@@ -1,0 +1,282 @@
+{
+  "valid_commands": [
+    "set",
+    "edit",
+    "config",
+    "diag",
+    "exe",
+    "execute",
+    "del",
+    "next",
+    "end",
+    "unset",
+    "keep_running",
+    "resetFirewall",
+    "show",
+    "append",
+    "select",
+    "unselect",
+    "purge",
+    "get",
+    "conf",
+    "clear",
+    "sh",
+    "myset",
+    "myend",
+    "mynext",
+    "mydelete",
+    "comment",
+    "Comment",
+    "ctrl_c",
+    "nan_enter",
+    "clone",
+    "dia",
+    "fnsysctl",
+    "con",
+    "y",
+    "sleep",
+    "rename",
+    "myexec",
+    "move",
+    "cleanbuff",
+    "admin",
+    "expect_ctrl_c",
+    "restore_image",
+    "confirm_with_newline",
+    "wait_for_confirm",
+    "auto_login"
+  ],
+  "script": ["api", "section", "command", "keyword", "include", "comment"],
+  "api": {
+    "setvar": [
+      "parse",
+      [
+        ["identifier", "-e"],
+        [["string", "identifier"], null],
+        ["identifier", "-to"],
+        [["identifier", "string"], null]
+      ]
+    ],
+    "collect_dev_info": [
+      "parse",
+      [
+        ["identifier", "-for"],
+        [["number", "identifier"], null]
+      ]
+    ],
+    "restore_image": [
+      "parse_options",
+      [
+        {
+          "-v": null,
+          "-b": null
+        },
+        [
+          ["identifier", null],
+          [["number", "variable"], null]
+        ]
+      ]
+    ],
+    "report": ["parse", [[["number", "identifier"], null]]],
+    "expect": [
+      "parse_options",
+      [
+        {
+          "-e": null,
+          "-for": null,
+          "-t": 5,
+          "-fail": "unmatch",
+          "-b": null,
+          "-a": null,
+          "-clear": "yes",
+          "-retry_command": null,
+          "-retry_cnt": 3
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "expect_ctrl_c": [
+      "parse_options",
+      [
+        {
+          "-e": null,
+          "-for": null,
+          "-t": 5,
+          "-fail": "unmatch",
+          "-b": null,
+          "-a": null,
+          "-clear": "yes",
+          "-retry_command": null,
+          "-retry_cnt": 3
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "myftp": [
+      "parse_options",
+      [
+        {
+          "-e": null,
+          "-ip": null,
+          "-for": null,
+          "-fail": null,
+          "-t": 5,
+          "-u": null,
+          "-p": null,
+          "-c": null,
+          "-a": "continue"
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "mytelnet": [
+      "parse_options",
+      [
+        {
+          "-d": null,
+          "-e": null,
+          "-ip": null,
+          "-for": null,
+          "-fail": null,
+          "-t": 5,
+          "-u": null,
+          "-p": null
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "expect_OR": [
+      "parse_options",
+      [
+        {
+          "-e1": null,
+          "-e2": null,
+          "-fail1": "unmatch",
+          "-fail2": "unmatch",
+          "-for": null,
+          "-t": 5
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "setenv": [
+      "parse_options",
+      [
+        {
+          "-n": null,
+          "-v": null,
+          "-d": null
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "compare": [
+      "parse_options",
+      [
+        {
+          "-v1": null,
+          "-v2": null,
+          "-for": null,
+          "-fail": "uneq"
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "varexpect": [
+      "parse_options",
+      [
+        {
+          "-e": null,
+          "-v": null,
+          "-for": null,
+          "-t": 5,
+          "-fail": null,
+          "-b": null
+        },
+        [
+          ["identifier", null],
+          [["identifier", "number", "string", "variable", "operator"], null]
+        ]
+      ]
+    ],
+    "sleep": ["parse", [[["number", "identifier"], null]]],
+    "clearbuff": ["parse", []],
+    "breakpoint": ["parse", []],
+    "enter_dev_debugmode": ["parse", []],
+    "resetFirewall": ["parse", []],
+    "clear_buffer": ["parse", [["number", null]]],
+    "clean_buffer": ["parse", []],
+    "keep_running": ["parse", [["number", null]]],
+    "confirm_with_newline": ["parse", [["number", null]]],
+    "wait_for_confirm": ["parse", [["number", null]]],
+    "auto_login": ["parse", [["number", null]]],
+    "forcelogin": ["parse", []],
+    "setlicense": [
+      "parse",
+      [
+        ["identifier", "-t"],
+        ["identifier", null],
+        ["identifier", "-for"],
+        ["identifier", null],
+        ["identifier", "-to"],
+        ["identifier", null]
+      ]
+    ]
+  },
+  "keyword": {
+    "if": ["control_block", ["expression", "script", ["elseif", "else", "fi"]]],
+    "elseif": [
+      "control_block",
+      ["expression", "script", ["elseif", "else", "fi"]]
+    ],
+    "else": ["control_block", ["script", "fi"]],
+    "fi": ["control_block", []],
+    "loop": ["control_block", ["expression", "script", "until"]],
+    "until": ["control_block", ["expression"]],
+    "while": ["control_block", ["expression", "script", "endwhile"]],
+    "endwhile": ["control_block", ["expression"]],
+    "intchange": ["control_block", ["expression"]],
+    "strset": [
+      "parse",
+      [
+        ["identifier", null],
+        [["identifier", "number", "string"], null]
+      ]
+    ],
+    "intset": [
+      "parse",
+      [
+        ["identifier", null],
+        [["identifier", "number"], null]
+      ]
+    ],
+    "listset": [
+      "parse",
+      [
+        ["identifier", null],
+        [["identifier", "number"], null]
+      ]
+    ]
+  }
+}

@@ -17,5 +17,4 @@ def test_get_vm_type():
     env.init_env(args)
     dev_cfg = env.get_dev_cfg("KVM_3")
 
-    # print(env.get_dev_cfg("KVM_3"))
     print(dev_cfg.get("non_sriov", "no") == "yes")
