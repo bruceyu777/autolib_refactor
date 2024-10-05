@@ -67,14 +67,14 @@ class Upgrade(argparse.Action):
 
 
 PROG_DESCRIPTION = """Regression Test Automation Framework.
-Document link: https://releaseqa-portal.corp.fortinet.com/static/docs/training/autolib_v3_beta/"""
+Document link: https://releaseqa-portal.corp.fortinet.com/static/docs/training/autolib_v3_docs/"""
 
-SUBMIT_HELP = """all: submit all testcases' result to oriole.
-none: do not submit any testcase result to oriole.
-succeeded: only submit succeeded testcases' result to oriole."""
+SUBMIT_HELP = """all: submit all testcases' result to Oriole.
+none: do not submit any testcase result to Oriole.
+succeeded: only submit succeeded testcases' result to Oriole."""
 
 
-__version__ = "V3R10B0002"
+__version__ = "V3R10B0003"
 
 
 def parse_cli_args():

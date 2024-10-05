@@ -1,28 +1,11 @@
-import json
-from collections import OrderedDict
 from pathlib import Path
 
 from lib.services import logger, output, summary
 from lib.utilities.exceptions import ScriptSyntaxError
 
 from .cmd_compiler import CmdCompiler
+from .syntax import syntax_manager
 from .vm_code import VMCode
-
-
-class Syntax:
-    def __init__(self, syntax_filepath):
-        with open(syntax_filepath, "r", encoding="utf-8") as f:
-            self.syntax = json.load(f, object_pairs_hook=OrderedDict)
-
-    def __getitem__(self, key):
-        return self.syntax[key]
-
-    def __contains__(self, item):
-        return item in self.syntax
-
-
-CLI_SYNTAX_FILEPAHT = Path(__file__).resolve().parent / "static" / "cli_syntax.json"
-SYNTAX = Syntax(CLI_SYNTAX_FILEPAHT)
 
 
 class Parser:
@@ -64,21 +47,22 @@ class Parser:
 
     def _script(self):
         token = self._cur_token
-        if token.type not in SYNTAX["script"]:
+        if not syntax_manager.is_a_valid_script_type(token.type):
             self._raise_syntax_error(
                 f"Unexpected token type '{token.type}' for '{token.str}'"
             )
-        if token.type not in SYNTAX:
+        if not syntax_manager.at_top_level_category(token.str):
             func = self._get_func_handler()
             func()
             self._advance()
         else:
-            if token.str not in SYNTAX[token.type]:
+            syntax_definition = syntax_manager.get_token_syntax_definition(token)
+            if syntax_definition is None:
                 self._raise_syntax_error(
                     f"Unexpected token '{token.str}'",
                 )
 
-            operation, matched_rule = SYNTAX[token.type][token.str]
+            operation, matched_rule = syntax_definition
             getattr(self, f"_{operation}")(matched_rule)
 
     def _comment(self):
@@ -96,7 +80,7 @@ class Parser:
         # TODO: get ride of hardcoded vmcodes
         cmd_vm_codes = CmdCompiler().compile(token.str, token.line_number)
         if self.cur_section is not None and self.cur_section.startswith(("FGT", "FVM")):
-            if not token.str.strip().startswith(tuple(SYNTAX["valid_commands"])):
+            if not syntax_manager.is_a_valid_command(token.str.strip()):
                 logger.debug(
                     "Warning, unknown or incompleted command %s:%d: %s",
                     self.file_name,
@@ -219,7 +203,7 @@ class Parser:
                     self._raise_syntax_error(
                         f"Unexpected EOF, missed {cur_block_end}.",
                     )
-                exp_stats = SYNTAX["keyword"][self._cur_token.str][-1]
+                exp_stats = syntax_manager.get_keyword_cli_syntax(self._cur_token.str)
                 self._control_block(exp_stats, vm_code)
 
     def _parse_options(self, matched_rule):

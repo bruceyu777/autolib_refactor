@@ -7,89 +7,7 @@ import chardet
 from lib.services import output
 from lib.utilities.exceptions import ScriptSyntaxError
 
-APIS_WITH_PARAS = (
-    "setvar",
-    "varexpect",
-    "keep_running",
-    "report",
-    "expect",
-    "expect_ctrl_c",
-    "sleep",
-    "setlicense",
-    "myftp",
-    "mytelnet",
-    "setenv",
-    "compare",
-    "expect_OR",
-    "collect_dev_info",
-    "restore_image",
-    "confirm_with_newline",
-    "wait_for_confirm",
-    "auto_login",
-)
-APIS_WITHOUT_PARAS = (
-    "forcelogin",
-    "clearbuff",
-    "clear_buffer",
-    "clean_buffer",
-    "breakpoint",
-    "enter_dev_debugmode",
-    "resetFirewall",
-)
-APIS_WITH_PARAS_PATTERN = "|".join(rf"{api}\s+.+" for api in APIS_WITH_PARAS)
-APIS_WITHOUT_PARAS_PATTERN = "|".join(rf"{api}" for api in APIS_WITHOUT_PARAS)
-APIS_PATTERN = rf"{APIS_WITH_PARAS_PATTERN}|{APIS_WITHOUT_PARAS_PATTERN}"
-
-KEYWORDS = (
-    "if",
-    "elseif",
-    "fi",
-    "else",
-    "strset",
-    "listset",
-    "intset",
-    "loop",
-    "intchange",
-    "until",
-    "while",
-    "endwhile",
-)
-
-KEYWORDS_PATTERN = "|".join(rf"{keyword}" for keyword in KEYWORDS)
-
-LINE_PATTERN_TABLE = {
-    "commented_section": r"#\s*\[.*\]",
-    "commented_line": r"#.*",
-    "section": r"\[(?P<section_name>.+)\]",
-    "statement": rf"\<\s*(?P<statement_content>({KEYWORDS_PATTERN}).*)\>",
-    "comment": r"[Cc]omment[s]*\s*:*\s*(?P<comment_content>.*)",
-    "include": r"include\s+(?P<file_name>.+)",
-    "api": rf"{APIS_PATTERN}",
-    "command": r".+",
-}
-
-LINE_PATTERN = re.compile(
-    r"|".join(rf"(?P<{type}>{pattern})" for type, pattern in LINE_PATTERN_TABLE.items())
-)
-
-TOKEN_PATTERN_TABLE = {
-    "variable": r"\{?\$(?P<variable_name>[^\s]+?)\s*\}?",
-    "symbol": r"==|[-()[\]{}<>+*\/=]",
-    "number": r"(?P<number_content>\d+)",
-    "operator": r"eq|ne|lt",
-    "expect_double": r'\-e\s+"(?P<double_quote_str>[^\"]*)"(?=\s+\-)',
-    "expect_single": r"\-e\s+'(?P<single_quote_str>[^\']*)'(?=\s+\-)",
-    "expect_string": r"\-e\s+(?P<expect_str>\S*)(?=\s+\-)",
-    "string": r'"(?:\"|[^"\\]|\\.)*?"',
-    "identifier": r"\{.+\}|.+?",
-}
-
-TOEKN_PATTERN = re.compile(
-    r"|".join(
-        rf"(?P<{type}>{pattern})(\s+|$)"
-        for type, pattern in TOKEN_PATTERN_TABLE.items()
-    )
-)
+from .syntax import syntax_manager
 
 
 class Token(dict):
@@ -123,13 +41,15 @@ class Lexer:
 
     def parse_line(self, line):
         self.cur_line = rf"{line}"
-        m = re.match(LINE_PATTERN, self.cur_line)
+        m = syntax_manager.line_pattern.match(self.cur_line)
         self.cur_groupdict = m.groupdict()
         if self.section_commented and self.cur_groupdict.get("section") is None:
             # commented lines are not included in tokens
             return []
         for line_type, matched_content in self.cur_groupdict.items():
-            if matched_content is not None and line_type in LINE_PATTERN_TABLE:
+            if matched_content is not None and syntax_manager.is_a_valid_line_type(
+                line_type
+            ):
                 func = getattr(self, line_type)
                 func()
         self._dump_to_file()
@@ -161,7 +81,9 @@ class Lexer:
 
     def _process_token(self, matched_group_dict):
         for token_type, matched_content in matched_group_dict.items():
-            if matched_content is not None and token_type in TOKEN_PATTERN_TABLE:
+            if matched_content is not None and syntax_manager.is_a_valid_token_type(
+                token_type
+            ):
                 if token_type == "variable":
                     variable_name = matched_group_dict.get("variable_name", None)
                     self.add_token(token_type, variable_name)
@@ -186,7 +108,7 @@ class Lexer:
     def tokenize(self, string):
         pos = 0
         while pos < len(string):
-            m = TOEKN_PATTERN.match(string, pos)
+            m = syntax_manager.token_pattern.match(string, pos)
             if m is None:
                 raise ScriptSyntaxError(
                     f"{self.line_number}: '{string[pos:]}' unsupported token"
