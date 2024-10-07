@@ -44,7 +44,8 @@
     "restore_image",
     "confirm_with_newline",
     "wait_for_confirm",
-    "auto_login"
+    "auto_login",
+    "sudo"
   ],
   "script": ["api", "section", "command", "keyword", "include", "comment"],
   "api": {
