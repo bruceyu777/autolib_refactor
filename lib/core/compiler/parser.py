@@ -47,7 +47,7 @@ class Parser:
 
     def _script(self):
         token = self._cur_token
-        if not script_syntax.is_a_valid_script_type(token.type):
+        if not script_syntax.is_valid_script_type(token.type):
             self._raise_syntax_error(
                 f"Unexpected token type '{token.type}' for '{token.str}'"
             )
@@ -80,7 +80,7 @@ class Parser:
         # TODO: get ride of hardcoded vmcodes
         cmd_vm_codes = CmdCompiler().compile(token.str, token.line_number)
         if self.cur_section is not None and self.cur_section.startswith(("FGT", "FVM")):
-            if not script_syntax.is_a_valid_command(token.str.strip()):
+            if not script_syntax.is_valid_command(token.str.strip()):
                 logger.debug(
                     "Warning, unknown or incompleted command %s:%d: %s",
                     self.file_name,

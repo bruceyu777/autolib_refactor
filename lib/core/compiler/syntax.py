@@ -37,16 +37,16 @@ class ScriptSyntax:
         self.line_pattern = self.generate_line_pattern()
         self.token_pattern = self.generate_token_pattern()
 
-    def is_a_valid_command(self, command):
+    def is_valid_command(self, command):
         return command.startswith(tuple(self.syntax["valid_commands"]))
 
-    def is_a_valid_script_type(self, script_type):
+    def is_valid_script_type(self, script_type):
         return script_type in self.syntax["script"]
 
-    def is_a_valid_line_type(self, line_type):
+    def is_valid_line_type(self, line_type):
         return line_type in self.LINE_PATTERN_TABLE
 
-    def is_a_valid_token_type(self, token_type):
+    def is_valid_token_type(self, token_type):
         return token_type in self.TOKEN_PATTERN_TABLE
 
     def at_top_level_category(self, category):
