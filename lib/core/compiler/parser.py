@@ -4,7 +4,7 @@ from lib.services import logger, output, summary
 from lib.utilities.exceptions import ScriptSyntaxError
 
 from .cmd_compiler import CmdCompiler
-from .syntax import syntax_manager
+from .syntax import script_syntax
 from .vm_code import VMCode
 
 
@@ -47,16 +47,16 @@ class Parser:
 
     def _script(self):
         token = self._cur_token
-        if not syntax_manager.is_a_valid_script_type(token.type):
+        if not script_syntax.is_a_valid_script_type(token.type):
             self._raise_syntax_error(
                 f"Unexpected token type '{token.type}' for '{token.str}'"
             )
-        if not syntax_manager.at_top_level_category(token.str):
+        if not script_syntax.at_top_level_category(token.str):
             func = self._get_func_handler()
             func()
             self._advance()
         else:
-            syntax_definition = syntax_manager.get_token_syntax_definition(token)
+            syntax_definition = script_syntax.get_token_syntax_definition(token)
             if syntax_definition is None:
                 self._raise_syntax_error(
                     f"Unexpected token '{token.str}'",
@@ -80,7 +80,7 @@ class Parser:
         # TODO: get ride of hardcoded vmcodes
         cmd_vm_codes = CmdCompiler().compile(token.str, token.line_number)
         if self.cur_section is not None and self.cur_section.startswith(("FGT", "FVM")):
-            if not syntax_manager.is_a_valid_command(token.str.strip()):
+            if not script_syntax.is_a_valid_command(token.str.strip()):
                 logger.debug(
                     "Warning, unknown or incompleted command %s:%d: %s",
                     self.file_name,
@@ -203,7 +203,7 @@ class Parser:
                     self._raise_syntax_error(
                         f"Unexpected EOF, missed {cur_block_end}.",
                     )
-                exp_stats = syntax_manager.get_keyword_cli_syntax(self._cur_token.str)
+                exp_stats = script_syntax.get_keyword_cli_syntax(self._cur_token.str)
                 self._control_block(exp_stats, vm_code)
 
     def _parse_options(self, matched_rule):

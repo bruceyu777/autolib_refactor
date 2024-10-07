@@ -4,7 +4,7 @@ from collections import OrderedDict
 from pathlib import Path
 
 
-class Syntax:
+class ScriptSyntax:
 
     TOKEN_PATTERN_TABLE = {
         "variable": r"\{?\$(?P<variable_name>[^\s]+?)\s*\}?",
@@ -43,9 +43,6 @@ class Syntax:
     def is_a_valid_script_type(self, script_type):
         return script_type in self.syntax["script"]
 
-    def is_a_token_require_further_analysis(self, token_type):
-        return token_type in {"variable", "identifier", "number"}
-
     def is_a_valid_line_type(self, line_type):
         return line_type in self.LINE_PATTERN_TABLE
 
@@ -64,16 +61,16 @@ class Syntax:
     def get_keyword_cli_syntax(self, keyword):
         return self.syntax["keyword"][keyword][-1]
 
-    def generate_keyword_pattern(self):
+    def _generate_keyword_pattern(self):
         keywords = self.syntax["keyword"].keys()
         sorted_keywords = sorted(keywords, key=len, reverse=True)
         return "|".join(rf"{keyword}" for keyword in sorted_keywords)
 
-    def generate_statement_pattern(self):
-        keyword_pattern = self.generate_keyword_pattern()
+    def _generate_statement_pattern(self):
+        keyword_pattern = self._generate_keyword_pattern()
         return rf"\<\s*(?P<statement_content>({keyword_pattern}).*)\>"
 
-    def generate_api_pattern(self):
+    def _generate_api_pattern(self):
         api_pattern_list = []
         for api, syntax_list in self.syntax["api"].items():
             _, args_definition, *_ = syntax_list
@@ -85,18 +82,20 @@ class Syntax:
         return r"|".join(api_pattern_list)
 
     def generate_line_pattern(self):
-        Syntax.LINE_PATTERN_TABLE["statement"] = self.generate_statement_pattern()
-        Syntax.LINE_PATTERN_TABLE["api"] = self.generate_api_pattern()
+        ScriptSyntax.LINE_PATTERN_TABLE["statement"] = (
+            self._generate_statement_pattern()
+        )
+        ScriptSyntax.LINE_PATTERN_TABLE["api"] = self._generate_api_pattern()
         line_pattern = re.compile(
             r"|".join(
                 rf"(?P<{type}>{pattern})"
-                for type, pattern in Syntax.LINE_PATTERN_TABLE.items()
+                for type, pattern in ScriptSyntax.LINE_PATTERN_TABLE.items()
             )
         )
         return line_pattern
 
     def generate_token_pattern(self):
-        token_pattern_table = Syntax.TOKEN_PATTERN_TABLE
+        token_pattern_table = ScriptSyntax.TOKEN_PATTERN_TABLE
         token_pattern = re.compile(
             r"|".join(
                 rf"(?P<{type}>{pattern})(\s+|$)"
@@ -106,5 +105,7 @@ class Syntax:
         return token_pattern
 
 
-CLI_SYNTAX_FILEPAHT = Path(__file__).resolve().parent / "static" / "cli_syntax.json"
-syntax_manager = Syntax(CLI_SYNTAX_FILEPAHT)
+SYNTAX_DEFINITION_FILEPAHT = (
+    Path(__file__).resolve().parent / "static" / "cli_syntax.json"
+)
+script_syntax = ScriptSyntax(SYNTAX_DEFINITION_FILEPAHT)

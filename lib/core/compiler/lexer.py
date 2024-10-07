@@ -7,7 +7,7 @@ import chardet
 from lib.services import output
 from lib.utilities.exceptions import ScriptSyntaxError
 
-from .syntax import syntax_manager
+from .syntax import script_syntax
 
 
 class Token(dict):
@@ -41,13 +41,13 @@ class Lexer:
 
     def parse_line(self, line):
         self.cur_line = rf"{line}"
-        m = syntax_manager.line_pattern.match(self.cur_line)
+        m = script_syntax.line_pattern.match(self.cur_line)
         self.cur_groupdict = m.groupdict()
         if self.section_commented and self.cur_groupdict.get("section") is None:
             # commented lines are not included in tokens
             return []
         for line_type, matched_content in self.cur_groupdict.items():
-            if matched_content is not None and syntax_manager.is_a_valid_line_type(
+            if matched_content is not None and script_syntax.is_a_valid_line_type(
                 line_type
             ):
                 func = getattr(self, line_type)
@@ -81,7 +81,7 @@ class Lexer:
 
     def _process_token(self, matched_group_dict):
         for token_type, matched_content in matched_group_dict.items():
-            if matched_content is not None and syntax_manager.is_a_valid_token_type(
+            if matched_content is not None and script_syntax.is_a_valid_token_type(
                 token_type
             ):
                 if token_type == "variable":
@@ -108,7 +108,7 @@ class Lexer:
     def tokenize(self, string):
         pos = 0
         while pos < len(string):
-            m = syntax_manager.token_pattern.match(string, pos)
+            m = script_syntax.token_pattern.match(string, pos)
             if m is None:
                 raise ScriptSyntaxError(
                     f"{self.line_number}: '{string[pos:]}' unsupported token"
