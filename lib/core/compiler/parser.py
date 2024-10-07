@@ -51,11 +51,7 @@ class Parser:
             self._raise_syntax_error(
                 f"Unexpected token type '{token.type}' for '{token.str}'"
             )
-        if not script_syntax.at_top_level_category(token.str):
-            func = self._get_func_handler()
-            func()
-            self._advance()
-        else:
+        if script_syntax.at_top_level_category(token.type):
             syntax_definition = script_syntax.get_token_syntax_definition(token)
             if syntax_definition is None:
                 self._raise_syntax_error(
@@ -64,6 +60,10 @@ class Parser:
 
             operation, matched_rule = syntax_definition
             getattr(self, f"_{operation}")(matched_rule)
+        else:
+            func = self._get_func_handler()
+            func()
+            self._advance()
 
     def _comment(self):
         token = self._cur_token
