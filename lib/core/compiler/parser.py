@@ -3,7 +3,6 @@ from pathlib import Path
 from lib.services import logger, output, summary
 from lib.utilities.exceptions import ScriptSyntaxError
 
-from .cmd_compiler import CmdCompiler
 from .syntax import script_syntax
 from .vm_code import VMCode
 
@@ -77,8 +76,7 @@ class Parser:
 
     def _command(self):
         token = self._cur_token
-        # TODO: get ride of hardcoded vmcodes
-        cmd_vm_codes = CmdCompiler().compile(token.str, token.line_number)
+        cmd_vm_codes = [VMCode(token.line_number, "command", (token.str,))]
         if self.cur_section is not None and self.cur_section.startswith(("FGT", "FVM")):
             if not script_syntax.is_valid_command(token.str.strip()):
                 logger.debug(
@@ -92,7 +90,7 @@ class Parser:
     def _include(self):
         token = self._cur_token
         self._add_vm_code(token.line_number, "include", (token.str,))
-        self.called_files.add(token.str)
+        self.called_files.add((token.str, self.cur_section))
 
     def _parse_token(self, expected_type=None, expected_str=None):
         token = self._cur_token

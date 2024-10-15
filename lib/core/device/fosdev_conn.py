@@ -47,10 +47,10 @@ class FosDevConn(DevConn):
             logger.info("Password appears before login, ignored it.")
             self.conn_state = "_retry"
         elif index == 3:
-            logger.error("Failed to login %s, will retry it again.", self.dev_name)
+            logger.error("\nFailed to login %s, will retry it again.", self.dev_name)
             self.conn_state = "_retry"
         else:
-            logger.error("Failed to login %s as connection is closed.", self.dev_name)
+            logger.error("\nFailed to login %s as connection is closed.", self.dev_name)
             self.conn_state = "_retry"
 
     def _cache_logged(self):
@@ -115,7 +115,7 @@ class FosDevConn(DevConn):
     def _retry(self):
         self._client.sendcontrol("c")
         if self.retry_cnt > self.RETRY_MAX_TIME:
-            logger.error("Failed to login after retry for %s times", self.retry_cnt)
+            logger.error("\nFailed to login after retry for %s times", self.retry_cnt)
             self.conn_state = "_failed"
             return
         time.sleep(60)

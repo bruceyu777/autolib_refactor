@@ -35,7 +35,7 @@ ORIOLE_FIELD_FOS_SOURCE = {
     "avdb": ["Virus Definitions"],
     "avdef": ["Virus Definitions", "Extended set", "Flow-based Virus Definitions"],
     "aven": ["AV Engine"],
-    "bios": ["bios_version"],
+    "bios": ["BIOS version"],
     "build": ["build"],
     "eavdf": ["Extended set"],
     "favdf": ["Flow-based Virus Definitions"],
@@ -44,7 +44,7 @@ ORIOLE_FIELD_FOS_SOURCE = {
     "nids": ["Attack Definitions"],
     "nids_ext": ["Attack Extended Definitions"],
     "platform": ["platform"],
-    "SN": ["serial"],
+    "SN": ["Serial-Number"],
     "snmp_mib": ["build"],
 }
 

@@ -1,0 +1,5 @@
+{
+  "FOS": {
+    "Interity check failure": "System file integrity \\w+ check failed![\\r\\n]*"
+  }
+}

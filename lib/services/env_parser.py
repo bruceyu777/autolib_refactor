@@ -1,6 +1,6 @@
 import os
 import re
-from configparser import ConfigParser, NoOptionError
+from configparser import _UNSET, ConfigParser
 
 from lib.services.output import output
 from lib.utilities.exceptions import FileNotExist, ScriptSyntaxError
@@ -28,6 +28,9 @@ class FosConfigParser(ConfigParser):
         super().__init__(**kwargs)
         self._global_section = None
 
+    def _section(self, section):
+        return self.global_section if section.lower() == "global" else section
+
     @property
     def global_section(self):
         if self._global_section is None:
@@ -40,25 +43,15 @@ class FosConfigParser(ConfigParser):
         return self._global_section
 
     def is_option_enabled(self, section, option, fallback=False):
-        if section.lower() == "global":
-            section = self.global_section
-        try:
-            value = self.get(section, option)
-            value = value.lower()
-            if value not in FosConfigParser.BOOLEAN_STATES:
-                print(
-                    "Invalid value for bool option %s in section %s" % (option, section)
-                )
-                print(
-                    "Valid values are: %s" % ", ".join(FosConfigParser.BOOLEAN_STATES)
-                )
-                return fallback
-            return self.BOOLEAN_STATES[value]
-        except NoOptionError:
+        section = self._section(section)
+        value = self.get(section, option, fallback=_UNSET)
+        if value is _UNSET:
             return fallback
-
-    def get_global_option_value(self, option, fallback=""):
-        return self.get(self.global_section, option, fallback=fallback)
+        value = value.lower()
+        if value not in FosConfigParser.BOOLEAN_STATES:
+            print("Invalid value for bool option %s in section %s" % (option, section))
+            print("Valid values are: %s" % ", ".join(FosConfigParser.BOOLEAN_STATES))
+        return self.BOOLEAN_STATES.get(value, fallback)
 
     def get_device_list(self):
         return [
@@ -71,6 +64,34 @@ class FosConfigParser(ConfigParser):
         # by default the option keys are case insensitive
         # override this func to make it case sensitive
         return optionstr
+
+    def _lookup_real_option(self, section, option):
+        existed_options = self.options(section)
+        if option in existed_options:
+            return option
+        lower_case_option = option.lower()
+        matched_options = [o for o in existed_options if o.lower() == lower_case_option]
+        return matched_options[0] if len(matched_options) == 1 else None
+
+    # pylint: disable=redefined-builtin
+    def get(self, section, option, *, raw=False, vars=None, fallback=None):
+        section = self._section(section)
+        option = self._lookup_real_option(section, option)
+        return (
+            fallback
+            if option is None
+            else super().get(section, option, raw=raw, vars=vars)
+        )
+
+    def has_option(self, section, option):
+        section = self._section(section)
+        option = self._lookup_real_option(section, option)
+        return False if option is None else super().has_option(section, option)
+
+    def set(self, section, option, value=None):
+        section = self._section(section)
+        matched_option = self._lookup_real_option(section, option)
+        return super().set(section, matched_option or option, value)
 
 
 class EnvParser:

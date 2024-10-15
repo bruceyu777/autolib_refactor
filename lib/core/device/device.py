@@ -6,6 +6,7 @@ from lib.services.environment import DeviceConfig, env
 from lib.services.log import logger
 
 DEFAULT_TIMEOUT_FOR_PROMPT = 10
+MAX_TIMEOUT_FOR_REBOOT = 10 * 60
 
 
 UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"(?P<windows_prompt>\:.*?\>)")
@@ -33,6 +34,16 @@ DEFAULT_PROMPTS = "|".join(
     + SYSCTRL_COMAND
     + FTP_NAME_PROMPT
 )
+DISABLE = "disable"
+
+
+def _parse_fos_version(version):
+    pattern = re.compile(
+        r"^(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
+        r"build((?P<build>\d+)),\d+\s+\((?P<release_type>.*?)\)"
+    )
+    matched = pattern.search(version)
+    return matched.groupdict() if matched else {}
 
 
 class Device:
@@ -135,26 +146,20 @@ class Device:
     def system_status(self):
         self.clear_buffer()
         *_, system_info_raw = self.send_command("get system status", timeout=10)
-        logger.info("System info captured: %s", system_info_raw)
-        status = {}
-        for line in system_info_raw.splitlines():
-            if line.startswith("Version: "):
-                pattern = re.compile(
-                    r"Version:\s+(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
-                    r"build((?P<build>\d+)),\d+\s+\((?P<release_type>.*?)\)"
-                )
-                matched = pattern.search(line)
-                if matched:
-                    status.update(matched.groupdict())
-            elif line.startswith("Serial-Number"):
-                status["serial"] = line.split(" ")[1]
-            elif line.startswith("BIOS version"):
-                status["bios_version"] = line.split(": ")[1]
-            elif line.startswith("Branch point"):
-                status["branch_point"] = line.split(": ")[1]
-        if status and "bios_version" not in status:
-            status["bios_version"] = "0"
-        return status
+        logger.debug("System info captured: %s", system_info_raw)
+        selected_lines = [
+            l.split(": ", maxsplit=1) for l in system_info_raw.splitlines() if ": " in l
+        ]
+        if not selected_lines:
+            return {}
+        system_status = dict(selected_lines)
+        if "Version" in system_status:
+            system_status.update(_parse_fos_version(system_status["Version"]))
+        if "Virtual domain configuration" not in system_status:
+            system_status["Virtual domain configuration"] = DISABLE
+        if "BIOS version" not in system_status:
+            system_status["BIOS version"] = "0"
+        return system_status
 
     def get_device_info(self, on_fly=False):
         if self._device_info is None or on_fly:
@@ -166,14 +171,19 @@ class Device:
             autoupdate_versions = self.get_autoupdate_versions()
             t2 = time.perf_counter()
             logger.info("It takes %s s to collect autoupdate versions.", t2 - t1)
-            self._device_info = {**system_status, **autoupdate_versions}
+            system_status_selected = {
+                k: v for k, v in system_status.items() if k not in autoupdate_versions
+            }
+            self._device_info = {**system_status_selected, **autoupdate_versions}
         return self._device_info
 
     @property
     def is_vdom_enabled(self):
         # for some platform if vdom not enabled, won't have Virtual information in
         # get system statuss
-        return self.system_status.get("vdom_mode", "disable") != "disable"
+        return (
+            self.system_status.get("Virtual domain configuration", DISABLE) != DISABLE
+        )
 
     def get_autoupdate_versions(self, is_vdom_enabled=None):
         if is_vdom_enabled or self.is_vdom_enabled:
@@ -205,7 +215,7 @@ class Device:
         self,
         command,
         pattern=DEFAULT_PROMPTS,
-        timeout=DEFAULT_TIMEOUT_FOR_PROMPT,
+        timeout=MAX_TIMEOUT_FOR_REBOOT,
     ):
         if command == "ctrl_c":
             command = "\x03"

@@ -1,11 +1,15 @@
 import csv
+import json
 import re
 from collections import defaultdict
+from pathlib import Path
 
 from .env_parser import EnvParser, FosConfigParser
 from .log import logger
 
-OPTION_ENABLED_VALUE = ("y", "yes", "true", "enable", "on", "enabled")
+BUFFER_CLEAN_PATTERN_SOURCE = (
+    Path(__file__).resolve().parent / "static" / "buffer_clean_patterns.json"
+)
 
 
 class DeviceConfig(dict):
@@ -22,7 +26,8 @@ class DeviceConfig(dict):
     def _get_real_key(self, key):
         if key in self.keys():
             return key
-        matched_keys = [k for k in self.keys() if k.lower() == key]
+        lowercase_key = key.lower()
+        matched_keys = [k for k in self.keys() if k.lower() == lowercase_key]
         return matched_keys[0] if len(matched_keys) == 1 else None
 
     def __contains__(self, key):
@@ -47,9 +52,29 @@ class Environment:
         self.args = None
         self.env_file = None
         self.test_file = None
+        self._buffer_clean_pattern = None
 
-    def _get_global_section_option_value(self, option, fallback=""):
-        return self.user_env.get_global_option_value(option, fallback=fallback)
+    def _buffer_clean_pattern_source_filepath(self):
+        filepath = self.user_env.get("GLOBAL", "EXEMPT_ERROR_PATTERN_SOURCE")
+        if not (filepath and Path(filepath).exists()):
+            logger.warning("Fall back to use default clean buffer pattern source.")
+            filepath = BUFFER_CLEAN_PATTERN_SOURCE
+        return filepath
+
+    @property
+    def buffer_clean_pattern(self):
+        if self._buffer_clean_pattern is None:
+            pattern_source_filepath = self._buffer_clean_pattern_source_filepath()
+            with open(pattern_source_filepath, "r", encoding="utf-8") as f:
+                clean_patterns = json.load(f)
+                self._buffer_clean_pattern = clean_patterns
+        return self._buffer_clean_pattern
+
+    def get_buffer_clean_pattern_by_dev_type(self, device_type):
+        if device_type in self.fos_device_types:
+            device_type = "FOS"
+        patterns = self.buffer_clean_pattern.get(device_type, {})
+        return {k: re.compile(v) for k, v in patterns.items()}
 
     def get_device_list(self):
         return self.user_env.get_device_list()
@@ -61,7 +86,7 @@ class Environment:
             and "HOSTED_ON" in self.get_dev_cfg(device_name)
         )
 
-    def is_fos_deivce(self, device_name):
+    def is_fos_device(self, device_name):
         return any(map(device_name.startswith, Environment.fos_device_types))
 
     def get_dev_cfg(self, device_name):
@@ -79,7 +104,7 @@ class Environment:
         self.extract_host_servers()
 
     def extract_host_servers(self):
-        host_file = self._get_global_section_option_value("VM_HOST_DEF")
+        host_file = self.user_env.get("GLOBAL", "VM_HOST_DEF")
         if host_file:
             self.host_servers = EnvParser(host_file).env
 
@@ -100,7 +125,7 @@ class Environment:
         self.add_var(var_name, val)
 
     def extract_license_info(self):
-        file_name = self._get_global_section_option_value("LICENSE_INFORMATION")
+        file_name = self.user_env.get("GLOBAL", "LICENSE_INFORMATION")
         if not file_name:
             return
         with open(file_name, "r", encoding="utf-8") as f:
@@ -158,49 +183,49 @@ class Environment:
     def get_test_file_name(self):
         return self.test_file
 
-    def _update_var_value(self, var_val_dict, section, var_name):
-        value = self.get_section_var(section, var_name)
-        var_val_dict.update({f"{section}:{var_name}": value})
+    def variable_interpolation(self, content, current_device=None):
 
-    def variable_interpolation(self, content):
-
-        def _replace(original, section):
+        def _replace(original, section, include_section=True):
             section_variable_dict = self.get_dev_cfg(section)
             for k in sorted(section_variable_dict, key=len, reverse=True):
-                section_key = f"{section}:{k}"
-                if section_key in original:
-                    original = original.replace(section_key, section_variable_dict[k])
+                variable_to_replace = f"{section}:{k}" if include_section else k
+                if variable_to_replace in original:
+                    original = original.replace(
+                        variable_to_replace, section_variable_dict[k]
+                    )
             return original
 
         existed_sections = (s for s in self.user_env.sections() if f"{s}:" in content)
         for section in existed_sections:
             content = _replace(content, section)
+        if current_device:
+            content = _replace(content, current_device, include_section=False)
 
         logger.debug("replaced content: '%s'", content)
         return content
 
     def get_device_hardware_generation(self, device_name, fallback="1"):
-        return self.user_env.get(device_name, "PLATFORMGENERATION", fallback=fallback)
+        return self.user_env.get(device_name, "PLATFORM_GENERATION", fallback=fallback)
 
     def get_dut(self):
-        return self._get_global_section_option_value("DUT")
+        return self.user_env.get("GLOBAL", "DUT")
 
     def get_dut_info_on_fly(self):
-        return self._get_global_section_option_value("DUT_INFO_ON_FLY")
+        return self.user_env.get("GLOBAL", "DUT_INFO_ON_FLY")
 
     def get_local_http_server_conf(self):
-        ip = self._get_global_section_option_value("LOCAL_HTTP_SERVER_IP")
-        port = self._get_global_section_option_value("LOCAL_HTTP_SERVER_PORT")
+        ip = self.user_env.get("GLOBAL", "LOCAL_HTTP_SERVER_IP")
+        port = self.user_env.get("GLOBAL", "LOCAL_HTTP_SERVER_PORT")
         return ip, port
 
     def get_vm_nic(self):
-        return self._get_global_section_option_value("VM_NIC")
+        return self.user_env.get("GLOBAL", "VM_NIC")
 
     def get_vm_os(self):
-        return self._get_global_section_option_value("VM_OS")
+        return self.user_env.get("GLOBAL", "VM_OS")
 
     def get_license_info(self):
-        return self._get_global_section_option_value("LICENSE_INFORMATION")
+        return self.user_env.get("GLOBAL", "LICENSE_INFORMATION")
 
     def need_retry_expect(self):
         return self.is_cfg_option_enabled("GLOBAL", "RETRY_EXPECT")

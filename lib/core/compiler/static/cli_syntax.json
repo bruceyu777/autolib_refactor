@@ -45,7 +45,8 @@
     "confirm_with_newline",
     "wait_for_confirm",
     "auto_login",
-    "sudo"
+    "sudo",
+    "send_literal"
   ],
   "script": ["api", "section", "command", "keyword", "include", "comment"],
   "api": {
@@ -243,7 +244,8 @@
         ["identifier", "-to"],
         ["identifier", null]
       ]
-    ]
+    ],
+    "send_literal": ["parse", [["string", null]]]
   },
   "keyword": {
     "if": ["control_block", ["expression", "script", ["elseif", "else", "fi"]]],
