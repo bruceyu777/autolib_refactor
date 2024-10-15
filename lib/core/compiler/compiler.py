@@ -20,8 +20,8 @@ class Compiler:
         self.files[file_name] = vm_codes
         self.devices |= devices
 
-        for f in called_files:
-            f = env.variable_interpolation(f)
+        for f, current_device in called_files:
+            f = env.variable_interpolation(f, current_device=current_device)
             self._compile_file(f)
 
     def run(self, file_name):

@@ -32,7 +32,7 @@ class Task:
             return
 
         for dev_name, dev in self.devices.items():
-            if env.is_fos_deivce(dev_name) and not env.need_deploy_vm():
+            if env.is_fos_device(dev_name) and not env.need_deploy_vm():
                 dev.restore_image(
                     env.args.release, env.args.build, env.args.reset, env.args.burn
                 )

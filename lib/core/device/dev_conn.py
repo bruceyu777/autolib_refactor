@@ -8,6 +8,7 @@ from lib.services import env, logger
 
 from .log_file import LogFile
 from .output_buffer import OutputBuffer
+from .pexpect_wrapper import Spawn, new_buffer_init_class
 
 READ_WAIT_TIME = 120
 WAIT_TIME = 60
@@ -40,11 +41,18 @@ class DevConn:
             del self.log_file
             self.log_file = None
 
+    def get_clean_buffer_init_class(self):
+        device_type = self.dev_name.split("_")[0]
+        buffer_clean_pattern = env.get_buffer_clean_pattern_by_dev_type(device_type)
+        return new_buffer_init_class(device_type, buffer_clean_pattern)
+
     @property
     def client(self):
         if self._client is None:
-            self._client = pexpect.spawn(
+            buffer_for_pexpect = self.get_clean_buffer_init_class()
+            self._client = Spawn(
                 self.conn,
+                buffer_for_pexpect,
                 encoding="utf-8",
                 echo=True,
                 logfile=sys.stdout,
