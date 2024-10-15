@@ -112,12 +112,14 @@ class FosDev(Device):
         while cnt < 3:
             ctrl_c = "\x03"
             ctrl_d = "\x04"
-            logger.info("Start sending ctrl_c and ctrl_d.")
+            logger.debug("Start sending ctrl_c and ctrl_d.")
             self.conn.send(ctrl_c)
+            time.sleep(0.5)
             self.conn.send(ctrl_d)
+            time.sleep(0.5)
             m, _ = self.conn.expect("login:", 10)
             if m is None:
-                logger.warning("Failed to execute ctrl-d in the device.")
+                logger.debug("Failed to execute ctrl-d in the device.")
                 cnt += 1
             else:
                 self.conn.login()
@@ -180,11 +182,13 @@ class FosDev(Device):
         self.send_line(temp_password)
         self.search("#", 30, -1)
         password = env.get_section_var(self.dev_name, "PASSWORD")
-        if password:
+        if password and password != temp_password:
             self.set_admin_password(self.DEFAULT_ADMIN, password, temp_password)
-        else:
+        if not password:
             self.unset_admin_password("admin", temp_password)
-        self._login(self.DEFAULT_ADMIN, password)
+        if password != temp_password:
+            self.search("login:", 5, -1)
+            self._login(self.DEFAULT_ADMIN, password)
 
     def reset_firewall(self, cmd):
         if self.is_vdom_enabled:

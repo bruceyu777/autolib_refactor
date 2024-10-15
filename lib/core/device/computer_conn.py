@@ -6,6 +6,7 @@ from lib.services import env, logger
 
 from .dev_conn import DevConn
 from .log_file import LogFile
+from .pexpect_wrapper import Spawn
 
 
 class ComputerConn(DevConn):
@@ -13,7 +14,7 @@ class ComputerConn(DevConn):
         index = self._client.expect(
             [
                 r"\(yes/no/\[fingerprint\]\)\? $",
-                "password: $",
+                r"[Pp]assword: $",  # Some linux flavor popup is `Password:`
                 pexpect.TIMEOUT,
                 pexpect.EOF,
             ]
@@ -27,9 +28,9 @@ class ComputerConn(DevConn):
             self._client.sendline(self.password)
             self._client.expect(r"[$#\>]\s*")
         elif index == 2:
-            logger.error("Timeout to login.")
+            logger.error("\nTimeout to login.")
         elif index == 3:
-            logger.error("Failed to login %s as connection is closed.", self.dev_name)
+            logger.error("\nFailed to login %s as connection is closed.", self.dev_name)
 
     def send_command(self, command, pattern, timeout):
         # make sure to match the output after command is send
@@ -73,8 +74,10 @@ class ComputerConn(DevConn):
     @property
     def client(self):
         if self._client is None:
-            self._client = pexpect.spawn(
+            buffer_for_pexpect = self.get_clean_buffer_init_class()
+            self._client = Spawn(
                 self.conn,
+                buffer_for_pexpect,
                 encoding="utf-8",
                 echo=False,
                 logfile=sys.stdout,

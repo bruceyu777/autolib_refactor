@@ -6,11 +6,10 @@ import sys
 import zipfile
 from collections import defaultdict
 from pathlib import Path
-from time import sleep
 
-from lib.services import env, logger, oriole, output, summary
-from lib.services.log import add_logger_handler
+from lib.services import add_logger_handler, env, logger, oriole, output, summary
 from lib.utilities.exceptions import ReportUnderPCWithoutDut
+from lib.utilities.util import sleep_with_print
 
 from ..compiler.compiler import compiler
 from ..compiler.vm_code import VMCode
@@ -139,6 +138,19 @@ class Executor:
             cmd = "exe factoryreset"
         self.cur_device.reset_firewall(cmd)
 
+    def _send_literal(self, parameters):
+        if (
+            parameters
+            and len(parameters[0]) >= 2
+            and parameters[0].startswith('"')
+            and parameters[0].endswith('"')
+        ):
+            cmd = parameters[0][1:-1]
+            cmd = cmd.encode().decode("unicode_escape").replace("CRLF", "\r\n")
+            self.cur_device.send(cmd)
+        else:
+            logger.error("raw command must be DOUBLE-QUOTED!!!")
+
     def _restore_image(self, parameters):
         release, build = parameters
         self.cur_device.restore_image(release, build, False)
@@ -192,11 +204,11 @@ class Executor:
             if retry_command is None:
                 previous_vm_code = self.vmcodes[self.program_counter - 1]
                 if previous_vm_code.operation == "command":
-                    previus_command = previous_vm_code.parameters[0]
-                    if previus_command.startswith(
+                    previous_command = previous_vm_code.parameters[0]
+                    if previous_command.startswith(
                         ("curl", "wget", "exe log display", "execute log display")
                     ):
-                        return f'"{previus_command}"', 3
+                        return f'"{previous_command}"', 3
         return retry_command, -1
 
     def _expect(self, parameters):
@@ -590,8 +602,7 @@ class Executor:
 
     def _sleep(self, parameters):
         seconds = int(parameters[0])
-        logger.notice("\nGoing to sleep '%d' seconds...\n", seconds)
-        sleep(seconds)
+        sleep_with_print(seconds, logger_func=logger.notice)
 
     def _forcelogin(self, _):
         self.cur_device.force_login()
@@ -728,6 +739,7 @@ class Executor:
                 ),
             )
         with Executor(file_name, vm_codes, self.devices, False) as executor:
+            executor.cur_device = self.cur_device
             executor.execute()
 
     def execute(self):
@@ -774,12 +786,17 @@ class Executor:
                 logger.notify("Failed to find the value for %s", var_name)
         return _string
 
-    def _variable_interpolation(self, orginal_parameter):
-        parameter = env.variable_interpolation(orginal_parameter)
+    def _variable_interpolation(self, original_parameter):
+        # for group file parsing, it also used this function, but it doesn't
+        # have a self.cur_device, so add this guard check here
+        current_device = self.cur_device.dev_name if self.cur_device else None
+        parameter = env.variable_interpolation(
+            original_parameter, current_device=current_device
+        )
         parameter = self._user_defined_variable_interpolation(parameter)
-        if orginal_parameter != parameter:
+        if original_parameter != parameter:
             logger.debug(
-                "Variable interpolation: '%s' -> '%s'", orginal_parameter, parameter
+                "Variable interpolation: '%s' -> '%s'", original_parameter, parameter
             )
         return parameter
 

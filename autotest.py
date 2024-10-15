@@ -169,7 +169,7 @@ def main():
         logger.error("Please speicify the testcase script or testcase group.")
         sys.exit(-1)
 
-    logger.notice("Start test job.")
+    logger.notice("**** Start test job with AUTOLIB - %s. ****", __version__)
     if args.script:
         logger.notice("Test script is %s", args.script)
         test_file = args.script
@@ -184,7 +184,7 @@ def main():
 
     try:
         Job(args).run()
-        logger.notice("Test job finised.")
+        logger.notice("Test job is launched.")
     except Exception:
         logger.exception("Test job failed.")
         if not args.check:
