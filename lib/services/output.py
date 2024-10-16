@@ -44,7 +44,7 @@ class Output:
 
     def zip_autotest_log(self):
         zip_file = self.compose_summary_file("autotest.zip")
-        log_file = self.compose_summary_file("autotest.log")
+        log_file = self.compose_summary_file("autotest.txt")
         with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
             zipf.write(log_file, arcname=os.path.basename(log_file))
         os.remove(log_file)

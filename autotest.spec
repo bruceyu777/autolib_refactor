@@ -10,9 +10,8 @@ a = Analysis(
     binaries=[],
     datas=[
         ("lib/services/fos/static/pltrev.csv", "./lib/services/fos/static/"),
-        ("lib/core/compiler/vm_codes/", "./lib/core/compiler/vm_codes/"),
         ("lib/core/compiler/static/cli_syntax.json", "./lib/core/compiler/static/"),
-        ("lib/services/summary.template", "./lib/services/")
+        ("lib/services/summary.template", "./lib/services/"),
         ("lib/services/static/buffer_clean_patterns.json", "./lib/services/static/"),
     ],
     hiddenimports=[],

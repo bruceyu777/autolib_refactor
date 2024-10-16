@@ -45,7 +45,7 @@ class Executor:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
+        log_file = output.compose_log_file(Path(self.script).stem, "autotest.txt")
         handler = logging.FileHandler(log_file)
         add_logger_handler(handler, logging.DEBUG, formatter)
         self.log_file_handler = handler
@@ -69,7 +69,7 @@ class Executor:
 
     def zip_running_log(self):
         zip_file = output.compose_log_file(Path(self.script).stem, "autotest.zip")
-        log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
+        log_file = output.compose_log_file(Path(self.script).stem, "autotest.txt")
         with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
             zipf.write(log_file, arcname=os.path.basename(log_file))
         os.remove(log_file)
