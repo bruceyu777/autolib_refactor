@@ -34,8 +34,9 @@ class Summary:
         self.start_time = datetime.now().replace(microsecond=0)
         self.end_time = "NA"
 
-    def add_testcase(self, id_):
-        self.testcases[id_] = ("Not Tested", (), False)
+    def add_testcase(self, id_, source_filepath):
+        testcase_relpath = os.path.relpath(source_filepath, os.getcwd())
+        self.testcases[id_] = ("Not Tested", (), False, testcase_relpath)
         self._generate()
 
     def update_testcase(self, id_, res, reported):
@@ -43,8 +44,8 @@ class Summary:
         self._generate()
 
     def update_reported(self, id_):
-        status, res, _ = self.testcases[id_]
-        self.testcases[id_] = status, res, True
+        status, res, _, testcase_relpath = self.testcases[id_]
+        self.testcases[id_] = (status, res, True, testcase_relpath)
         self._generate()
 
     def add_testscript(self, id_):
@@ -71,11 +72,11 @@ class Summary:
         statistics["total_number"] = len(self.testcases)
         statistics["passed_number"] = sum(
             status == "Tested" and all(r for r, *_ in res)
-            for status, res, _ in self.testcases.values()
+            for status, res, *_ in self.testcases.values()
         )
         statistics["failed_number"] = sum(
             status == "Tested" and any(not r for r, *_ in res)
-            for status, res, _ in self.testcases.values()
+            for status, res, *_ in self.testcases.values()
         )
         statistics["passed_percentage"] = 100 * round(
             (
@@ -117,7 +118,12 @@ class Summary:
 
     def _classify_testcases(self):
         results = []
-        for testcase_id, (status, res, reported) in self.testcases.items():
+        for testcase_id, (
+            status,
+            res,
+            reported,
+            source_filepath,
+        ) in self.testcases.items():
             if status != "Tested":
                 continue
 
@@ -134,6 +140,7 @@ class Summary:
             final_res = all(succeeded for succeeded, *_ in res)
             result = {
                 "id": testcase_id,
+                "source_filepath": source_filepath,
                 "res": final_res,
                 "details": details,
                 "reported": reported,

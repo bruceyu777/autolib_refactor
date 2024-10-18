@@ -9,7 +9,7 @@ from pathlib import Path
 
 from lib.services import add_logger_handler, env, logger, oriole, output, summary
 from lib.utilities.exceptions import ReportUnderPCWithoutDut
-from lib.utilities.util import sleep_with_print
+from lib.utilities.util import sleep_with_progress
 
 from ..compiler.compiler import compiler
 from ..compiler.vm_code import VMCode
@@ -45,7 +45,7 @@ class Executor:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        log_file = output.compose_log_file(Path(self.script).stem, "autotest.txt")
+        log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
         handler = logging.FileHandler(log_file)
         add_logger_handler(handler, logging.DEBUG, formatter)
         self.log_file_handler = handler
@@ -69,7 +69,7 @@ class Executor:
 
     def zip_running_log(self):
         zip_file = output.compose_log_file(Path(self.script).stem, "autotest.zip")
-        log_file = output.compose_log_file(Path(self.script).stem, "autotest.txt")
+        log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
         with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
             zipf.write(log_file, arcname=os.path.basename(log_file))
         os.remove(log_file)
@@ -602,7 +602,7 @@ class Executor:
 
     def _sleep(self, parameters):
         seconds = int(parameters[0])
-        sleep_with_print(seconds, logger_func=logger.notice)
+        sleep_with_progress(seconds, logger_func=logger.notice)
 
     def _forcelogin(self, _):
         self.cur_device.force_login()

@@ -42,7 +42,7 @@ class LogFile:
 
     def start_record(self, folder_name):
         for log_type, log_file in self.FILE_TABLE.items():
-            file_name = f"{self.dev_name}_{log_type}.txt"
+            file_name = f"{self.dev_name}_{log_type}.log"
             file_path = output.compose_terminal_file(folder_name, file_name)
             # pylint: disable=consider-using-with
             fp = open(file_path, "a", encoding="utf-8")

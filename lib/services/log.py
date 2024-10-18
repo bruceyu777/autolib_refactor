@@ -48,7 +48,7 @@ def add_file_stream(in_debug_mode):
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
-    log_file = output.compose_summary_file("autotest.txt")
+    log_file = output.compose_summary_file("autotest.log")
     handler = logging.FileHandler(log_file)
     level = logging.DEBUG if in_debug_mode else logging.INFO
     add_logger_handler(handler, level, formatter)

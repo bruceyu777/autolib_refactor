@@ -33,7 +33,7 @@ class Parser:
 
     def _add_vm_code(self, line_number, operation, parameters):
         if operation == "report":
-            summary.add_testcase(parameters[0])
+            summary.add_testcase(parameters[0], self.file_name)
         vm_code = VMCode(line_number, operation, parameters)
         self.vm_codes.append(vm_code)
         return vm_code

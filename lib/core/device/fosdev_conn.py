@@ -113,6 +113,8 @@ class FosDevConn(DevConn):
         self.conn_state = "_logged_in"
 
     def _retry(self):
+        self._client.sendline("\n")
+        time.sleep(0.1)
         self._client.sendcontrol("c")
         if self.retry_cnt > self.RETRY_MAX_TIME:
             logger.error("\nFailed to login after retry for %s times", self.retry_cnt)

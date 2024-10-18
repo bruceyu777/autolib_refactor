@@ -74,7 +74,7 @@ none: do not submit any testcase result to Oriole.
 succeeded: only submit succeeded testcases' result to Oriole."""
 
 
-__version__ = "V3R10B0003"
+__version__ = "V3R10B0004"
 
 
 def parse_cli_args():

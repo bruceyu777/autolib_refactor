@@ -45,13 +45,13 @@ class ComputerConn(DevConn):
 
         # pdb.set_trace()
         cur_pos = len(self.output_buffer)
-        logger.info("current command is %s", command)
-        logger.info("current pos in send_command is %s", cur_pos)
-        logger.info(
+        logger.debug("current command is %s", command)
+        logger.debug("current pos in send_command is %s", cur_pos)
+        logger.debug(
             "current output in send_command is %s", self.output_buffer[cur_pos:]
         )
-        logger.info("Current pattern is %s", pattern)
-        self.client.sendline(command)
+        logger.debug("Current pattern is %s", pattern)
+        self.send_line(command)
 
         # For commands like this:
         # fosqa@ztna-client:~$ forticlient vpn edit sslvpn

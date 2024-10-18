@@ -18,12 +18,15 @@ FOS_UNIVERSAL_PROMPTS = (
 
 AUTO_PROCEED_RULE_MAP = {
     r"\(y/n\)$": "y",
-    r"\(yes/no.*\)\??": "yes",
+    r"\(yes/no.*\)\?*$": "yes",
     r"\[Y/N\]\?": "Y",
-    r"to accept\): ": "a",
-    r"\[confirm\]": "y",
+    r"to accept\): $": "a",
+    r"\[confirm\]$": "y",
     r"--More-- $": " ",
 }
+
+AUTO_PROCEED_PATTERNS = "|".join(AUTO_PROCEED_RULE_MAP.keys())
+MAX_AUTO_PROCEED_TIMES = 6
 
 SYSCTRL_COMAND = (r"Admin:\s*$",)
 FTP_NAME_PROMPT = (r"Name\s*\(.+\):\s*$",)
@@ -55,9 +58,8 @@ class Device:
         self.keep_running = False
         self.confirm_with_newline = False
         self.wait_for_confirm = False
-        self.connect()
         self.embeded_conn = False
-        self.fnsysctl = False
+        self.connect()
         self.license_info = {}
         self._extract_license_info()
 
@@ -211,49 +213,61 @@ class Device:
     def _return_to_user_view(self):
         self.send_command("end")
 
+    def _handle_embeded_session(self, command):
+        new_session_commands = ("telnet ", "ssh ", "sshpass ", "ftp ")
+        if command.startswith(new_session_commands):
+            self.embeded_conn = True
+        if command == "exit":
+            self.embeded_conn = False
+        return self.embeded_conn
+
+    def _translate_signal_command(self, command):
+        mapping = {
+            "ctrl_b": "\x02",
+            "ctrl_c": "\x03",
+            "ctrl_d": "\x04",
+            "backspace": "\x08",
+        }
+        return mapping.get(command, command)
+
+    def _process_command(self, command):
+        command = self._translate_signal_command(command)
+        self._handle_embeded_session(command)
+        return command
+
     def send_command(
         self,
         command,
         pattern=DEFAULT_PROMPTS,
         timeout=MAX_TIMEOUT_FOR_REBOOT,
     ):
-        if command == "ctrl_c":
-            command = "\x03"
-        if command == "ctrl_d":
-            command = "\x04"
-
-        if command.startswith(("telnet ", "ssh ", "sshpass ", "ftp ")):
-            self.embeded_conn = True
-        if command == "exit":
-            self.embeded_conn = False
-        if self.wait_for_confirm:
-            expected_pattern = "|".join(AUTO_PROCEED_RULE_MAP.keys())
-        else:
-            expected_pattern = pattern
-        matched, output = self.conn.send_command(command, expected_pattern, timeout)
-        if self.wait_for_confirm:
-            self.wait_for_confirm = False
-        if matched:
-            logger.info("Matched group is '%s'", matched.group())
-        while matched is not None:
-            confirm_str = self.require_confirm(matched.group())
-            if confirm_str:
-                logger.info("Matched group is '%s'", confirm_str)
-                matched, output = self.conn.send_command(confirm_str, pattern, timeout)
-            elif self.require_login(matched.group()) and not self.embeded_conn:
-                logger.info("Start login:")
-                if not self.fnsysctl:
-                    self.conn.login()
-                else:
-                    self.fnsysctl = False
-                break
-            elif self.sysctl_login(matched.group()):
-                logger.info("Fnsysctl login:")
-                self.fnsysctl = True
-                break
+        command = self._process_command(command)
+        pattern = f"{pattern}|{AUTO_PROCEED_PATTERNS}"
+        start_time = time.time()
+        handled_output = output = ""
+        auto_proceed_times = 0
+        matched, output = self.conn.send_command(command, pattern, timeout)
+        while time.time() - start_time < timeout:
+            if handled_output.endswith(output):
+                time.sleep(0.1)
             else:
-                break
-        return matched, output
+                handled_output += output
+                if matched:
+                    logger.info("Matched group is '%s'", matched.group())
+                    command = self.require_confirm(matched.group())
+                    if not command:
+                        break
+                    if auto_proceed_times > MAX_AUTO_PROCEED_TIMES:
+                        logger.warning("Stopping autoproceed loop by sending CTRL_C")
+                        matched, output = self.conn.send_command("\x03", pattern, 3)
+                        handled_output += output
+                        break
+                    matched, output = self.conn.send_command(command, pattern, timeout)
+                    handled_output += output
+                    auto_proceed_times += 1
+        else:
+            logger.debug("* TIMEOUT * Unable to match pattern...")
+        return matched, handled_output
 
     def start_record_terminal(self, folder_name):
         self.conn.start_record(folder_name)

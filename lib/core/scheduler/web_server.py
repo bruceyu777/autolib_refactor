@@ -11,7 +11,28 @@ from lib.services.log import logger
 
 
 # Define a custom handler that suppresses logging messages
-class SilentHandler(http.server.SimpleHTTPRequestHandler):
+class CustomHandler(http.server.SimpleHTTPRequestHandler):
+
+    @staticmethod
+    def _is_viewable(safe_path):
+
+        file_extension = not os.path.splitext(safe_path)[1]
+        return file_extension in (".log", ".txt", ".env", ".vm", "")
+
+    def _load_response_with_file_content(self, safe_path):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        with open(safe_path, "rb") as file:
+            self.wfile.write(file.read())
+
+    def do_GET(self):
+        safe_path = self.translate_path(self.path)
+        if self._is_viewable(safe_path):
+            self._load_response_with_file_content(safe_path)
+        else:
+            super().do_GET()
+
     # pylint: disable=redefined-builtin
     def log_message(self, format, *args):
         pass
@@ -25,7 +46,7 @@ class WebServer:
 
     def create(self):
         server_address = ("", self.port)
-        httpd = http.server.HTTPServer(server_address, SilentHandler)
+        httpd = http.server.HTTPServer(server_address, CustomHandler)
         httpd.serve_forever()
 
     def _is_port_available(self):
