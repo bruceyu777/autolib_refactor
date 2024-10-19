@@ -2,8 +2,8 @@ import os
 import sys
 import webbrowser
 
-from lib.core.scheduler.web_server import WebServer
 from lib.services import env, logger, oriole, output
+from lib.services.web_server import WebServer
 
 from .group_task import GroupTask
 from .script_task import ScriptTask

@@ -38,7 +38,7 @@
     "rename",
     "myexec",
     "move",
-    "cleanbuff",
+    "clean_buffer",
     "admin",
     "expect_ctrl_c",
     "restore_image",

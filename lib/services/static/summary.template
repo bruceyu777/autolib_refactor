@@ -35,8 +35,8 @@
                 <th> End Time </th>
                 <th> Duration</th>
                 <tr>
-                    <td><a href="{{env_file}}">{{env_file}}</a></td>
-                    <td><a href="{{test_file}}">{{test_file}}</a></td>
+                    <td><a href="/{{env_file}}">{{env_file}}</a></td>
+                    <td><a href="/{{test_file}}">{{test_file}}</a></td>
                     <td>{{start_time}}</td>
                     <td>{{end_time}}</td>
                     <td>{{duration}}</td>
@@ -88,7 +88,7 @@
                 <th>Reported</th>
                 {% for testcase in testcase_results %}
                     <tr>
-                        <td> <a href="{testcase.source_filepath}">{{testcase.id}}</a></td>
+                        <td> <a href="/{testcase.source_filepath}">{{testcase.id}}</a></td>
                         {%if testcase.res %}
                             <td style="background-color:lightgreen;">
                                 Succeeded

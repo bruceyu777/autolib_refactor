@@ -4,20 +4,18 @@ import os
 import shutil
 from datetime import datetime
 
-from jinja2 import Environment, FileSystemLoader
-
 # pylint: disable=wrong-import-order, import-error
 from rich.console import Console
 from rich.table import Table
 
 from .environment import env
 from .output import output
+from .template_env import web_server_env
 
 SUMMARY_FILE_NAME = "summary.html"
 TEMPLATE_FILE_NAME = "summary.template"
 BRIEF_SUMMARY_FILE_NAME = "brief_summary.txt"
 FAILED_TESTSCRIPTS_FILE_NAME = "failed_testscripts.txt"
-TEMPLATE_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 class Summary:
@@ -40,7 +38,7 @@ class Summary:
         self._generate()
 
     def update_testcase(self, id_, res, reported):
-        self.testcases[id_] = ("Tested", res, reported)
+        self.testcases[id_] = ("Tested", res, reported, self.testcases[id_][-1])
         self._generate()
 
     def update_reported(self, id_):
@@ -149,9 +147,7 @@ class Summary:
         return results
 
     def _render(self):
-        file_loader = FileSystemLoader(TEMPLATE_FILE_DIR)
-        render_env = Environment(loader=file_loader)
-        template = render_env.get_template(TEMPLATE_FILE_NAME)
+        template = web_server_env.get_template(TEMPLATE_FILE_NAME)
         not_tested_cases = [
             _id
             for _id, (status, *_) in self.testcases.items()
