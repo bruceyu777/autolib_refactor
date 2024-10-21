@@ -27,6 +27,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         ".conf",
         ".grp",
         ".html",
+        ".py",
+        ".md",
+        ".json",
     )
 
     @staticmethod
@@ -57,7 +60,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             breadcrumbs=self._prepare_breadcrumbs(),
             file_content=file_content,
         )
-
         self.send_response(200)
         self.send_header("Content-type", "text/html; charset=utf-8")
         self.end_headers()

@@ -1,157 +1,241 @@
 <!DOCTYPE html>
 <html>
     <head>
-
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Test Report</title>
         <style>
-            table {
-                border-collapse: collapse;
-                width: 100%;
+            h2 {
+                text-align: center;
+                font-size: 24px;
+                font-weight: 600;
+                color: #333;
+                margin: 20px 0 10px;
+                border-bottom: 2px solid #4CAF50;
+                padding-bottom: 5px;
             }
 
-            td, th {
-                border: 1px solid #dddddd;
-                text-align: left;
-                padding: 8px;
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 10px 0;
+                font-size: 16px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
 
+            th, td {
+                text-align: center;
+                padding: 12px;
+                border: 1px solid #dddddd;
             }
 
             th {
-                background-color: #dddddd;
+                background-color: #f8f8f8 !important; /* Changed header color to neutral */
+                font-weight: lighter !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             }
 
-            h2 {
-                text-align: center;
-                background-color: lightgrey;
+            tr:nth-child(even) {
+                background-color: #f2f2f2;
             }
+
+            tr:hover {
+                background-color: #e9f5e9;
+            }
+
+            a {
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            .summary-table td {
+                text-align: center;
+            }
+
+            .success {
+                background-color: #c8e6c9;
+                color: #388e3c;
+                font-weight: bold;
+            }
+
+            .failure {
+                background-color: #ffcdd2 !important;;
+                color: #d32f2f;
+                font-weight: bold;
+            }
+
+            .not-tested {
+                background-color: #e0e0e0;
+                color: #757575;
+                font-weight: bold;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .file-info, .test-summary {
+                margin-bottom: 30px;
+            }
+
         </style>
     </head>
     <body>
-        <div>
-            <h2 >AutoTest Running Info</h2>
-            <table>
-                <th> Environment File</th>
-                <th> Test File</th>
-                <th> Start Time</th>
-                <th> End Time </th>
-                <th> Duration</th>
-                <tr>
-                    <td><a href="/{{env_file}}">{{env_file}}</a></td>
-                    <td><a href="/{{test_file}}">{{test_file}}</a></td>
-                    <td>{{start_time}}</td>
-                    <td>{{end_time}}</td>
-                    <td>{{duration}}</td>
-                </tr>
-            </table>
-        </div>
-
-        <div>
-            <h2 >Testcases Result Summary</h2>
-            <table>
-                <th> Total Test Case </th>
-                <th> Passed </th>
-                <th> Failed </th>
-                <th> Not Tested</th>
-                <th> Passed Percentage(%) </th>
-                <tr>
-                    <td>{{total_number}}</td>
-                    <td>{{passed_number}}</td>
-                    <td>{{failed_number}}</td>
-                    <td>{{not_tested_number}}</td>
-                    {%if failed_number == 0 %}
-                        <td style="background-color:lightgreen;">{{passed_percentage}}</td>
-                    {% else %}
-                        <td style="background-color:red;">{{passed_percentage}}</td>
-                    {% endif %}
-                </tr>
-            </table>
-        </div>
-        <div>
-            <h2 >Testscript Summary</h2>
-            <table>
-                <th> Testscript </th>
-                <th> Status </th>
-                <th> Elapsed Time(s)</th>
-                {% for id, (status, duration) in testscripts.items() %}
-                    <tr>
-                        <td> {{id}}</td>
-                        <td> {{status}} </td>
-                        <td> {{duration}} </td>
-                    </tr>
-                {% endfor%}
-            </table>
-        </div>
-        <div>
-            <h2 >Testcases Summary</h2>
-            <table>
-                <th>QAID</th>
-                <th>Result</th>
-                <th>Reported</th>
-                {% for testcase in testcase_results %}
-                    <tr>
-                        <td> <a href="/{testcase.source_filepath}">{{testcase.id}}</a></td>
-                        {%if testcase.res %}
-                            <td style="background-color:lightgreen;">
-                                Succeeded
-                            </td>
-                        {% else %}
-                            <td style="background-color:red;">
-                                Failed
-                            </td>
-                        {%endif%}
-                        {%if testcase.reported %}
-                            <td style="background-color:lightgreen;">
-                                Reported
-                            </td>
-                        {% else %}
-                            <td style="background-color:red;">
-                                Not Reported
-                            </td>
-                        {%endif%}
-                    </tr>
-                {% endfor%}
-                {% for testcase in not_tested_cases %}
-                    <tr>
-                        <td> {{testcase}}</td>
-                        <td style="background-color:gray;">
-                            Not Tested
-                        </td>
-                        <td style="background-color:gray;">
-                            Not Reported
-                        </td>
-                    </tr>
-                {% endfor%}
-            </table>
-            {%if failed_number != 0 %}
-                <h2> Failed Testcases Details</h2>
-                <table>
-                    <th> QAID </th>
-                    <th> Details </th>
-                    {% for testcase in testcase_results -%}
-                        {%if not testcase.res %}
-                            <tr>
-                                <td>{{testcase.id}}</td>
-                                <td>
-                                    <table>
-                                        <th> line number </th>
-                                        <th> expect </th>
-                                        <th> output </th>
-                                        {% for detail in testcase.details -%}
-                                            <tr>
-                                                <td>{{detail.line_num}}</td>
-                                                <td>{{detail.expect}}</td>
-                                                <td>
-
-                                                        {{detail.output}}
-
-                                                </td>
-                                            </tr>
-                                        {% endfor%}
-                                    </table>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    {% endfor %}
+        <div class="container">
+            <!-- AutoTest Running Info -->
+            <div class="file-info">
+                <h2>AutoTest Running Info</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>Environment File</th>
+                            <th>Test File</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><a href="/{{env_file}}">{{env_file}}</a></td>
+                            <td><a href="/{{test_file}}">{{test_file}}</a></td>
+                            <td>{{start_time}}</td>
+                            <td>{{end_time}}</td>
+                            <td>{{duration}}</td>
+                        </tr>
+                    </tbody>
                 </table>
+            </div>
+
+            <!-- Testcases Result Summary -->
+            <div class="test-summary">
+                <h2>Test Case Result Summary</h2>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Total Test Case</th>
+                            <th>Passed</th>
+                            <th>Failed</th>
+                            <th>Not Tested</th>
+                            <th>Passed Percentage (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{total_number}}</td>
+                            <td>{{passed_number}}</td>
+                            <td>{{failed_number}}</td>
+                            <td>{{not_tested_number}}</td>
+                            <td class="{{'success' if failed_number == 0 else 'failure'}}">{{passed_percentage}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Testscript Summary -->
+            <div class="test-summary">
+                <h2>Test Script Summary</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>Test Script</th>
+                            <th>Status</th>
+                            <th>Elapsed Time (s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for id, (status, duration) in testscripts.items() %}
+                        <tr>
+                            <td>{{id}}</td>
+                            <td>{{status}}</td>
+                            <td>{{duration}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Testcases Summary -->
+            <div class="test-summary">
+                <h2>Test Case Summary</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>QAID</th>
+                            <th>Result</th>
+                            <th>Oriole Reported</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for testcase in testcase_results %}
+                        <tr>
+                            <td><a href="/{{testcase.source_filepath}}">{{testcase.id}}</a></td>
+                            <td class="{{'success' if testcase.res else 'failure'}}">
+                                {{'Succeeded' if testcase.res else 'Failed'}}
+                            </td>
+                            <td class="{{'success' if testcase.reported else 'failure'}}">
+                                {{'Reported' if testcase.reported else 'Not Reported'}}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for testcase in not_tested_cases %}
+                        <tr>
+                            <td>{{testcase}}</td>
+                            <td class="not-tested">Not Tested</td>
+                            <td class="not-tested">Not Reported</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Failed Testcases Details -->
+            {% if failed_number != 0 %}
+            <div class="test-summary">
+                <h2>Test Case Failure Details</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>QAID</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for testcase in testcase_results %}
+                        {% if not testcase.res %}
+                        <tr>
+                            <td>{{testcase.id}}</td>
+                            <td>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Line Number</th>
+                                            <th>Expected</th>
+                                            <th>Output</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for detail in testcase.details %}
+                                        <tr>
+                                            <td>{{detail.line_num}}</td>
+                                            <td>{{detail.expect}}</td>
+                                            <td>{{detail.output}}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
             {% endif %}
         </div>
     </body>

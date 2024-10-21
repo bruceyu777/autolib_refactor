@@ -16,6 +16,7 @@ SUMMARY_FILE_NAME = "summary.html"
 TEMPLATE_FILE_NAME = "summary.template"
 BRIEF_SUMMARY_FILE_NAME = "brief_summary.txt"
 FAILED_TESTSCRIPTS_FILE_NAME = "failed_testscripts.txt"
+LOADED_SUMMARY_TEMAPLTE = web_server_env.get_template(TEMPLATE_FILE_NAME)
 
 
 class Summary:
@@ -147,7 +148,6 @@ class Summary:
         return results
 
     def _render(self):
-        template = web_server_env.get_template(TEMPLATE_FILE_NAME)
         not_tested_cases = [
             _id
             for _id, (status, *_) in self.testcases.items()
@@ -158,7 +158,7 @@ class Summary:
         if self.end_time != "NA":
             duration = int((self.end_time - self.start_time).total_seconds())
 
-        rendered_content = template.render(
+        rendered_content = LOADED_SUMMARY_TEMAPLTE.render(
             env_file=env.get_env_file_name(),
             test_file=env.get_test_file_name(),
             start_time=self.start_time,
@@ -180,9 +180,9 @@ class Summary:
 
     def _print(self):
         table = Table(title="Testcase Results")
-        table.add_column("Testcase Id", justify="right", style="cyan", no_wrap=True)
-        table.add_column("Result", style="magenta")
-        table.add_column("Reported", style="magenta")
+        table.add_column("Oriole QAID", justify="center", style="cyan", no_wrap=True)
+        table.add_column("Result", justify="center", style="magenta")
+        table.add_column("Oriole Reported", justify="center", style="magenta")
 
         for testcase in self._classify_testcases():
             table.add_row(
