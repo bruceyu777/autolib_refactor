@@ -67,6 +67,13 @@ class OutputBuffer:
         return regex_flags
 
     @staticmethod
+    def _to_line_buffer_pattern(pattern):
+        pattern = regex.sub(r"\.\*", r"[^\n\r]*", pattern)
+        pattern = regex.sub(r"^\(\^", r"^(", pattern)
+        pattern = regex.sub(r"^\^", r"(?:[\n\r]|^)", pattern)
+        return pattern
+
+    @staticmethod
     def _split_flag_and_pattern(pattern):
         """
         (?i) — Case Insensitive: Enables case-insensitive matching.
@@ -91,7 +98,7 @@ class OutputBuffer:
         if "n" in flags:
             # in tcl/tk, (?n) was used to disable newline matching
             flags = flags.replace("n", "")
-            pattern = regex.sub(r"\.\*", r"[^\n\r]*", pattern)
+            pattern = OutputBuffer._to_line_buffer_pattern(pattern)
         return flags, pattern
 
     @staticmethod

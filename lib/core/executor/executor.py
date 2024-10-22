@@ -555,10 +555,9 @@ class Executor:
         if match:
             value = match.group(1)
             env.add_var(name, value)
-            logger.info("Succeeded to set variable %s to (%s)", name, value)
-            return
-        logger.error("Failed to execute setvar.")
-        return
+            logger.info("Succeeded to set variable %s to '%s'", name, value)
+        else:
+            logger.error("Failed to execute setvar.")
 
     def _varexpect(self, parameters):
         (

@@ -25,4 +25,5 @@ tomli
 tqdm
 typing-extensions
 urllib3
+wget
 zipp
