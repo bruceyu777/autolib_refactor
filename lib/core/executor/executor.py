@@ -250,11 +250,9 @@ class Executor:
                 cli_output,
             )
         )
-        result_str = "Succeeded" if is_succeeded else "Failed"
         if is_succeeded:
             logger.info(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
+                "\nSucceeded to expect for testcase: %s\nExpect Rule: '%s'\nfail_match: %s in %ss.",
                 testcase_id,
                 rule,
                 fail_match,
@@ -262,8 +260,7 @@ class Executor:
             )
         else:
             logger.notice(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
+                "\nFailed to expect for testcase: %s\nExpect Rule: '%s'\nfail_match: %s in %ss.",
                 testcase_id,
                 rule,
                 fail_match,

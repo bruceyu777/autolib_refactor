@@ -228,7 +228,7 @@ class Device:
             "ctrl_d": "\x04",
             "backspace": "\x08",
         }
-        return mapping.get(command, command)
+        return mapping.get(command.strip(), command)
 
     def _process_command(self, command):
         command = self._translate_signal_command(command)

@@ -70,6 +70,7 @@ class OutputBuffer:
     def _to_line_buffer_pattern(pattern):
         pattern = regex.sub(r"\.\*", r"[^\n\r]*", pattern)
         pattern = regex.sub(r"^\(\^", r"^(", pattern)
+        pattern = regex.sub(r"\$*\)\$*", r")", pattern)
         pattern = regex.sub(r"^\^", r"(?:[\n\r]|^)", pattern)
         return pattern
 
