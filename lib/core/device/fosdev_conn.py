@@ -47,7 +47,7 @@ class FosDevConn(DevConn):
             logger.info("Password appears before login, ignored it.")
             self.conn_state = "_retry"
         elif index == 3:
-            logger.error("\nFailed to login %s, will retry it again.", self.dev_name)
+            logger.debug("\nFailed to login %s, will retry it again.", self.dev_name)
             self.conn_state = "_retry"
         else:
             logger.error("\nFailed to login %s as connection is closed.", self.dev_name)

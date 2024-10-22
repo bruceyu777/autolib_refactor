@@ -1,9 +1,10 @@
 import os
+import socket
 import sys
 import time
 
 import requests
-import tftpy
+import wget
 
 from lib.utilities.exceptions import ImageNotFound, OperationFailure, UnSupportedModel
 
@@ -11,52 +12,23 @@ from .log import logger
 
 DEPLOYMENT = "deploy"
 UPGRADE = "upgrade"
-TFTP_SERVER_IP = "172.18.52.254"
+IMAGE_SERVER_FQDN = "releaseqa-imageserver.corp.fortinet.com"
 IMAGE_STORE_DIR = r"/qaserver/tftpboot/"
 
-
-class DownloadProgress:
-    """download progress bar"""
-
-    def __init__(self, file_size):
-        self.filesize = file_size
-        self.so_far = 0
-        self.count = 0
-
-    def ddcallback(self, tftp_packet):
-        self.count += 1
-        if not hasattr(tftp_packet, "data"):
-            return
-        self.so_far = self.so_far + len(tftp_packet.data)
-        if self.count % 150 == 0 or self.so_far == self.filesize:
-            progress = self.so_far / self.filesize
-            self.update_progress(progress)
-        return
-
-    @staticmethod
-    def update_progress(progress):
-        length = 38
-        block = int(round(length * progress))
-        msg = "\r{0:}: [{1}] {2: 3}%".format(
-            "Approaching",
-            "#" * block + "-" * (length - block),
-            round(progress * 100, 1),
-        )
-        sys.stdout.write(msg)
-        sys.stdout.flush()
+try:
+    IMAGE_SERVER_IP = socket.gethostbyname(IMAGE_SERVER_FQDN)
+except socket.error:
+    logger.error("Unable to resolve Image Server FQDN: '%s'", IMAGE_SERVER_FQDN)
+    IMAGE_SERVER_IP = "172.18.52.254"
 
 
 class ImageServer:
     TFTP_PORT = 69
     MD5_FILE = "md5sum.txt"
-    IMAGE_MICROSERVICE_PORT = 8090
 
     def __init__(self, work_dir=IMAGE_STORE_DIR):
         self.work_dir = work_dir
-        self.url_prefix = "http://{}:{}".format(
-            TFTP_SERVER_IP,
-            self.IMAGE_MICROSERVICE_PORT,
-        )
+        self.url_prefix = f"https://{IMAGE_SERVER_FQDN}"
 
     def get_build_files(self, project, major, build):
         template = "{}/api/files?project={}&version={}&build={}"
@@ -83,9 +55,10 @@ class ImageServer:
         return {}
 
     def get_image_http_url(self, image):
-        image_file = self.lookup_image(image)
-        image_loc = f"{image_file['parent_dir']}/{image_file['name']}"
-        return f"http://{TFTP_SERVER_IP}/{image_loc}"
+        image_abs_path = self.locate_image(image)
+        if not image_abs_path:
+            raise ImageNotFound(image)
+        return f"https://{IMAGE_SERVER_FQDN}/{image_abs_path}"
 
     def locate_image(self, image):
         image_info = self.lookup_image(image)
@@ -99,33 +72,22 @@ class ImageServer:
         return (image["parent_dir"] + "/" + image["name"]) if image else ""
 
     def download_an_image(self, image):
-        image_info = self.lookup_image(image)
-        abs_path = self.generate_image_abs_path(image_info)
-
+        image_url = self.get_image_http_url(image)
         start = time.time()
-        image_location = self._retrieve_file(abs_path, image_info["size"])
+        image_location = self._retrieve_file(image_url)
         logger.info("Done! consumed: %d(s)\n", int(time.time() - start))
         return image_location
 
-    def _retrieve_file(self, image_path, total_size):
+    def _retrieve_file(self, image_path):
         filename = os.path.basename(image_path)
         saved_file = self.work_dir + filename
         count, sleep_interval = 0, 10
-        tftp_client = tftpy.TftpClient(
-            TFTP_SERVER_IP,
-            self.TFTP_PORT,
-            options={"blksize": 14680},
-        )
-        progress_bar = DownloadProgress(total_size)
         while count < 3:
             logger.info("\nTry to download image:\n%s\n", image_path)
             try:
-                tftp_client.download(
-                    image_path,
-                    saved_file,
-                    packethook=progress_bar.ddcallback,
-                    timeout=60,
-                )
+                if os.path.exists(saved_file):
+                    os.remove(saved_file)
+                wget.download(image_path, saved_file)
                 logger.info("\n\nDownloaded to:\n%s\n", saved_file)
                 return saved_file
             except Exception:  # pylint: disable = broad-except
