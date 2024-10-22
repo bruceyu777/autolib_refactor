@@ -12,6 +12,7 @@ from .computer_conn import ComputerConn
 from .vm_builder import VmBuilder
 
 KVM_DEFAULT_IMAGE_FOLDER = r"/home/tester/images/another"
+VIRSH_DEFAULT_TIMEOUT = 60 * 2
 
 
 class VmStatus(Enum):
@@ -173,12 +174,12 @@ class KVM(Computer):
     def power_on_vm(self, vm_domain):
         command = f"virsh --connect qemu:///system start {vm_domain}"
         expected_str = rf"Domain {vm_domain} started"
-        return self.send_command(command, expected_str)
+        return self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
 
     def power_off_vm(self, vm_domain, poweroffdelay=10):
         command = f"virsh shutdown {vm_domain}"
         expected_str = rf"Domain '{vm_domain}' is being shutdown"
-        self.send_command(command, expected_str)
+        self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
         time.sleep(poweroffdelay)
         vm_status = self.retr_vm_status(vm_domain)
         return vm_status is None or vm_status is VmStatus.SHUTOFF
@@ -186,7 +187,7 @@ class KVM(Computer):
     def remove_vm(self, vm_domain):
         command = f"virsh undefine {vm_domain}"
         expected_str = rf"Domain '{vm_domain}' has been undefined"
-        return self.send_command(command, expected_str)
+        return self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
 
     def create_vm(self, **kwargs):
         template = (
@@ -202,6 +203,5 @@ class KVM(Computer):
 
         command = template.format(**kwargs)
         expected_str = "Domain creation completed"
-        self.send_command(command, expected_str)
-
+        self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
         return command

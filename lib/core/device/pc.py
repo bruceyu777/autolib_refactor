@@ -30,7 +30,7 @@ class Pc(Computer):
         self.conn.close()
         self.connect()
 
-    def send_command(self, command, pattern=DEFAULT_PROMPTS, timeout=60):
+    def send_command(self, command, pattern=DEFAULT_PROMPTS, timeout=5):
         if self.need_carriage:
             command = command + "\r"
         return super().send_command(command, pattern=pattern, timeout=timeout)

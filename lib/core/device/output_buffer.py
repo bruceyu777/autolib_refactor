@@ -68,10 +68,15 @@ class OutputBuffer:
 
     @staticmethod
     def _to_line_buffer_pattern(pattern):
-        pattern = regex.sub(r"\.\*", r"[^\n\r]*", pattern)
-        pattern = regex.sub(r"^\(\^", r"^(", pattern)
-        pattern = regex.sub(r"\$*\)\$*", r")", pattern)
-        pattern = regex.sub(r"^\^", r"(?:[\n\r]|^)", pattern)
+        patterns_to_update = {
+            r"\.\*": r"[^\n\r]*",
+            r"^\(\^": r"^(",
+            r"\$*\)\$*": r")",
+            r"[\r\n\\r\\n]$": r"[^\r\n]",
+            r"^\^": r"(?:[\n\r]|^)",
+        }
+        for original, target in patterns_to_update.items():
+            pattern = regex.sub(original, target, pattern)
         return pattern
 
     @staticmethod
