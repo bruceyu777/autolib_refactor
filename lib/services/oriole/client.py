@@ -12,7 +12,11 @@ from ..environment import env
 from ..log import logger
 from ..output import output
 from ..summary import summary
-from .meta import HOST, ORIOLE_FIELD_FOS_SOURCE, ORIOLE_REPORT_FIXED_FIELDS, PORT
+from .meta import (
+    ORIOLE_FIELD_FOS_SOURCE,
+    ORIOLE_REPORT_FIXED_FIELDS,
+    ORIOLE_SUBMIT_API_URL,
+)
 
 REPORT_FILE = "report.json"
 
@@ -22,7 +26,6 @@ class OrioleClient:
         self.user = None
         self.password = None
         self.specified_fields = None
-        self.api = f"http://{HOST}:{PORT}/api/"
         self.file_name = output.compose_summary_file(REPORT_FILE)
         self.submit_flag = "None"
         self.reports = []
@@ -42,14 +45,15 @@ class OrioleClient:
     def send_oriole(self, user, password, report, release_tag):
         response = None
         try:
-            url = self.api + "oriole"
             payload = {
                 "user": user,
                 "password": password,
                 "report": report,
                 "release_tag": release_tag,
             }
-            response = requests.request("POST", url, data=payload, timeout=60)
+            response = requests.request(
+                "POST", ORIOLE_SUBMIT_API_URL, data=payload, timeout=60
+            )
             succeeded = response.status_code == 200
         except Exception:
             logger.exception("Failed to report to oriole!")
@@ -59,7 +63,7 @@ class OrioleClient:
             if response is not None:
                 logger.error("Error details from Oriole: %s", response.text)
             else:
-                logger.error("Unable to access to %s", url)
+                logger.error("Unable to access to %s", ORIOLE_SUBMIT_API_URL)
         return succeeded
 
     def submit(self):

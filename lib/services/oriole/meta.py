@@ -1,10 +1,10 @@
+from lib.services.image_server import IMAGE_SERVER_FQDN
+
 ORIOLE_REPORT_FOLDER = "."
 SUMMARY_FILE_NAME_PREFIX = "AutoTesting_Oriole_"
 FILE_EXT = ".json"
 
-
-ORIOLE_SUBMIT_URL = r"http://172.16.100.117/wsqadb/AutoTestResult?wsdl"
-TEMPLATE_FILE_NAME = "summary.template"
+ORIOLE_SUBMIT_API_URL = f"https://{IMAGE_SERVER_FQDN}/api/oriole"
 
 ORIOLE_REPORT_FIXED_FIELDS = {
     "cidb": "1.00111",
@@ -27,8 +27,6 @@ ORIOLE_REPORT_FIXED_FIELDS = {
     "mcdb": "0.00000",
 }
 
-HOST = "172.18.52.254"
-PORT = "8090"
 
 ORIOLE_FIELD_FOS_SOURCE = {
     "apdb": ["Application Definitions"],
