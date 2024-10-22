@@ -85,14 +85,13 @@ class OutputBuffer:
         if match:
             flags = match.group("flags")
             pattern = match.group("pattern")
-        if "s" not in flags:
-            flags += "s"
+        for flag in ("s", "m"):
+            if flag not in flags:
+                flags += flag
         if "n" in flags:
             # in tcl/tk, (?n) was used to disable newline matching
             flags = flags.replace("n", "")
-        else:
-            flags += "m"
-            # by default in tcl/tk, the match pattern is (?sm)
+            pattern = regex.sub(r"\.\*", r"[^\n\r]*", pattern)
         return flags, pattern
 
     @staticmethod

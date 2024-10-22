@@ -549,7 +549,6 @@ class Executor:
 
     def _setvar(self, parameters):
         rule, name = parameters
-        print(rule)
         rule = self._normalize_regexp(rule)
         logger.info("rule in set_var is %s", rule)
         match, _ = self.cur_device.expect(rule)
