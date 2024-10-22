@@ -6,6 +6,7 @@
     <title>FortiOS Release QA Automation</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.css" rel="stylesheet" />
+    <link href="data:text/plain;base64,AAABAAEAEBAQAAAAAAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAACAAAAAgIAAgAAAAIAAgACAgAAAgICAAMDAwAAAAP8AAP8AAAD//wD/AAAA/wD/AP//AAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJmAmZmAmYAJmYCZmYCZmJmZgJmZgJmZAAAAAAAAAACZmYAAAACZmZmZgAAAAJmZmZmAAAAAmZkAAAAAAAAAAJmZgJmZgJmZCZmAmZmAmZgAmYCZmYCZgAAAAAAAAAAAAAAAAAAAAAD//wAA//8AAP//AADEEQAAhBAAAAQQAAD//wAAB/AAAAfwAAAH8AAA//8AAAQQAACEEAAAxBEAAP//AAD//wAA" rel="icon" type="image/x-icon">
     <style>
         body {
             font-family: Arial, sans-serif;
