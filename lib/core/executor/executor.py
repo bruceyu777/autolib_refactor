@@ -53,7 +53,8 @@ class Executor:
     def __enter__(self):
         logger.notice("Start executing script: %s", self.script)
         summary.dump_script_start_time_to_brief_summary()
-        self._add_file_handler()
+        if getattr(logger, "in_debug_mode", False):
+            self._add_file_handler()
         with open(self.script, "r", encoding="utf-8") as f:
             self.lines = [line.strip() for line in f]
             self.debugger = Debugger(self.lines, self.vmcodes)
@@ -65,7 +66,7 @@ class Executor:
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
         logger.notice("Finished executing script: %s", self.script)
-        self.zip_running_log()
+        # self.zip_running_log()
 
     def zip_running_log(self):
         zip_file = output.compose_log_file(Path(self.script).stem, "autotest.zip")
@@ -102,11 +103,6 @@ class Executor:
             return
 
         cmd = parameters[0]
-        cmd = cmd.replace("myexec", "exec")
-        cmd = cmd.replace("mynext", "next")
-        cmd = cmd.replace("myset", "set")
-        cmd = cmd.replace("mydelete", "delete")
-        cmd = cmd.replace("myend", "end")
 
         if self._is_reset_command(cmd) and self.auto_login:
             self._resetFirewall(cmd)
@@ -442,7 +438,7 @@ class Executor:
 
     def _comment(self, parameters):
         comment = parameters[0]
-        logger.notify(comment)
+        logger.info(comment)
         summary.dump_str_to_brief_summary(comment)
 
     def report_to_oriole(self, testcase_id, device_info):
@@ -751,7 +747,7 @@ class Executor:
                     self.last_line_number is None
                     or self.last_line_number != line_number
                 ):
-                    logger.notify(f"{line_number} {self.lines[line_number - 1]}")
+                    logger.debug("%d  %s", line_number, self.lines[line_number - 1])
                     self.last_line_number = line_number
             func = getattr(self, f"_{code.operation}")
             parameters = code.parameters
@@ -778,7 +774,7 @@ class Executor:
             if value is not None:
                 _string = _string.replace(m, str(value))
             else:
-                logger.notify("Failed to find the value for %s", var_name)
+                logger.error("Failed to find the value for %s", var_name)
         return _string
 
     def _variable_interpolation(self, original_parameter):

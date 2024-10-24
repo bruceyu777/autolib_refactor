@@ -20,7 +20,7 @@ class ComputerConn(DevConn):
             ]
         )
 
-        logger.info("enter into connect: the index is %s", index)
+        logger.debug("enter into connect: the index is %s", index)
         if index == 0:
             self._client.sendline("yes")
             self.login()
@@ -45,12 +45,12 @@ class ComputerConn(DevConn):
 
         # pdb.set_trace()
         cur_pos = len(self.output_buffer)
-        logger.debug("current command is %s", command)
+        logger.debug("current command is '%s'", command)
         logger.debug("current pos in send_command is %s", cur_pos)
         logger.debug(
-            "current output in send_command is %s", self.output_buffer[cur_pos:]
+            "current output in send_command is '%s'", self.output_buffer[cur_pos:]
         )
-        logger.debug("Current pattern is %s", pattern)
+        logger.debug("Current pattern is '%s'", pattern)
         self.send_line(command)
 
         # For commands like this:

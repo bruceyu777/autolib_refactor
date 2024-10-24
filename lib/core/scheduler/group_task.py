@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from lib.services import summary
 
 from ..compiler.compiler import compiler
@@ -17,7 +15,7 @@ class GroupTask(Task):
 
         for script in self.group_parser.scripts.values():
             compiler.run(script)
-            summary.add_testscript(Path(script).stem)
+            summary.add_testscript(script)
 
     def execute(self):
         for script in self.group_parser.scripts.values():

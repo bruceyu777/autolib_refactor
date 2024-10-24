@@ -151,7 +151,7 @@
                     <tbody>
                         {% for id, (status, duration) in testscripts.items() %}
                         <tr>
-                            <td>{{id}}</td>
+                            <td><a href="/{{qaid_script_mapping[id]}}">{{id}}</a></td>
                             <td>{{status}}</td>
                             <td>{{duration}}</td>
                         </tr>
@@ -174,7 +174,7 @@
                     <tbody>
                         {% for testcase in testcase_results %}
                         <tr>
-                            <td><a href="/{{testcase.source_filepath}}">{{testcase.id}}</a></td>
+                            <td><a href="/{{qaid_script_mapping[testcase.id]}}">{{testcase.id}}</a></td>
                             <td class="{{'success' if testcase.res else 'failure'}}">
                                 {{'Succeeded' if testcase.res else 'Failed'}}
                             </td>
@@ -209,7 +209,7 @@
                         {% for testcase in testcase_results %}
                         {% if not testcase.res %}
                         <tr>
-                            <td>{{testcase.id}}</td>
+                            <td><a href="/{{qaid_script_mapping[testcase.id]}}">{{testcase.id}}</a></td>
                             <td>
                                 <table>
                                     <thead>

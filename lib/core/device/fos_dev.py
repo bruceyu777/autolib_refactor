@@ -107,7 +107,7 @@ class FosDev(Device):
         self.keep_running = keep_running
 
     def force_login(self):
-        logger.info("Start force logout and then login.")
+        logger.debug("Start force logout and then login.")
         cnt = 0
         while cnt < 3:
             ctrl_c = "\x03"
@@ -231,16 +231,16 @@ class FosDev(Device):
 
     def restore_image(self, release, build, need_reset=True, need_burn=False):
         if not need_burn and need_reset:
-            logger.notify("Start reset firewall.")
+            logger.debug("Start reset firewall.")
             self.reset_firewall("exe factoryreset")
 
-        logger.notify("Start configuring output mode to be standard.")
+        logger.debug("Start configuring output mode to be standard.")
         self.set_output_mode()
-        logger.notify("Succeeded configuring output mode to be standard.")
+        logger.debug("Succeeded configuring output mode to be standard.")
         self.model = self.system_status["platform"]
-        logger.notify("Start configuring mgmt settings.")
+        logger.debug("Start configuring mgmt settings.")
         self.pre_mgmt_settings()
-        logger.notify("Finished configuring mgmt settings.")
+        logger.debug("Finished configuring mgmt settings.")
         if self.is_vdom_enabled:
             self._goto_global_view()
         image = Image(self.image_prefix(), release, build, UPGRADE)
@@ -318,10 +318,10 @@ class FosDev(Device):
 
     def _if_succeeded_to_execute_command(self, result, command):
         if any(err in result for err in ERROR_INFO):
+            logger.error("Failed to execute command: '%s'.", command)
             error_report = result.splitlines()
-            logger.error("Failed to execute command: %s.", command)
-            error_info = " ".join(error_report[2:-2])
-            logger.error("Error information: %s", error_info)
+            error_info = "\n".join(error_report[2:-2])
+            logger.error("Error information: \n'%s'\n", error_info)
             return False
-        logger.info("Succeeded to execute command %s.", command)
+        logger.debug("Succeeded to execute command '%s'.", command)
         return True

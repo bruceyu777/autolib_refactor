@@ -5,8 +5,6 @@ from configparser import _UNSET, ConfigParser
 from lib.services.output import output
 from lib.utilities.exceptions import FileNotExist, ScriptSyntaxError
 
-CONVERTED_ENV = "converted.env"
-
 
 class FosConfigParser(ConfigParser):
 
@@ -39,7 +37,7 @@ class FosConfigParser(ConfigParser):
                     self._global_section = section
                     break
             else:
-                raise ScriptSyntaxError("Global section not found")
+                raise ScriptSyntaxError("GLOBAL section not found")
         return self._global_section
 
     def is_option_enabled(self, section, option, fallback=False):
@@ -66,6 +64,8 @@ class FosConfigParser(ConfigParser):
         return optionstr
 
     def _lookup_real_option(self, section, option):
+        if not self.has_section(section):
+            return None
         existed_options = self.options(section)
         if option in existed_options:
             return option
@@ -95,14 +95,21 @@ class FosConfigParser(ConfigParser):
 
 
 class EnvParser:
-    def __init__(self, env_file):
+    def __init__(self, env_file, dump_parsed_env=False):
         if not os.path.exists(env_file):
             raise FileNotExist(env_file)
         self.env_file = env_file
-        self.converted_file = output.compose_summary_file(CONVERTED_ENV)
         self.section_commented = False
         self.config = FosConfigParser()
         self.run()
+        if dump_parsed_env:
+            self._dump_procecssed_config()
+
+    def _dump_procecssed_config(self):
+        filename = f"Converted_{os.path.basename(self.env_file)}"
+        file_path = output.compose_summary_file(filename)
+        with open(file_path, "w") as processed_config:
+            self.config.write(processed_config)
 
     def finalize_value(self, value):
         read_from_prefix = "readfile->>"
@@ -117,15 +124,15 @@ class EnvParser:
     def _preprocess(self):
         with open(self.env_file, "r") as f:
             lines = f.readlines()
-
-        with open(self.converted_file, "w") as f:
-            for line in lines:
-                if re.match(r"#\s*\[.*\]", line):
-                    self.section_commented = True
-                elif re.match(r"\[.+\]", line):
-                    self.section_commented = False
-                if not self.section_commented:
-                    f.write(line.strip() + "\n")
+        content = ""
+        for line in lines:
+            if re.match(r"#\s*\[.*\]", line):
+                self.section_commented = True
+            elif re.match(r"\[.+\]", line):
+                self.section_commented = False
+            if not self.section_commented:
+                content += f"{line.strip()}\n"
+        return content
 
     def _parse_value(self, value, parse_pattern, visited):
         # support nested reference and multiple reference for a value
@@ -161,8 +168,8 @@ class EnvParser:
         return self.config
 
     def run(self):
-        self._preprocess()
-        self.config.read(self.converted_file)
+        process_config = self._preprocess()
+        self.config.read_string(process_config)
         self._dereference()
 
     def show(self):

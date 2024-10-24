@@ -32,11 +32,12 @@ class OrioleClient:
         self.release_tag = None
 
     def set_user_cfg(self, args):
-        self.user = env.get_section_var("ORIOLE", "USER")
-        self.password = env.get_section_var("ORIOLE", "ENCODE_PASSWORD")
         self.submit_flag = (
             args.submit_flag if hasattr(args, "submit_flag") else self.submit_flag
         )
+        if self.submit_flag:
+            self.user = env.get_section_var("ORIOLE", "USER")
+            self.password = env.get_section_var("ORIOLE", "ENCODE_PASSWORD")
         selected_fields = env.filter_env_section_items("ORIOLE", "RES_FIELD")
         self.specified_fields = {k.lower(): v for k, v in selected_fields.items()}
         if "RES_FIELD_MARK" not in self.specified_fields:
@@ -80,7 +81,7 @@ class OrioleClient:
             else:
                 logger.error("Failed to report to oriole.")
         t2 = time.perf_counter()
-        logger.notify("It takes %s s to submit.", t2 - t1)
+        logger.info("It takes %s s to submit.", t2 - t1)
         return succeeded
 
     def gen_plt_info_for_oriole(self, device_info, report):

@@ -24,7 +24,7 @@ class FortiGate(FosDev):
 
     def restore_image(self, release, build, need_reset=True, need_burn=False):
         if need_burn:
-            logger.notify("Start burn image.")
+            logger.debug("Start burn image.")
             self.burn_image(release, build)
             self.set_stage("start_from_login")
             self.login_firewall_after_reset()

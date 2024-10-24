@@ -179,7 +179,7 @@ def main():
     logger.notice("Test environment file is %s", args.env)
 
     summary.dump_str_to_brief_summary(
-        f"Environment File: {args.env}, Test File: {test_file}"
+        f"# Environment File: {args.env}\n# Test File: {test_file}\\n"
     )
 
     try:

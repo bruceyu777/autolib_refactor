@@ -158,7 +158,6 @@ class KVM(Computer):
         time.sleep(2)
         self.power_on_vm(vm_name)
         self.wait_until_running(vm_name)
-        logger.notify("%s is created and is running.", vm_name)
 
     def wait_until_running(self, vm_name, time_out=10 * 60):
         start_time = time.perf_counter()

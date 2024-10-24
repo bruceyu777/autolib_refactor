@@ -98,12 +98,12 @@ class DevConn:
         # 2 #
         # 3 need confirmStart configuring output mode to be standard.
         cur_pos = len(self.output_buffer)
-        logger.debug("current command is %s", command)
+        logger.debug("current command is '%s'", command)
         logger.debug("current pos in send_command is %s", cur_pos)
         logger.debug(
-            "current output in send_command is %s", self.output_buffer[cur_pos:]
+            "current output in send_command is\n'%s'", self.output_buffer[cur_pos:]
         )
-        logger.debug("Current pattern is %s", pattern)
+        logger.debug("Current pattern is '%s'", pattern)
 
         if command.endswith("?"):
             self.send(command)
@@ -140,12 +140,12 @@ class DevConn:
 
         logger.debug("The ouput for expect is: \n'%s'", output)
         if m is not None:
-            logger.info(
+            logger.debug(
                 "The buffer size is %s, the matched index is %s",
                 len(self.output_buffer),
                 m.end(),
             )
-            logger.info(
+            logger.debug(
                 "The buffer content that has been cleared is %s",
                 self.output_buffer[: m.end()],
             )
@@ -192,7 +192,7 @@ class DevConn:
     def _log_output(output):
         separator = "\n" + "-" * 80 + "\n"
         content = f"{separator} {output} {separator}"
-        logger.info("Buffer content is :%s", content)
+        logger.debug("Buffer content is :%s", content)
 
     def _dump_to_buffer(self):
         output = self.client.before + self.client.after
@@ -206,7 +206,7 @@ class DevConn:
             self._dump_to_buffer()
             return True
         except pexpect.TIMEOUT:
-            logger.info("No more characters captured.")
+            logger.debug("No more characters captured.")
             return False
 
     def start_record(self, folder_name):

@@ -109,8 +109,10 @@ class OutputBuffer:
 
     @staticmethod
     def _convert_tcl_to_python_pattern(pattern):
-        logger.info("The original pattern is: %s", pattern)
+        logger.debug("The original pattern is: %s", pattern)
         flags, pattern = OutputBuffer._split_flag_and_pattern(pattern)
         regex_flags = OutputBuffer._to_regex_flags(flags)
-        logger.info("The converted pattern is: '%s', flags: '%s'", pattern, regex_flags)
+        logger.debug(
+            "The converted pattern is: '%s', flags: '%s'", pattern, regex_flags
+        )
         return regex.compile(pattern, flags=regex_flags)

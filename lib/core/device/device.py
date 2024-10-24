@@ -22,7 +22,7 @@ AUTO_PROCEED_RULE_MAP = {
     r"\[Y/N\]\?": "Y",
     r"to accept\): $": "a",
     r"\[confirm\]$": "y",
-    r"--More-- $": " ",
+    r"--More--\s*$": " ",
 }
 
 AUTO_PROCEED_PATTERNS = "|".join(AUTO_PROCEED_RULE_MAP.keys())
@@ -63,6 +63,9 @@ class Device:
         self.license_info = {}
         self._extract_license_info()
 
+    def __str__(self):
+        return f"{type(self).__name__}({self.dev_name})"
+
     def _reconnect_if_exited(self):
         expected_switch_prompts = (
             r"((?P<prompt>[#$]\s*$)|(?P<login>login:)|(?P<Password>Password:))"
@@ -72,30 +75,30 @@ class Device:
                 "", expected_switch_prompts, DEFAULT_TIMEOUT_FOR_PROMPT
             )
             if matched is None:
-                logger.notify(
+                logger.error(
                     "Failed to switch to device:%s, start reconnecting.",
                     self.dev_name,
                 )
                 self.connect()
-                logger.notify("Device:%s is reconnected.", self.dev_name)
-            logger.info("The output is %s.", output)
-            logger.info("The matched is %s.", matched)
+                logger.debug("Device:%s is reconnected.", self.dev_name)
+            logger.debug("The output is %s.", output)
+            logger.debug("The matched is %s.", matched)
         except Exception:
-            logger.notify(
+            logger.debug(
                 "Exception happened when switching to device:%s, start reconnecting.",
                 self.dev_name,
             )
             self.connect()
-            logger.notify("Device:%s is reconnected.", self.dev_name)
+            logger.debug("Device:%s is reconnected.", self.dev_name)
 
     def switch(self, retry=0):
         if retry > 3:
-            logger.info("Failed to switch device: %s", self.dev_name)
+            logger.debug("Failed to switch device: %s", self.dev_name)
         try:
             if self.keep_running:
                 return
             self._reconnect_if_exited()
-            logger.info("Start login device %s", self.dev_name)
+            logger.debug("Start login device %s", self.dev_name)
             self.force_login()
             self.clear_buffer()
 
@@ -168,11 +171,11 @@ class Device:
             t1 = time.perf_counter()
             system_status = self.system_status
             t2 = time.perf_counter()
-            logger.info("It takes %s s to collect system status.", t2 - t1)
+            logger.debug("It takes %s s to collect system status.", t2 - t1)
             t1 = time.perf_counter()
             autoupdate_versions = self.get_autoupdate_versions()
             t2 = time.perf_counter()
-            logger.info("It takes %s s to collect autoupdate versions.", t2 - t1)
+            logger.debug("It takes %s s to collect autoupdate versions.", t2 - t1)
             system_status_selected = {
                 k: v for k, v in system_status.items() if k not in autoupdate_versions
             }
@@ -192,7 +195,7 @@ class Device:
             self._goto_global_view()
         self.clear_buffer()
         *_, versions_raw = self.send_command("diag autoupdate versions", timeout=10)
-        logger.info("The autoupdate version is\n%s", versions_raw)
+        logger.debug("The autoupdate version is\n%s", versions_raw)
         pattern = re.compile(
             r"\r\n([^\r\n]+)\r\n--+\r\nVersion: ([0-9.]+)[ \r\n]", flags=re.M | re.S
         )
@@ -247,22 +250,25 @@ class Device:
         handled_output = output = ""
         auto_proceed_times = 0
         matched, output = self.conn.send_command(command, pattern, timeout)
+        logger.info(output)
         while time.time() - start_time < timeout:
             if handled_output.endswith(output):
                 time.sleep(0.1)
             else:
                 handled_output += output
                 if matched:
-                    logger.info("Matched group is '%s'", matched.group())
+                    logger.debug("Matched group is '%s'", matched.group())
                     command = self.require_confirm(matched.group())
-                    if not command:
+                    if command is None:
                         break
                     if auto_proceed_times > MAX_AUTO_PROCEED_TIMES:
                         logger.warning("Stopping autoproceed loop by sending CTRL_C")
                         matched, output = self.conn.send_command("\x03", pattern, 3)
+                        logger.info(output)
                         handled_output += output
                         break
                     matched, output = self.conn.send_command(command, pattern, timeout)
+                    logger.info(output)
                     handled_output += output
                     auto_proceed_times += 1
         else:

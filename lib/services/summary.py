@@ -3,6 +3,7 @@ import html
 import os
 import shutil
 from datetime import datetime
+from pathlib import Path
 
 # pylint: disable=wrong-import-order, import-error
 from rich.console import Console
@@ -32,22 +33,28 @@ class Summary:
         )
         self.start_time = datetime.now().replace(microsecond=0)
         self.end_time = "NA"
+        self.qaid_script_mapping = {}
+
+    def add_qaid_script_mapping(self, qaid, source_filepath):
+        self.qaid_script_mapping[qaid] = os.path.relpath(source_filepath, os.getcwd())
 
     def add_testcase(self, id_, source_filepath):
-        testcase_relpath = os.path.relpath(source_filepath, os.getcwd())
-        self.testcases[id_] = ("Not Tested", (), False, testcase_relpath)
+        self.add_qaid_script_mapping(id_, source_filepath)
+        self.testcases[id_] = ("Not Tested", (), False)
         self._generate()
 
     def update_testcase(self, id_, res, reported):
-        self.testcases[id_] = ("Tested", res, reported, self.testcases[id_][-1])
+        self.testcases[id_] = ("Tested", res, reported)
         self._generate()
 
     def update_reported(self, id_):
-        status, res, _, testcase_relpath = self.testcases[id_]
-        self.testcases[id_] = (status, res, True, testcase_relpath)
+        status, res, _ = self.testcases[id_]
+        self.testcases[id_] = (status, res, True)
         self._generate()
 
-    def add_testscript(self, id_):
+    def add_testscript(self, script_path):
+        id_ = Path(script_path).stem
+        self.add_qaid_script_mapping(id_, script_path)
         self.testscripts[id_] = ("Not Tested", "NA")
         self._generate()
 
@@ -121,7 +128,6 @@ class Summary:
             status,
             res,
             reported,
-            source_filepath,
         ) in self.testcases.items():
             if status != "Tested":
                 continue
@@ -139,7 +145,6 @@ class Summary:
             final_res = all(succeeded for succeeded, *_ in res)
             result = {
                 "id": testcase_id,
-                "source_filepath": source_filepath,
                 "res": final_res,
                 "details": details,
                 "reported": reported,
@@ -167,6 +172,7 @@ class Summary:
             testscripts=self.testscripts,
             not_tested_cases=not_tested_cases,
             testcase_results=self._classify_testcases(),
+            qaid_script_mapping=self.qaid_script_mapping,
             **statistics,
         )
 
@@ -200,7 +206,7 @@ class Summary:
 
     def dump_result_to_brief_summary(self, script_id, script, result):
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
-            f.write(f"{script_id} {script} {result}\n")
+            f.write(f"{script_id} {script} {result.upper()}\n")
 
     def dump_str_to_brief_summary(self, comment):
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
@@ -209,11 +215,11 @@ class Summary:
     def dump_script_start_time_to_brief_summary(self):
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
             current_time = datetime.now().replace(microsecond=0)
-            f.write(f"Current Time: {current_time}\n")
+            f.write(f"\n# Current Time: {current_time}\n")
 
     def dump_err_command_to_brief_summary(self, err_info):
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
-            f.write(f"{err_info}\n")
+            f.write(f"# {err_info}\n")
 
 
 summary = Summary()

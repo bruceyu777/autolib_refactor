@@ -106,7 +106,9 @@ class Environment:
     def extract_host_servers(self):
         host_file = self.user_env.get("GLOBAL", "VM_HOST_DEF")
         if host_file:
-            self.host_servers = EnvParser(host_file).env
+            self.host_servers = EnvParser(
+                host_file, dump_parsed_env=self.args.debug
+            ).env
 
     def add_var(self, name, value):
         self.variables[name] = value
@@ -147,7 +149,9 @@ class Environment:
 
     def init_env(self, args):
         self.args = args
-        self.set_user_defined_env(EnvParser(self.args.env).env)
+        self.set_user_defined_env(
+            EnvParser(self.args.env, dump_parsed_env=self.args.debug).env
+        )
         self.env_file = self.args.env
         self.test_file = self.args.script or self.args.group
 
@@ -155,10 +159,10 @@ class Environment:
         return self.user_env.get(vm_name, "HOSTED_ON")
 
     def get_section_var(self, section, variable):
-        logger.info("user_env: %s", self.user_env)
-        logger.info("section:%s, variable: %s", section, variable)
-        logger.info(
-            "self.user_env.get(section, variable, fallback=None): %s",
+        logger.debug(
+            "self.user_env.get(%s, %s, fallback=None): %s",
+            section,
+            variable,
             self.user_env.get(section, variable, fallback=None),
         )
         return self.user_env.get(section, variable, fallback=None)

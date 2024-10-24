@@ -38,7 +38,7 @@ class Task:
                 )
 
     def init_devices(self):
-        logger.notify("Devices used during the test %s", list(self.devices.keys()))
+        logger.debug("Devices used during the test %s", list(self.devices.keys()))
         for dev_name in self.devices:
             t1 = perf_counter()
             if env.is_vm_device(dev_name):
@@ -70,7 +70,7 @@ class Task:
     def activate_vm_licenses(self):
         vms = [dev_name for dev_name in self.devices if env.is_vm_device(dev_name)]
         if vms and env.need_deploy_vm():
-            logger.notify(
+            logger.info(
                 "Sleep 10s for the console to able to be connected for new deployed vms."
             )
             time.sleep(10)
@@ -137,7 +137,7 @@ class Task:
             oriole.submit()
         self.summary()
         t5 = perf_counter()
-        logger.notify("Compiling takes %d s ", t2 - t1)
-        logger.notify("Setting up devices takes %d s", t3 - t2)
-        logger.notify("Executing testcases takes %d s", t4 - t3)
-        logger.notify("Generating summary report takes %d s", t5 - t4)
+        logger.debug("Compiling takes %d s ", t2 - t1)
+        logger.debug("Setting up devices takes %d s", t3 - t2)
+        logger.debug("Executing testcases takes %d s", t4 - t3)
+        logger.debug("Generating summary report takes %d s", t5 - t4)

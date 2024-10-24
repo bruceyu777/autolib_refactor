@@ -1,6 +1,5 @@
 import os
 import socket
-import sys
 import time
 
 import requests
@@ -43,8 +42,7 @@ class ImageServer:
             major,
             build,
         )
-        sys.exit(-1)
-        # raise OperationFailure(response.text)
+        raise OperationFailure(response.text)
 
     def lookup_image(self, image):
         image_files = self.get_build_files(image.project, image.major, image.build)
@@ -54,11 +52,12 @@ class ImageServer:
         logger.info("failed to get an image!!!")
         return {}
 
-    def get_image_http_url(self, image):
+    def get_image_http_url(self, image, use_ip=True):
         image_abs_path = self.locate_image(image)
         if not image_abs_path:
             raise ImageNotFound(image)
-        return f"https://{IMAGE_SERVER_FQDN}/{image_abs_path}"
+        _server = IMAGE_SERVER_IP if use_ip else IMAGE_SERVER_FQDN
+        return f"https://{_server}/{image_abs_path}"
 
     def locate_image(self, image):
         image_info = self.lookup_image(image)

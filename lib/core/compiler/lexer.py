@@ -4,7 +4,7 @@ from pathlib import Path
 
 import chardet
 
-from lib.services import output
+from lib.services import logger, output
 from lib.utilities.exceptions import ScriptSyntaxError
 
 from .syntax import script_syntax
@@ -31,13 +31,14 @@ class Token(dict):
 
 
 class Lexer:
-    def __init__(self, file_name=None):
+    def __init__(self, file_name=None, dump_token=False):
         self.file_name = file_name
         self.tokens = []
         self.section_commented = False
         self.line_number = 1
         self.cur_line = None
         self.cur_groupdict = {}
+        self.dump_token = dump_token
 
     def parse_line(self, line):
         self.cur_line = rf"{line}"
@@ -52,7 +53,8 @@ class Lexer:
             ):
                 func = getattr(self, line_type)
                 func()
-        self._dump_to_file()
+        if self.dump_token:
+            self._dump_to_file()
         return self.tokens
 
     def add_token(self, _type, data):
@@ -168,12 +170,31 @@ class Lexer:
             content_decoded = ""
         return content_decoded
 
+    def update_deprecated_command(self, cmd):
+        for (
+            deprecated,
+            new_cmd,
+        ) in script_syntax.get_deprecated_cmd_replace_patterns().items():
+            updated_cmd = re.sub(deprecated, new_cmd, cmd)
+            if updated_cmd != cmd:
+                title = "*** DeprecationWarning ***"
+                logger.warning(
+                    "%s\nDeprecated: '%s'\nReplacement: '%s'\n%s",
+                    title,
+                    cmd,
+                    updated_cmd,
+                    "*" * len(title),
+                )
+                return updated_cmd
+        return cmd
+
     def parse(self):
         content = self.read()
         lines = content.splitlines()
         for line in lines:
             line = line.strip()
             if line:
+                line = self.update_deprecated_command(line)
                 self.parse_line(line)
             self.line_number += 1
         return self.tokens, lines
