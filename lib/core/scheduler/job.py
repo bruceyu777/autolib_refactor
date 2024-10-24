@@ -23,7 +23,8 @@ class Job:
     def execute_script(self):
         task = self.init_task()
         task.run(self.args)
-        output.zip_autotest_log()
+        if not self.args.debug:
+            output.zip_autotest_log()
 
     def start_http_server(self):
         ip, port = env.get_local_http_server_conf()

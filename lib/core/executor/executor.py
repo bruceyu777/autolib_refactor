@@ -66,7 +66,8 @@ class Executor:
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
         logger.notice("Finished executing script: %s", self.script)
-        # self.zip_running_log()
+        if getattr(logger, "in_debug_mode", False):
+            self.zip_running_log()
 
     def zip_running_log(self):
         zip_file = output.compose_log_file(Path(self.script).stem, "autotest.zip")
