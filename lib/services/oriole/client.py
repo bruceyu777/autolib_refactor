@@ -18,7 +18,7 @@ from .meta import (
     ORIOLE_SUBMIT_API_URL,
 )
 
-REPORT_FILE = "report.json"
+REPORT_FILE = "Oriole_report.json"
 
 
 class OrioleClient:
@@ -81,7 +81,7 @@ class OrioleClient:
             else:
                 logger.error("Failed to report to oriole.")
         t2 = time.perf_counter()
-        logger.info("It takes %s s to submit.", t2 - t1)
+        logger.info("It takes %.1f s to submit.", t2 - t1)
         return succeeded
 
     def gen_plt_info_for_oriole(self, device_info, report):

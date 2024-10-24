@@ -56,20 +56,6 @@ class FosDev(Device):
         self.send_command("")
         self.clear_buffer()
 
-    def get_device_info(self, on_fly=False):
-        if self._device_info is None or on_fly:
-            t1 = time.perf_counter()
-            system_status = self.system_status
-            t2 = time.perf_counter()
-            logger.info("It takes %s s to collect system status.", t2 - t1)
-            t1 = time.perf_counter()
-            autoupdate_versions = self.get_autoupdate_versions()
-            t2 = time.perf_counter()
-            logger.info("It takes %s s to collect autoupdate versions.", t2 - t1)
-
-            self._device_info = {**system_status, **autoupdate_versions}
-        return self._device_info
-
     def set_output_mode(self, mode="standard", is_vdom_enabled=None):
         is_vdom_enabled = is_vdom_enabled or self.is_vdom_enabled
         if is_vdom_enabled:
@@ -80,12 +66,6 @@ class FosDev(Device):
             time.sleep(0.5)
         if is_vdom_enabled:
             self._return_to_user_view()
-
-    def is_reset_command(self, command):
-        pattern = re.compile(
-            r"(exe.*factoryreset.*|exe.*forticarrier-license|exe.*restore)"
-        )
-        return re.match(pattern, command)
 
     def update_settings_after_reset(self):
         self.conn.login("")

@@ -71,22 +71,27 @@ class ComputerConn(DevConn):
             logger.warning("Failed to match %s in %s s.", pattern, timeout)
             return m, output
 
+    def _new_client(self):
+        if self._client:
+            self.close()
+        buffer_for_pexpect = self.get_clean_buffer_init_class()
+        self._client = Spawn(
+            self.conn,
+            buffer_for_pexpect,
+            encoding="utf-8",
+            echo=False,
+            logfile=sys.stdout,
+            codec_errors="ignore",
+        )
+        self.log_file = LogFile(self._client, self.dev_name)
+        script = env.get_var("testing_script")
+        record = "setup" if script is None else script
+        self.start_record(record)
+
     @property
     def client(self):
-        if self._client is None:
-            buffer_for_pexpect = self.get_clean_buffer_init_class()
-            self._client = Spawn(
-                self.conn,
-                buffer_for_pexpect,
-                encoding="utf-8",
-                echo=False,
-                logfile=sys.stdout,
-                codec_errors="ignore",
-            )
-            self.log_file = LogFile(self._client, self.dev_name)
-            script = env.get_var("testing_script")
-            record = "setup" if script is None else script
-            self.start_record(record)
+        if not self._client or not self._client.isalive():
+            self._new_client()
             self.login()
             self.resume_stdout()
         return self._client

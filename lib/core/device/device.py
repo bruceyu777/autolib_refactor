@@ -11,8 +11,10 @@ MAX_TIMEOUT_FOR_REBOOT = 10 * 60
 
 UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"(?P<windows_prompt>\:.*?\>)")
 
+FOS_LOGIN_PROMPTS = r"[\w\-]{1,35} login:\s*$"
+
 FOS_UNIVERSAL_PROMPTS = (
-    r"^[\w\-]{1,35} login:\s*$",
+    FOS_LOGIN_PROMPTS,
     r"[P|p]assword:\s*$",
 )
 
@@ -149,7 +151,6 @@ class Device:
 
     @property
     def system_status(self):
-        self.clear_buffer()
         *_, system_info_raw = self.send_command("get system status", timeout=10)
         logger.debug("System info captured: %s", system_info_raw)
         selected_lines = [
@@ -171,11 +172,11 @@ class Device:
             t1 = time.perf_counter()
             system_status = self.system_status
             t2 = time.perf_counter()
-            logger.debug("It takes %s s to collect system status.", t2 - t1)
+            logger.debug("It takes %.1f s to collect system status.", t2 - t1)
             t1 = time.perf_counter()
             autoupdate_versions = self.get_autoupdate_versions()
             t2 = time.perf_counter()
-            logger.debug("It takes %s s to collect autoupdate versions.", t2 - t1)
+            logger.debug("It takes %.1f s to collect autoupdate versions.", t2 - t1)
             system_status_selected = {
                 k: v for k, v in system_status.items() if k not in autoupdate_versions
             }
@@ -238,39 +239,46 @@ class Device:
         self._handle_embeded_session(command)
         return command
 
+    def is_reboot_command(self, command):
+        reboot_command_patterns = (
+            r"^exe[^\s]*\s+reboot",
+            r"^exe[^\s]*\s+vm-license",
+            r"^exe[^\s]*\s+restore",
+            r"^diag[^\s]*\s+sys[^\s]*\s+flash[^\s]*\s+format",
+            r"^diag[^\s]*\s+deb[^\s]*\s+kernel\s+sysrq\s+command\s+crash",
+        )
+        return any(re.match(pattern, command) for pattern in reboot_command_patterns)
+
     def send_command(
         self,
         command,
         pattern=DEFAULT_PROMPTS,
         timeout=MAX_TIMEOUT_FOR_REBOOT,
     ):
+        self.clear_buffer()
         command = self._process_command(command)
+        if self.is_reboot_command(command) and pattern == DEFAULT_PROMPTS:
+            pattern = FOS_LOGIN_PROMPTS
         pattern = f"{pattern}|{AUTO_PROCEED_PATTERNS}"
         start_time = time.time()
-        handled_output = output = ""
         auto_proceed_times = 0
-        matched, output = self.conn.send_command(command, pattern, timeout)
-        logger.info(output)
+        matched, handled_output = self.conn.send_command(command, pattern, timeout)
+        logger.info(handled_output)
         while time.time() - start_time < timeout:
-            if handled_output.endswith(output):
-                time.sleep(0.1)
-            else:
+            logger.debug("Matched group is '%s'", matched.group())
+            command = self.require_confirm(matched.group())
+            if command is None:
+                break
+            if auto_proceed_times > MAX_AUTO_PROCEED_TIMES:
+                logger.warning("Stopping AUTOPROCEED by sending CTRL_C")
+                matched, output = self.conn.send_command("\x03", pattern, 3)
+                logger.info(output)
                 handled_output += output
-                if matched:
-                    logger.debug("Matched group is '%s'", matched.group())
-                    command = self.require_confirm(matched.group())
-                    if command is None:
-                        break
-                    if auto_proceed_times > MAX_AUTO_PROCEED_TIMES:
-                        logger.warning("Stopping autoproceed loop by sending CTRL_C")
-                        matched, output = self.conn.send_command("\x03", pattern, 3)
-                        logger.info(output)
-                        handled_output += output
-                        break
-                    matched, output = self.conn.send_command(command, pattern, timeout)
-                    logger.info(output)
-                    handled_output += output
-                    auto_proceed_times += 1
+                break
+            matched, output = self.conn.send_command(command, pattern, timeout)
+            logger.info(output)
+            handled_output += output
+            auto_proceed_times += 1
         else:
             logger.debug("* TIMEOUT * Unable to match pattern...")
         return matched, handled_output

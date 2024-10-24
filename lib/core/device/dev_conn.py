@@ -61,10 +61,8 @@ class DevConn:
         )
         self.log_file = LogFile(self._client, self.dev_name)
         script = env.get_var("testing_script")
-        if script is None:
-            self.start_record("setup")
-        else:
-            self.start_record(script)
+        record = "setup" if script is None else script
+        self.start_record(record)
 
     @property
     def client(self):

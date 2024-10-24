@@ -82,7 +82,7 @@ class Executor:
 
     def _is_reset_command(self, cmd):
         pattern = re.compile(
-            r"(exe.*factoryreset.*|exe.*forticarrier-license|resetFirewall)"
+            r"(exe.*factoryreset.*|exe.*(?:forticarrier|factory|crypto)-license|resetFirewall)"
         )
         return re.match(pattern, cmd)
 

@@ -4,6 +4,7 @@ import pexpect
 
 from lib.services import logger
 from lib.utilities.exceptions import LoginDeviceFailed
+from lib.utilities.util import sleep_with_progress
 
 from .common import BURN_IMAGE_STAGE
 from .dev_conn import DevConn
@@ -16,7 +17,7 @@ MAX_VIEW_LAYER = 5
 
 
 class FosDevConn(DevConn):
-    RETRY_MAX_TIME = 15
+    RETRY_MAX_TIME = 3
     FOS_DEFAULT_PASSWORD = ""
 
     def __init__(self, dev_name, connection, user_name, password, cur_stage):
@@ -120,7 +121,7 @@ class FosDevConn(DevConn):
             logger.error("\nFailed to login after retry for %s times", self.retry_cnt)
             self.conn_state = "_failed"
             return
-        time.sleep(60)
+        sleep_with_progress(60 * self.retry_cnt)
         self.retry_cnt += 1
         self.conn_state = "_connected"
 

@@ -283,12 +283,12 @@
     ]
   },
   "deprecated_commands": {
-    "^myexe[^\\s]*\\s+(.*?)": "execute \\1",
+    "^myexe[^\\s]*\\s+(.*)$": "execute \\1",
     "^mynext(.*?)": "next",
-    "^myset[^\\s]*\\s+(.*?)": "set \\1",
-    "^mydel[^\\s]*\\s+(.*?)": "delete \\1",
+    "^myset[^\\s]*\\s+(.*)$": "set \\1",
+    "^mydel[^\\s]*\\s+(.*)$": "delete \\1",
     "^myend": "end",
-    "^pcsend[^\\s]*\\s+(.*?)": "send_literal \"\\1\"",
-    "^sendraw[^\\s]*\\s+(.*?)": "send_literal \\1"
+    "^pcsend[^\\s]*\\s+(.*)$": "send_literal \"\\1\"",
+    "^sendraw[^\\s]*\\s+(.*)$": "send_literal \\1"
   }
 }
