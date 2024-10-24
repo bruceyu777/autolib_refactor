@@ -4,7 +4,7 @@ from pathlib import Path
 from time import perf_counter
 
 from lib.services import env, logger, oriole, summary
-from lib.utilities.exceptions import FileNotExist, NotSupportedDevice
+from lib.utilities.exceptions import FileNotExist, GeneralException, NotSupportedDevice
 
 from ..compiler.compiler import compiler
 from ..device.forti_vm import FortiVM
@@ -131,13 +131,17 @@ class Task:
             return
         self.setup_devices()
         t3 = perf_counter()
-        self.execute()
-        t4 = perf_counter()
-        if args.submit_flag != "none":
-            oriole.submit()
-        self.summary()
-        t5 = perf_counter()
-        logger.debug("Compiling takes %d s ", t2 - t1)
-        logger.debug("Setting up devices takes %d s", t3 - t2)
-        logger.debug("Executing testcases takes %d s", t4 - t3)
-        logger.debug("Generating summary report takes %d s", t5 - t4)
+        try:
+            self.execute()
+        except GeneralException:
+            logger.exception("Task Execution Failure...")
+        finally:
+            t4 = perf_counter()
+            if args.submit_flag != "none":
+                oriole.submit()
+            self.summary()
+            t5 = perf_counter()
+            logger.debug("Compiling takes %d s ", t2 - t1)
+            logger.debug("Setting up devices takes %d s", t3 - t2)
+            logger.debug("Executing testcases takes %d s", t4 - t3)
+            logger.debug("Generating summary report takes %d s", t5 - t4)

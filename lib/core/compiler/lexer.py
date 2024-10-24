@@ -177,9 +177,10 @@ class Lexer:
         ) in script_syntax.get_deprecated_cmd_replace_patterns().items():
             updated_cmd = re.sub(deprecated, new_cmd, cmd)
             if updated_cmd != cmd:
-                title = "*** DeprecationWarning ***"
+                length = max(len(updated_cmd), len(cmd), 30) + 2
+                title = " DeprecationWarning ".center(length, "*")
                 logger.warning(
-                    "%s\nDeprecated: '%s'\nReplacement: '%s'\n%s",
+                    "%s\n'%s'\nwas DEPRECATED and REPLACED by\n'%s'\n%s",
                     title,
                     cmd,
                     updated_cmd,
