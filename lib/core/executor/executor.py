@@ -66,7 +66,7 @@ class Executor:
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
         logger.notice("Finished executing script: %s", self.script)
-        if getattr(logger, "in_debug_mode", False):
+        if not getattr(logger, "in_debug_mode", False):
             self.zip_running_log()
 
     def zip_running_log(self):
