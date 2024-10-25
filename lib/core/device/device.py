@@ -11,10 +11,10 @@ MAX_TIMEOUT_FOR_REBOOT = 10 * 60
 
 UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"(?P<windows_prompt>\:.*?\>)")
 
-FOS_LOGIN_PROMPTS = r"[\w\-]{1,35} login:\s*$"
+FOS_LOGIN_PROMPT = r"[\w\-]{1,35} login:\s*$"
 
 FOS_UNIVERSAL_PROMPTS = (
-    FOS_LOGIN_PROMPTS,
+    FOS_LOGIN_PROMPT,
     r"[P|p]assword:\s*$",
 )
 
@@ -151,8 +151,9 @@ class Device:
 
     @property
     def system_status(self):
-        *_, system_info_raw = self.send_command("get system status", timeout=10)
-        logger.debug("System info captured: %s", system_info_raw)
+        *_, system_info_raw = self.send_command(
+            "get system status", pattern="Last reboot reason.*?# $", timeout=10
+        )
         selected_lines = [
             l.split(": ", maxsplit=1) for l in system_info_raw.splitlines() if ": " in l
         ]
@@ -239,49 +240,65 @@ class Device:
         self._handle_embeded_session(command)
         return command
 
-    def is_reboot_command(self, command):
+    @staticmethod
+    def is_reboot_command(command):
         reboot_command_patterns = (
             r"^exe[^\s]*\s+reboot",
-            r"^exe[^\s]*\s+vm-license",
-            r"^exe[^\s]*\s+restore",
+            r"^exe[^\s]*\s+format",
+            r"^exe[^\s]*\s+vm-license\s+[^\s]+",
+            r"^exe[^\s]*\s+restore\s+(image|config|vm-license)",
             r"^diag[^\s]*\s+sys[^\s]*\s+flash[^\s]*\s+format",
             r"^diag[^\s]*\s+deb[^\s]*\s+kernel\s+sysrq\s+command\s+crash",
         )
         return any(re.match(pattern, command) for pattern in reboot_command_patterns)
 
-    def send_command(
-        self,
-        command,
-        pattern=DEFAULT_PROMPTS,
-        timeout=MAX_TIMEOUT_FOR_REBOOT,
-    ):
+    def _send_command(self, command, pattern, timeout):
         self.clear_buffer()
-        command = self._process_command(command)
-        if self.is_reboot_command(command) and pattern == DEFAULT_PROMPTS:
-            pattern = FOS_LOGIN_PROMPTS
         pattern = f"{pattern}|{AUTO_PROCEED_PATTERNS}"
+        command = self._process_command(command)
         start_time = time.time()
         auto_proceed_times = 0
-        matched, handled_output = self.conn.send_command(command, pattern, timeout)
-        logger.info(handled_output)
+        matched, output = self.conn.send_command(command, pattern, timeout)
+        logger.info(output)
         while time.time() - start_time < timeout:
-            logger.debug("Matched group is '%s'", matched.group())
             command = self.require_confirm(matched.group())
             if command is None:
                 break
             if auto_proceed_times > MAX_AUTO_PROCEED_TIMES:
                 logger.warning("Stopping AUTOPROCEED by sending CTRL_C")
-                matched, output = self.conn.send_command("\x03", pattern, 3)
-                logger.info(output)
-                handled_output += output
+                matched, additional_output = self.conn.send_command("\x03", pattern, 3)
+                logger.info(additional_output)
+                output += additional_output
                 break
-            matched, output = self.conn.send_command(command, pattern, timeout)
-            logger.info(output)
-            handled_output += output
+            matched, additional_output = self.conn.send_command(
+                command, pattern, timeout
+            )
+            logger.info(additional_output)
+            output += additional_output
             auto_proceed_times += 1
         else:
             logger.debug("* TIMEOUT * Unable to match pattern...")
-        return matched, handled_output
+        return matched, output
+
+    def send_command(
+        self,
+        command,
+        pattern=DEFAULT_PROMPTS,
+        timeout=DEFAULT_TIMEOUT_FOR_PROMPT,
+    ):
+        if self.embeded_conn:
+            return self._send_command(command, pattern, timeout)
+        is_reboot_command = self.is_reboot_command(command)
+        if is_reboot_command and pattern == DEFAULT_PROMPTS:
+            pattern = FOS_LOGIN_PROMPT
+            timeout = MAX_TIMEOUT_FOR_REBOOT
+            time.sleep(0.1)
+            # NOTE: if previous command is 'get system status' and the first character of
+            # the command will be eatten by FOS without this delay, it will not work.
+        matched, output = self._send_command(command, pattern, timeout)
+        if is_reboot_command:
+            self.conn.login()
+        return matched, output
 
     def start_record_terminal(self, folder_name):
         self.conn.start_record(folder_name)

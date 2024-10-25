@@ -5,7 +5,7 @@ from lib.services import UPGRADE, Image, env, image_server, logger, platform_man
 from lib.utilities.exceptions import KernelPanicErr, RestoreFailure
 
 from .common import BURN_IMAGE_STAGE
-from .device import Device
+from .device import DEFAULT_PROMPTS, Device
 from .fosdev_conn import FosDevConn
 
 DEFAULT_MGMT = "port1"
@@ -17,7 +17,6 @@ ERROR_INFO = (
     "failed command",
 )
 TEN_SECONDS = 10
-DEFAULT_PATTERN = r"# $"
 
 
 class FosDev(Device):
@@ -288,11 +287,8 @@ class FosDev(Device):
                 "mgmt_ip/mgmt_mask/mgmt_gw in device config file is not configured."
             )
 
-    def send_command(self, command, pattern=DEFAULT_PATTERN, timeout=TEN_SECONDS):
-        if pattern != DEFAULT_PATTERN:
-            match, output = super().send_command(command, pattern, timeout)
-        else:
-            match, output = super().send_command(command, timeout=timeout)
+    def send_command(self, command, pattern=DEFAULT_PROMPTS, timeout=TEN_SECONDS):
+        match, output = super().send_command(command, pattern, timeout=timeout)
         is_succeeded = self._if_succeeded_to_execute_command(output, command)
         return is_succeeded, match, output
 

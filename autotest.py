@@ -170,13 +170,13 @@ def main():
         sys.exit(-1)
 
     logger.notice("**** Start test job with AUTOLIB - %s. ****", __version__)
+    logger.notice("Test Environment: %s", args.env)
     if args.script:
-        logger.notice("Test script is %s", args.script)
+        logger.notice("Test Script: %s", args.script)
         test_file = args.script
     else:
-        logger.notice("Test group is %s", args.group)
+        logger.notice("Test Group: %s", args.group)
         test_file = args.group
-    logger.notice("Test environment file is %s", args.env)
 
     summary.dump_str_to_brief_summary(
         f"# Environment File: {args.env}\n# Test File: {test_file}\\n"
