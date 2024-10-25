@@ -11,7 +11,7 @@ a = Analysis(
     datas=[
         ("lib/services/fos/static/pltrev.csv", "./lib/services/fos/static/"),
         ("lib/core/compiler/static/cli_syntax.json", "./lib/core/compiler/static/"),
-        ("lib/services/", "./lib/services/"),
+        ("lib/services/static/", "./lib/services/static/"),
     ],
     hiddenimports=[],
     hookspath=[],
