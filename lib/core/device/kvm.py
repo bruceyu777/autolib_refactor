@@ -66,7 +66,7 @@ class KVM(Computer):
         image = Image(self.model(vm_name), release, build)
         image_url = image_server.get_image_http_url(image)
         image_name = image_url.split("/")[-1]
-        command = f"curl {image_url} --output {image_name}"
+        command = f"curl -k {image_url} --output {image_name}"
         self.send_command(command, timeout=60)
         self.image_location = self.unzip_image(image_name)
         if not self.image_location:
