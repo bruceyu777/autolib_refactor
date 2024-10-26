@@ -7,9 +7,8 @@ import ptyprocess
 
 from lib.services import env, logger
 
-from .log_file import LogFile
 from .output_buffer import OutputBuffer
-from .pexpect_wrapper import Spawn, new_buffer_init_class
+from .pexpect_wrapper import LogFile, Spawn, new_buffer_init_class
 
 READ_WAIT_TIME = 120
 WAIT_TIME = 60
@@ -45,7 +44,8 @@ class DevConn:
     def get_clean_buffer_init_class(self):
         device_type = self.dev_name.split("_")[0]
         buffer_clean_pattern = env.get_buffer_clean_pattern_by_dev_type(device_type)
-        return new_buffer_init_class(device_type, buffer_clean_pattern)
+        cls = new_buffer_init_class(device_type, buffer_clean_pattern)
+        return cls
 
     def _new_client(self):
         if self._client:
@@ -54,6 +54,7 @@ class DevConn:
         self._client = Spawn(
             self.conn,
             buffer_for_pexpect,
+            logger.job_log_hanlder,
             encoding="utf-8",
             echo=True,
             logfile=sys.stdout,

@@ -202,7 +202,7 @@ class Summary:
 
     def add_failed_testscript(self, script_id, script, comment="Failed testscript"):
         with open(self.failed_testscripts_file_name, "a", encoding="utf-8") as f:
-            f.write(f"{script_id}  {script} {comment}\n")
+            f.write(f"{script_id}  {script}\n{comment}\n\n")
 
     def dump_result_to_brief_summary(self, script_id, script, result):
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:

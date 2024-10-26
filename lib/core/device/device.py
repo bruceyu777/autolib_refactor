@@ -246,7 +246,7 @@ class Device:
             r"^exe[^\s]*\s+reboot",
             r"^exe[^\s]*\s+format",
             r"^exe[^\s]*\s+vm-license\s+[^\s]+",
-            r"^exe[^\s]*\s+restore\s+(image|config|vm-license)",
+            r"^exe[^\s]*\s+restore\s+(image|config|vmlicense)",
             r"^diag[^\s]*\s+sys[^\s]*\s+flash[^\s]*\s+format",
             r"^diag[^\s]*\s+deb[^\s]*\s+kernel\s+sysrq\s+command\s+crash",
         )

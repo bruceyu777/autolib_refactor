@@ -47,6 +47,7 @@ def add_file_stream(in_debug_mode):
     handler = logging.FileHandler(log_file)
     level = logging.DEBUG if in_debug_mode else logging.INFO
     add_logger_handler(handler, level, formatter)
+    return handler
 
 
 def set_logger(in_debug_mode):
@@ -55,4 +56,5 @@ def set_logger(in_debug_mode):
     logger.setLevel(log_level)
     setattr(logger, "in_debug_mode", in_debug_mode)
     add_stdout_stream()
-    add_file_stream(in_debug_mode)
+    job_log_hanlder = add_file_stream(in_debug_mode)
+    setattr(logger, "job_log_hanlder", job_log_hanlder)

@@ -57,7 +57,7 @@ class Environment:
     def _buffer_clean_pattern_source_filepath(self):
         filepath = self.user_env.get("GLOBAL", "EXEMPT_ERROR_PATTERN_SOURCE")
         if not (filepath and Path(filepath).exists()):
-            logger.warning("Fall back to use default clean buffer pattern source.")
+            logger.debug("Fall back to use default clean buffer pattern source.")
             filepath = BUFFER_CLEAN_PATTERN_SOURCE
         return filepath
 

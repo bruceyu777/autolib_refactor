@@ -84,6 +84,29 @@
             }
 
         </style>
+        <script>
+            function saveScrollPosition() {
+                sessionStorage.setItem('scrollPosition', window.scrollY);
+            }
+
+            function restoreScrollPosition() {
+                const scrollPosition = sessionStorage.getItem('scrollPosition');
+                if (scrollPosition) {
+                    window.scrollTo(0, parseInt(scrollPosition));
+                }
+            }
+            function autoReload() {
+                saveScrollPosition();
+                setTimeout(() => {
+                    location.reload();
+                }, 10000);
+            }
+
+            window.onload = function() {
+                restoreScrollPosition();
+                autoReload();
+            };
+        </script>
     </head>
     <body>
         <div class="container">

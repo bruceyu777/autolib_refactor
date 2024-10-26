@@ -93,9 +93,10 @@ class FosDev(Device):
             ctrl_d = "\x04"
             logger.debug("Start sending ctrl_c and ctrl_d.")
             self.conn.send(ctrl_c)
-            time.sleep(0.5)
+            time.sleep(1)
             self.conn.send(ctrl_d)
-            time.sleep(0.5)
+            time.sleep(1)
+            # NOTE: if the interval is too short, for FVM simulated console, it may hang
             m, _ = self.conn.expect("login:", 10)
             if m is None:
                 logger.debug("Failed to execute ctrl-d in the device.")

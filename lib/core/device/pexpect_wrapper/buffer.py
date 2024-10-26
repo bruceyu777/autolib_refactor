@@ -16,22 +16,24 @@ class CleanedBuffer(StringIO):
 
     def getvalue(self):
         buffer_content = super().getvalue()
-        return self._clean(buffer_content)
+        return self._clean(buffer_content) if buffer_content else buffer_content
 
     def read(self):
         buffer_content = super().read()
-        return self._clean(buffer_content)
+        return self._clean(buffer_content) if buffer_content else buffer_content
 
     @lru_cache(maxsize=128, typed=True)
     def _clean_by_pattern(self, original_output):
-        cleaned_output = original_output
+        cleaned_output = original_output.encode("utf-8")
         for p_description, pattern in self.COMPILED_CLEAN_PATTERN.items():
             cleaned_output = re.sub(pattern, "", original_output)
             if original_output != cleaned_output:
-                logger.debug(
-                    "Pattern matched for cleaning: '%s'\n**** CLEANED ****\n'%s'",
-                    p_description,
-                    original_output,
+                title = f"*** Clean Pattern '{p_description}' Matched ***"
+                logger.notice(
+                    "%s\nCleaned Content:\n'%s'\n%s",
+                    title,
+                    cleaned_output,
+                    "*" * len(title),
                 )
                 original_output = cleaned_output
         return cleaned_output

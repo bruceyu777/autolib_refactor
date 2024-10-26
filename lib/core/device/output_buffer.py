@@ -38,9 +38,8 @@ class OutputBuffer:
         t1 = time.perf_counter()
         result = regex.search(pattern, self.output[pos:])
         t2 = time.perf_counter()
-
-        logger.debug("pattern match for %s takes %s s", pattern, t2 - t1)
-        logger.debug("the result is %s", result)
+        logger.debug("pattern match for %s takes %.1f s", pattern, t2 - t1)
+        logger.debug("the matched result is '%s'", result)
         return result
 
     def expect(self, pattern):

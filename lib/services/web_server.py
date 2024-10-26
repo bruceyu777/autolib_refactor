@@ -152,8 +152,16 @@ class WebServer:
 
     def create(self):
         server_address = ("", self.port)
-        httpd = http.server.HTTPServer(server_address, CustomHandler)
-        httpd.serve_forever()
+        try:
+            httpd = http.server.HTTPServer(server_address, CustomHandler)
+            httpd.serve_forever()
+        except OSError as e:
+            logger.error("Unable to start webserver as '%s'", e)
+        else:
+            logger.info(
+                "Succeeded to start HTTP server on port %s",
+                self.port,
+            )
 
     def _is_port_available(self):
         # Try to create a socket on the specified port
@@ -210,10 +218,6 @@ class WebServer:
         logging.getLogger("http.server").setLevel(logging.ERROR)
         setproctitle.setproctitle(self.process_name)
         self.create()
-        logger.info(
-            "Succeeded to start HTTP server on port %s",
-            self.port,
-        )
 
     def create_process(self):
         if self._is_already_started():

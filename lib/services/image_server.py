@@ -6,6 +6,7 @@ import requests
 import wget
 
 from lib.utilities.exceptions import ImageNotFound, OperationFailure, UnSupportedModel
+from lib.utilities.util import sleep_with_progress
 
 from .log import logger
 
@@ -80,8 +81,8 @@ class ImageServer:
     def _retrieve_file(self, image_path):
         filename = os.path.basename(image_path)
         saved_file = self.work_dir + filename
-        count, sleep_interval = 0, 10
-        while count < 3:
+        sleep_interval = 30
+        while sleep_interval <= sleep_interval * 2 * 2:
             logger.info("\nTry to download image:\n%s\n", image_path)
             try:
                 if os.path.exists(saved_file):
@@ -90,12 +91,9 @@ class ImageServer:
                 logger.info("\n\nDownloaded to:\n%s\n", saved_file)
                 return saved_file
             except Exception:  # pylint: disable = broad-except
-                time.sleep(10)
                 logger.error("Failed to download file from server: %s", image_path)
-                count += 1
-                logger.info("Going to sleep %d...", sleep_interval)
-                time.sleep(sleep_interval)
                 sleep_interval *= 2
+                sleep_with_progress(sleep_interval)
         raise OperationFailure("Failed to download file from server after 3 retries!!!")
 
 

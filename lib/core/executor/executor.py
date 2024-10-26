@@ -49,7 +49,7 @@ class Executor:
         self.log_file_handler = handler
 
     def __enter__(self):
-        logger.notice("Start executing script: %s", self.script)
+        logger.notice("\n** Start executing script ==> %s", self.script)
         summary.dump_script_start_time_to_brief_summary()
         if getattr(logger, "in_debug_mode", False):
             self._add_file_handler()
@@ -63,7 +63,7 @@ class Executor:
             self.report_all()
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
-        logger.notice("Finished executing script: %s", self.script)
+        logger.notice("\n** Finished executing script ==> %s", self.script)
 
     def clear_devices_buffer(self):
         for device in self.devices.values():
@@ -121,8 +121,10 @@ class Executor:
 
     def _resetFirewall(self, cmd):
         if not cmd:
-            cmd = "exe factoryreset"
+            cmd = "execute factoryreset"
         self.cur_device.reset_firewall(cmd)
+        sleep_with_progress(1)
+        # to avoid some error message message other commands
 
     def _send_literal(self, parameters):
         if (
@@ -197,6 +199,29 @@ class Executor:
                         return f'"{previous_command}"', 3
         return retry_command, -1
 
+    def _log_expect_result(
+        self, is_succeeded, testcase_id, rule, fail_match, timeout_timer
+    ):
+        if is_succeeded:
+            logger.debug(
+                "\n* Expect Succeeded(%s) *\nRule: '%s'\n'fail_match' Flag: %s\nTimeout Timer: %ss\n\n",
+                testcase_id,
+                rule,
+                fail_match,
+                timeout_timer,
+            )
+        else:
+            logger.notice(
+                "\n* Expect Failure(%s) *\nRule: '%s'\n'fail_match' Flag: %s\nTimeout Timer: %ss\n\n",
+                testcase_id,
+                rule,
+                fail_match,
+                timeout_timer,
+            )
+            summary.dump_err_command_to_brief_summary(
+                f"{testcase_id} failed at line {self.last_line_number}: {self.lines[self.last_line_number - 1]}."
+            )
+
     def _expect(self, parameters):
         (
             rule,
@@ -236,25 +261,9 @@ class Executor:
                 cli_output,
             )
         )
-        if is_succeeded:
-            logger.info(
-                "\nSucceeded to expect for testcase: %s\nExpect Rule: '%s'\nfail_match: %s in %ss.",
-                testcase_id,
-                rule,
-                fail_match,
-                wait_seconds,
-            )
-        else:
-            logger.notice(
-                "\nFailed to expect for testcase: %s\nExpect Rule: '%s'\nfail_match: %s in %ss.",
-                testcase_id,
-                rule,
-                fail_match,
-                wait_seconds,
-            )
-            summary.dump_err_command_to_brief_summary(
-                f"{testcase_id} failed at line {self.last_line_number}: {self.lines[self.last_line_number - 1]}."
-            )
+        self._log_expect_result(
+            is_succeeded, testcase_id, rule, fail_match, wait_seconds
+        )
 
     def _expect_OR(self, parameters):
         print(parameters)
@@ -269,35 +278,22 @@ class Executor:
         rule2 = self._normalize_regexp(rule2)
         result2, cli_output2 = self.cur_device.expect(rule2, wait_seconds)
 
-        result = bool(result1) ^ fail1_match | bool(result2) ^ fail2_match
+        is_succeeded = bool(result1) ^ fail1_match | bool(result2) ^ fail2_match
         self.expect_result[testcase_id].append(
             (
-                result,
+                is_succeeded,
                 self.last_line_number,
                 self.lines[self.last_line_number - 1],
                 f"output of {rule1}:\n{cli_output1}\noutput of {rule2}:\n{cli_output2}\n",
             )
         )
-
-        result_str = "Succeeded" if result else "Failed"
-        if result:
-            logger.info(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
-                testcase_id,
-                (rule1, rule2),
-                (fail1_match, fail2_match),
-                wait_seconds,
-            )
-        else:
-            logger.notice(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
-                testcase_id,
-                (rule1, rule2),
-                (fail1_match, fail2_match),
-                wait_seconds,
-            )
+        self._log_expect_result(
+            is_succeeded,
+            testcase_id,
+            (rule1, rule2),
+            (fail1_match, fail2_match),
+            wait_seconds,
+        )
 
     def _myftp(self, parameters):
         (
@@ -442,8 +438,8 @@ class Executor:
         return is_succeeded
 
     def _get_failure_details(self):
-        return ",".join(
-            f"{line_number}: {line}"
+        return "\n".join(
+            f"# Line {line_number}: {line}"
             for _, details in self.expect_result.items()
             for result, line_number, line, _ in details
             if not result

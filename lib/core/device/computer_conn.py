@@ -5,8 +5,7 @@ import pexpect
 from lib.services import env, logger
 
 from .dev_conn import DevConn
-from .log_file import LogFile
-from .pexpect_wrapper import Spawn
+from .pexpect_wrapper import LogFile, Spawn
 
 
 class ComputerConn(DevConn):
@@ -78,6 +77,7 @@ class ComputerConn(DevConn):
         self._client = Spawn(
             self.conn,
             buffer_for_pexpect,
+            logger.job_log_hanlder,
             encoding="utf-8",
             echo=False,
             logfile=sys.stdout,

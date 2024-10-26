@@ -169,7 +169,8 @@ def main():
         logger.error("Please speicify the testcase script or testcase group.")
         sys.exit(-1)
 
-    logger.notice("**** Start test job with AUTOLIB - %s. ****", __version__)
+    logger.notice("\n**** Start test job with AUTOLIB - %s. ****", __version__)
+    logger.notice("CLI from user: %s", " ".join(sys.argv))
     logger.notice("Test Environment: %s", args.env)
     if args.script:
         logger.notice("Test Script: %s", args.script)
@@ -179,7 +180,7 @@ def main():
         test_file = args.group
 
     summary.dump_str_to_brief_summary(
-        f"# Environment File: {args.env}\n# Test File: {test_file}\\n"
+        f"# Environment File: {args.env}\n# Test File: {test_file}\n"
     )
 
     try:

@@ -90,7 +90,7 @@ class Task:
 
     def _start_record_terminal(self, script_id):
         for dev in self.devices.values():
-            logger.info("Start record terminal for %s", dev)
+            logger.debug("Start record terminal for %s", dev)
             dev.start_record_terminal(script_id)
 
     def _stop_record_terminal(self, _):
