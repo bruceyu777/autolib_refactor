@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from time import perf_counter
 
-from lib.services import env, logger, oriole, summary
+from lib.services import TestStatus, env, logger, oriole, summary
 from lib.utilities.exceptions import FileNotExist, GeneralException, NotSupportedDevice
 
 from ..compiler.compiler import compiler
@@ -106,15 +106,20 @@ class Task:
     def execute_script(self, script, vm_codes, devices):
         script_id = Path(script).stem
         start = perf_counter()
-        summary.update_testscript(script_id, "Testing")
+        summary.update_testscript(script_id, TestStatus.TESTING)
         self._record_testing_script(script_id)
         self._start_record_terminal(script_id)
-        with Executor(script, vm_codes, devices) as executor:
-            executor.execute()
-        self._stop_record_terminal(script_id)
-        end = perf_counter()
-        duration = int(end - start)
-        summary.update_testscript_duration(script_id, duration)
+        try:
+            with Executor(script, vm_codes, devices) as executor:
+                executor.execute()
+        except Exception:
+            summary.update_testscript(script_id, TestStatus.FAILED)
+            raise
+        finally:
+            self._stop_record_terminal(script_id)
+            end = perf_counter()
+            duration = int(end - start)
+            summary.update_testscript_duration(script_id, duration)
 
     def execute(self):
         raise NotImplementedError

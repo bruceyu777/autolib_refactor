@@ -16,10 +16,17 @@ class Output:
         current_time = datetime.now().time().strftime("%H-%M-%S")
         self.directory_path = OUTPUTS_DIR / current_date / current_time
 
+    def update_output_folder_suffix(self, folder_suffix):
+        folder_name = self.directory_path.name
+        self.directory_path = (
+            self.directory_path.parent / f"{folder_name}--{folder_suffix}"
+        )
+
     @staticmethod
     def _compose_folder(parent_folder, folder_name):
         folder = parent_folder / folder_name
-        folder.mkdir(parents=True, exist_ok=True)
+        if not os.path.exists(folder):
+            folder.mkdir(parents=True, exist_ok=True)
         return folder
 
     def compose_terminal_file(self, folder_name, file_name):

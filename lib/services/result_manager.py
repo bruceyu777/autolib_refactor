@@ -7,7 +7,7 @@ from lib.utilities.exceptions import ReportUnderPCWithoutDut
 from .environment import env
 from .log import logger
 from .oriole import oriole
-from .summary import summary
+from .summary import TestStatus, summary
 
 
 class ScriptResultManager:
@@ -122,8 +122,8 @@ class ScriptResultManager:
 
     def report_qaid_result_to_roiole(self, qaid, device_info):
         is_succeeded = self.is_qaid_succeeded(qaid)
-        res_str = "passed" if is_succeeded else "failed"
-        logger.info("Testcase %s %s", qaid, res_str)
+        test_status = TestStatus.PASSED if is_succeeded else TestStatus.FAILED
+        logger.info("Testcase %s %s", qaid, test_status)
         result = oriole.report(qaid, is_succeeded, device_info)
         summary.update_testcase(qaid, self.expect_result[qaid], result)
         return is_succeeded
@@ -152,7 +152,7 @@ class ScriptResultManager:
         # 1. update summary results
         summary.dump_result_to_brief_summary(script_name, self.script_filepath, result)
         summary.update_testscript(
-            script_name, "passed" if is_script_succeeded else "failed"
+            script_name, TestStatus.PASSED if is_script_succeeded else TestStatus.FAILED
         )
         # 2. update failed expect results
         if not is_script_succeeded:

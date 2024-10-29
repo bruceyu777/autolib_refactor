@@ -1,17 +1,18 @@
 import logging
 import pdb
 import re
-import sys
 from pathlib import Path
 
 from lib.services import (
     ScriptResultManager,
+    TestStatus,
     add_logger_handler,
     env,
     logger,
     output,
     summary,
 )
+from lib.utilities.exceptions import OperationFailure, TestFailed
 from lib.utilities.util import sleep_with_progress
 
 from ..compiler.compiler import compiler
@@ -324,7 +325,7 @@ class Executor:
             cli_output,
         )
 
-        result_str = "Succeeded" if is_succeeded else "Failed"
+        result_str = TestStatus.PASSED if is_succeeded else TestStatus.FAILED
         logger.info(
             "%s to to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
             result_str,
@@ -336,11 +337,11 @@ class Executor:
         self.cur_device.send_line("quit")
         self.cur_device.search(".+")
 
-        if result_str != "Succeeded":
+        if result_str is not TestStatus.PASSED:
             if action == "stop":
-                sys.exit(-1)
-            elif action == "nextgroup":
-                self.need_stop = True
+                raise OperationFailure("FTP Failed and user requested to STOP!!!")
+            if action == "nextgroup":
+                raise TestFailed("FTP failed and user requested to go to next!!!")
 
     def _mytelnet(self, parameters):
         (

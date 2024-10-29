@@ -16,6 +16,12 @@ class BlockingException(Exception):
         return repr(self.value)
 
 
+class TestFailed(GeneralException):
+    def __init__(self, failure):
+        self.message = f"Test Failed: {failure}"
+        super().__init__(self.message)
+
+
 class CompileException(GeneralException):
     def __init__(self, file_name, line_number, expected, current):
         self.message = f"Error: {file_name}:{line_number}, expect {expected}, but current is {current}."

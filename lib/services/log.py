@@ -1,5 +1,6 @@
 import logging
 import sys
+from pathlib import Path
 
 from .output import output
 
@@ -50,7 +51,14 @@ def add_file_stream(in_debug_mode):
     return handler
 
 
-def set_logger(in_debug_mode):
+def update_output_subfolder(is_group_test, env_config_filename):
+    test_type = "group" if is_group_test else "script"
+    folder_suffix = f"{test_type}--{Path(env_config_filename).stem}"
+    output.update_output_folder_suffix(folder_suffix)
+
+
+def setup_logger(in_debug_mode, is_group_test, env_config_filename):
+    update_output_subfolder(is_group_test, env_config_filename)
     add_logging_level("NOTICE", logging.INFO + 10)
     log_level = logging.DEBUG if in_debug_mode else logging.INFO
     logger.setLevel(log_level)

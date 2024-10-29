@@ -5,7 +5,7 @@ import os
 import sys
 
 from lib.core.scheduler.job import Job
-from lib.services import logger, set_logger
+from lib.services import logger, setup_logger
 from lib.services.summary import summary
 
 
@@ -163,12 +163,11 @@ def parse_cli_args():
 
 def main():
     args = parse_cli_args()
-    set_logger(args.debug)
-
     if not (args.script or args.group):
         logger.error("Please speicify the testcase script or testcase group.")
         sys.exit(-1)
 
+    setup_logger(args.debug, args.group, args.script or args.group)
     logger.notice("\n**** Start test job with AUTOLIB - %s. ****", __version__)
     logger.notice("CLI from user: %s", " ".join(sys.argv))
     logger.notice("Test Environment: %s", args.env)

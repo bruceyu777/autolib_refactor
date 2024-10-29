@@ -6,27 +6,26 @@ import time
 
 import requests
 
+from lib.services.environment import env
 from lib.services.fos import platform_manager
+from lib.services.log import logger
+from lib.services.output import output
+from lib.services.summary import summary
 
-from ..environment import env
-from ..log import logger
-from ..output import output
-from ..summary import summary
 from .meta import (
     ORIOLE_FIELD_FOS_SOURCE,
     ORIOLE_REPORT_FIXED_FIELDS,
     ORIOLE_SUBMIT_API_URL,
+    REPORT_FILE,
 )
-
-REPORT_FILE = "Oriole_report.json"
 
 
 class OrioleClient:
+
     def __init__(self):
         self.user = None
         self.password = None
         self.specified_fields = None
-        self.file_name = output.compose_summary_file(REPORT_FILE)
         self.submit_flag = "None"
         self.reports = []
         self.release_tag = None
@@ -152,12 +151,9 @@ class OrioleClient:
                 else:
                     new_lines.append(line)
         report_str = "\n".join(new_lines)
-        with open(self.file_name, "w") as f:
+        report_filename = output.compose_summary_file(REPORT_FILE)
+        with open(report_filename, "w") as f:
             f.write(report_str)
-
-    @staticmethod
-    def _compose_filename():
-        return "oriole_report.json"
 
 
 oriole = OrioleClient()

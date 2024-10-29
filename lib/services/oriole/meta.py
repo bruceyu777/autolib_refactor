@@ -3,6 +3,7 @@ from lib.services.image_server import IMAGE_SERVER_FQDN
 ORIOLE_REPORT_FOLDER = "."
 SUMMARY_FILE_NAME_PREFIX = "AutoTesting_Oriole_"
 FILE_EXT = ".json"
+REPORT_FILE = "Oriole_report.json"
 
 ORIOLE_SUBMIT_API_URL = f"https://{IMAGE_SERVER_FQDN}/api/oriole"
 

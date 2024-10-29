@@ -207,18 +207,18 @@
                         <tr>
                             <td><a href="/{{qaid_script_mapping[testcase.id]}}">{{testcase.id}}</a></td>
                             <td class="{{'success' if testcase.res else 'failure'}}">
-                                {{'Succeeded' if testcase.res else 'Failed'}}
+                                {{'PASSED' if testcase.res else 'FAILED'}}
                             </td>
                             <td class="{{'success' if testcase.reported else 'failure'}}">
-                                {{'Reported' if testcase.reported else 'Not Reported'}}
+                                {{'REPORTED' if testcase.reported else 'NOT REPORTED'}}
                             </td>
                         </tr>
                         {% endfor %}
                         {% for testcase in not_tested_cases %}
                         <tr>
                             <td>{{testcase}}</td>
-                            <td class="not-tested">Not Tested</td>
-                            <td class="not-tested">Not Reported</td>
+                            <td class="not-tested">NOT TESTED</td>
+                            <td class="not-tested">NOT REPORTED</td>
                         </tr>
                         {% endfor %}
                     </tbody>
