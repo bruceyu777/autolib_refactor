@@ -28,7 +28,7 @@ class OutputFileType(IntEnum):
 
 class TestStatus(Enum):
 
-    NOT_TESTED = "NOT_TESTED"
+    NOT_TESTED = "NOT TESTED"
     TESTING = "TESTING"
     TESTED = "TESTED"
     PASSED = "PASSED"
