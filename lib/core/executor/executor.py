@@ -4,14 +4,20 @@ import re
 import sys
 from pathlib import Path
 
-from lib.services import add_logger_handler, env, logger, output, summary
+from lib.services import (
+    ScriptResultManager,
+    add_logger_handler,
+    env,
+    logger,
+    output,
+    summary,
+)
 from lib.utilities.util import sleep_with_progress
 
 from ..compiler.compiler import compiler
 from ..compiler.vm_code import VMCode
 from .debugger import Debugger
 from .if_stack import if_stack
-from .result_manager import ScriptResultManager
 
 
 class Executor:
@@ -22,7 +28,7 @@ class Executor:
         self.devices = devices
         self.vmcodes = vmcodes
         self.cur_device = None
-        self.result_manager = ScriptResultManager()
+        self.result_manager = ScriptResultManager(self.script)
         self.lines = []
         self.last_line_number = None
         self.program_counter = 0  # abbreviated as"pc"
@@ -56,7 +62,7 @@ class Executor:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.need_report:
-            self.report_all()
+            self.report_script_result()
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
         logger.notice("\n** Finished executing script ==> %s", self.script)
@@ -103,9 +109,7 @@ class Executor:
             pattern = parameters[1]
             timeout = int(parameters[2])
             *_, cli_output = self.cur_device.send_command(cmd, pattern, timeout)
-        self.result_manager.check_cli_error(
-            self.script, self.last_line_number, cmd, cli_output
-        )
+        self.result_manager.check_cli_error(self.last_line_number, cmd, cli_output)
 
     def _clearbuff(self, _):
         self.cur_device.clear_buffer()
@@ -415,14 +419,14 @@ class Executor:
         logger.info(comment)
         summary.dump_str_to_brief_summary(comment)
 
-    def report_all(self):
+    def report_script_result(self):
         device_require_collect = (
             self.result_manager.get_require_info_collection_devices()
         )
         devices_info = {
             dev: self.__collect_dut_info(dev) for dev in device_require_collect
         }
-        self.result_manager.report_all(devices_info, self.script)
+        self.result_manager.report_script_result(devices_info)
 
     def _report(self, parameters):
         testcase_id = parameters[0]

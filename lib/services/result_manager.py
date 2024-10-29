@@ -2,8 +2,12 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from lib.services import env, logger, oriole, summary
 from lib.utilities.exceptions import ReportUnderPCWithoutDut
+
+from .environment import env
+from .log import logger
+from .oriole import oriole
+from .summary import summary
 
 
 class ScriptResultManager:
@@ -34,8 +38,9 @@ class ScriptResultManager:
         "duplicated with another vip",
     )
 
-    def __init__(self):
-        self.cli_errors = defaultdict(list)
+    def __init__(self, script_filepath):
+        self.script_filepath = script_filepath
+        self.cli_errors = []
         self.expect_result = defaultdict(list)
         self.report_qaid_and_dev_map = {}  # qaid: dev_name
         self.dev_info_requested_by_user = {}  # qaid: dev_info dict
@@ -58,12 +63,12 @@ class ScriptResultManager:
                 )
             self.report_qaid_and_dev_map[testcase_id] = dut
 
-    def check_cli_error(self, script, line_number, command, result):
+    def check_cli_error(self, line_number, command, result):
         failed_pattern = "|".join(ScriptResultManager.CLI_ERROR_PATTERNS)
         m = re.search(failed_pattern, result)
         if m:
             error = m.group()
-            self.cli_errors[script].append((line_number, command, error))
+            self.cli_errors.append((line_number, command, error))
 
     def get_formatted_command_errors(self):
         def _to_str(details):
@@ -73,8 +78,8 @@ class ScriptResultManager:
             )
 
         return "\n".join(
-            f"{script}\n{_to_str(details)}\n"
-            for script, details in self.cli_errors.items()
+            f"{self.script_filepath}\n{_to_str(details)}\n"
+            for details in self.cli_errors
             if details
         )
 
@@ -115,7 +120,7 @@ class ScriptResultManager:
             return False
         return all(result for result, *_ in self.expect_result[qaid])
 
-    def report_to_oriole(self, qaid, device_info):
+    def report_qaid_result_to_roiole(self, qaid, device_info):
         is_succeeded = self.is_qaid_succeeded(qaid)
         res_str = "passed" if is_succeeded else "failed"
         logger.info("Testcase %s %s", qaid, res_str)
@@ -123,30 +128,36 @@ class ScriptResultManager:
         summary.update_testcase(qaid, self.expect_result[qaid], result)
         return is_succeeded
 
-    def report_all(self, report_qaid_and_dev_map, script_path):
+    def report_script_result_to_oriole(self, collected_device_info):
         is_script_succeeded = True
-        devices_info = {**report_qaid_and_dev_map, **self.dev_info_requested_by_user}
         for qaid in self.expect_result:
             if qaid not in self.report_qaid_and_dev_map:
-                summary.dump_err_command_to_brief_summary(
-                    f"QAID in Expect without 'report': {qaid}\n"
-                )
-                logger.warning("\n** QAID - %s in Expect without 'report' ***\n", qaid)
+                error_msg = f"** QAID - {qaid} in Expect without 'report' ***\n"
+                summary.dump_err_command_to_brief_summary(error_msg)
+                logger.warning("\n%s", error_msg)
                 continue
-            dev = self.report_qaid_and_dev_map[qaid]
-            if not self.report_to_oriole(qaid, devices_info[dev]):
+            if qaid in self.dev_info_requested_by_user:
+                dut_info = self.dev_info_requested_by_user[qaid]
+            else:
+                dev = self.report_qaid_and_dev_map[qaid]
+                dut_info = collected_device_info[dev]
+            if not self.report_qaid_result_to_roiole(qaid, dut_info):
                 is_script_succeeded = False
-        script_name = Path(script_path).stem
+        return is_script_succeeded
+
+    def report_script_result(self, collected_device_info):
+        is_script_succeeded = self.report_script_result_to_oriole(collected_device_info)
+        script_name = Path(self.script_filepath).stem
         result = self.get_brief_result()
         # 1. update summary results
-        summary.dump_result_to_brief_summary(script_name, script_path, result)
+        summary.dump_result_to_brief_summary(script_name, self.script_filepath, result)
         summary.update_testscript(
             script_name, "passed" if is_script_succeeded else "failed"
         )
         # 2. update failed expect results
         if not is_script_succeeded:
             summary.add_failed_testscript(
-                script_name, script_path, self._get_failure_details()
+                script_name, self.script_filepath, self._get_failure_details()
             )
         # 3. update failed commands
         command_errors = self.get_formatted_command_errors()
