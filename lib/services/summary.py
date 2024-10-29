@@ -13,23 +13,27 @@ from .environment import env
 from .output import output
 from .template_env import web_server_env
 
-SUMMARY_FILE_NAME = "summary.html"
-TEMPLATE_FILE_NAME = "summary.template"
-BRIEF_SUMMARY_FILE_NAME = "brief_summary.txt"
-FAILED_TESTSCRIPTS_FILE_NAME = "failed_testscripts.txt"
-LOADED_SUMMARY_TEMAPLTE = web_server_env.get_template(TEMPLATE_FILE_NAME)
+SUMMARY_FILENAME = "summary.html"
+TEMPLATE_FILENAME = "summary.template"
+BRIEF_SUMMARY_FILENAME = "brief_summary.txt"
+FAILED_TESTSCRIPT_FILENAME = "failed_testscripts.txt"
+FAILED_COMMAND_FILENAME = "testscript_failed_commands.txt"
+LOADED_SUMMARY_TEMAPLTE = web_server_env.get_template(TEMPLATE_FILENAME)
 
 
 class Summary:
     def __init__(self):
         self.testscripts = collections.defaultdict(tuple)
         self.testcases = collections.defaultdict(tuple)
-        self.file_name = output.compose_summary_file(SUMMARY_FILE_NAME)
+        self.file_name = output.compose_summary_file(SUMMARY_FILENAME)
         self.failed_testscripts_file_name = output.compose_summary_file(
-            FAILED_TESTSCRIPTS_FILE_NAME
+            FAILED_TESTSCRIPT_FILENAME
         )
         self.brief_summary_file_name = output.compose_summary_file(
-            BRIEF_SUMMARY_FILE_NAME
+            BRIEF_SUMMARY_FILENAME
+        )
+        self.failed_commands_file_name = output.compose_summary_file(
+            FAILED_COMMAND_FILENAME
         )
         self.start_time = datetime.now().replace(microsecond=0)
         self.end_time = "NA"
@@ -200,9 +204,15 @@ class Summary:
         console = Console()
         console.print(table)
 
+    def add_failed_command(self, errors):
+        with open(self.failed_commands_file_name, "a", encoding="utf-8") as f:
+            f.write(errors)
+        self.dump_err_command_to_brief_summary(f"#### Command Errors: \n{errors}\n")
+
     def add_failed_testscript(self, script_id, script, comment="Failed testscript"):
         with open(self.failed_testscripts_file_name, "a", encoding="utf-8") as f:
             f.write(f"{script_id}  {script}\n{comment}\n\n")
+        self.dump_err_command_to_brief_summary(f"#### Expect Failures: \n{comment}\n\n")
 
     def dump_result_to_brief_summary(self, script_id, script, result):
         with open(self.brief_summary_file_name, "a", encoding="utf-8") as f:
