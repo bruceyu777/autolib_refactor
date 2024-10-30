@@ -30,13 +30,13 @@ AUTO_PROCEED_RULE_MAP = {
 AUTO_PROCEED_PATTERNS = "|".join(AUTO_PROCEED_RULE_MAP.keys())
 MAX_AUTO_PROCEED_TIMES = 6
 
-SYSCTRL_COMAND = (r"Admin:\s*$",)
+SYSCTRL_COMMAND = (r"Admin:\s*$",)
 FTP_NAME_PROMPT = (r"Name\s*\(.+\):\s*$",)
 DEFAULT_PROMPTS = "|".join(
     UNIVERSAL_PROMPTS
     + FOS_UNIVERSAL_PROMPTS
     + tuple(AUTO_PROCEED_RULE_MAP.keys())
-    + SYSCTRL_COMAND
+    + SYSCTRL_COMMAND
     + FTP_NAME_PROMPT
 )
 DISABLE = "disable"
@@ -144,7 +144,7 @@ class Device:
         return False
 
     def sysctl_login(self, s):
-        for key in SYSCTRL_COMAND:
+        for key in SYSCTRL_COMMAND:
             if re.match(key, s):
                 return True
         return False
