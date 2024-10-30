@@ -123,6 +123,7 @@
             }
 
             const contentElement = document.querySelector(".content");
+            contentElement.addEventListener('scroll', saveScrollPosition);
 
             function restoreScrollPosition() {
                 const scrollPosition = sessionStorage.getItem('scrollPosition');
