@@ -294,7 +294,7 @@ class Device:
             timeout = MAX_TIMEOUT_FOR_REBOOT
             time.sleep(0.1)
             # NOTE: if previous command is 'get system status' and the first character of
-            # the command will be eatten by FOS without this delay, it will not work.
+            # the command will be eaten by FOS without this delay, it will not work.
         matched, output = self._send_command(command, pattern, timeout)
         if is_reboot_command:
             self.conn.login()

@@ -282,7 +282,7 @@
       ]
     ]
   },
-  "deprecated_commands": {
+  "deprecated_commands_replacement": {
     "^myexe[^\\s]*\\s+(.*)$": "execute \\1",
     "^mynext(.*?)": "next",
     "^myset[^\\s]*\\s+(.*)$": "set \\1",

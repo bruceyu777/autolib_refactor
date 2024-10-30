@@ -33,9 +33,7 @@ class ComputerConn(DevConn):
 
     def send_command(self, command, pattern, timeout):
         # make sure to match the output after command is send
-
         # self._read_output()
-
         # For diag commands, there are 3 types of output that could
         # be expected:
         # 1 output will be continue untill user input another command
@@ -77,7 +75,7 @@ class ComputerConn(DevConn):
         self._client = Spawn(
             self.conn,
             buffer_for_pexpect,
-            logger.job_log_hanlder,
+            logger.job_log_handler,
             encoding="utf-8",
             echo=False,
             logfile=sys.stdout,

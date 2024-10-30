@@ -54,7 +54,7 @@ class DevConn:
         self._client = Spawn(
             self.conn,
             buffer_for_pexpect,
-            logger.job_log_hanlder,
+            logger.job_log_handler,
             encoding="utf-8",
             echo=True,
             logfile=sys.stdout,
@@ -80,8 +80,8 @@ class DevConn:
             OSError,
             pexpect.ExceptionPexpect,
             ptyprocess.PtyProcessError,
-        ):
-            pass
+        ) as e:
+            logger.debug("Failed to close the client(%s).", e)
 
     def login(self):
         raise NotImplementedError
@@ -219,7 +219,3 @@ class DevConn:
 
     def resume_stdout(self):
         self.log_file.resume_stdout()
-
-
-if __name__ == "__main__":
-    pass

@@ -16,11 +16,11 @@ class CleanedBuffer(StringIO):
 
     def getvalue(self):
         buffer_content = super().getvalue()
-        return self._clean(buffer_content) if buffer_content else buffer_content
+        return self._clean(buffer_content)
 
     def read(self):
         buffer_content = super().read()
-        return self._clean(buffer_content) if buffer_content else buffer_content
+        return self._clean(buffer_content)
 
     @lru_cache(maxsize=128, typed=True)
     def _clean_by_pattern(self, original_output):

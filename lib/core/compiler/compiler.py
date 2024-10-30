@@ -16,7 +16,7 @@ class Compiler:
         lexer = Lexer(file_name, dump_token=in_debug_mode)
         tokens, lines = lexer.parse()
         parser = Parser(file_name, tokens, lines)
-        vm_codes, devices, called_files = parser.run(deump_vm_codes=in_debug_mode)
+        vm_codes, devices, called_files = parser.run(dump_code_flag=in_debug_mode)
 
         self.files[file_name] = vm_codes
         self.devices |= devices

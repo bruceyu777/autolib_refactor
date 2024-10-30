@@ -116,16 +116,22 @@
 
         </style>
         <script>
+
             function saveScrollPosition() {
-                sessionStorage.setItem('scrollPosition', window.scrollY);
+                const currentScroll = contentElement.scrollTop;
+                sessionStorage.setItem('scrollPosition', currentScroll);
             }
+
+            const contentElement = document.querySelector(".content");
 
             function restoreScrollPosition() {
                 const scrollPosition = sessionStorage.getItem('scrollPosition');
                 if (scrollPosition) {
-                    window.scrollTo(0, parseInt(scrollPosition));
+                    console.log("Restore to position: ", scrollPosition)
+                    contentElement.scrollTop = parseInt(scrollPosition, 10);
                 }
             }
+
             function autoReload() {
                 saveScrollPosition();
                 setTimeout(() => {
@@ -133,12 +139,7 @@
                 }, 10000);
             }
 
-            window.onload = function() {
-                restoreScrollPosition();
-                autoReload();
-            };
-
-            document.addEventListener("DOMContentLoaded", function() {
+            function updateTestStatus() {
                 const rows = document.querySelectorAll("table#summary_table tbody tr");
                 rows.forEach(row => {
                     const statusCell = row.cells[1]; // Select the second cell, which holds the status
@@ -146,7 +147,14 @@
                         row.classList.add("status-testing");
                     }
                 });
-            });
+            }
+
+            window.onload = function() {
+                restoreScrollPosition();
+                autoReload();
+                updateTestStatus();
+            };
+
         </script>
     </head>
     <body>

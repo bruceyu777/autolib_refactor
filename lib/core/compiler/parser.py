@@ -38,10 +38,10 @@ class Parser:
         self.vm_codes.append(vm_code)
         return vm_code
 
-    def run(self, deump_vm_codes=False):
+    def run(self, dump_code_flag=False):
         while self._cur_token is not None:
             self._script()
-        if deump_vm_codes:
+        if dump_code_flag:
             self.dump_vm_codes()
         return self.vm_codes, self.devices, self.called_files
 

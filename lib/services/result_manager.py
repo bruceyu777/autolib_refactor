@@ -71,17 +71,13 @@ class ScriptResultManager:
             self.cli_errors.append((line_number, command, error))
 
     def get_formatted_command_errors(self):
-        def _to_str(details):
-            return "\n".join(
-                f"# Line {line_number: 4}: {command}  <== {error}"
-                for line_number, command, error in details
-            )
-
-        return "\n".join(
-            f"{self.script_filepath}\n{_to_str(details)}\n"
-            for details in self.cli_errors
-            if details
+        if not self.cli_errors:
+            return ""
+        errors = "\n".join(
+            f"# Line {line_number: 4}: {command}  <== {error}"
+            for line_number, command, error in self.cli_errors
         )
+        return f"{self.script_filepath}\n{errors}\n"
 
     def add_qaid_expect_result(
         self, qaid, is_succeeded, line_number, expect_statement, cli_output
@@ -162,7 +158,7 @@ class ScriptResultManager:
         # 3. update failed commands
         command_errors = self.get_formatted_command_errors()
         if command_errors:
-            summary.add_failed_command(self.get_formatted_command_errors())
+            summary.add_failed_command(command_errors)
 
     def get_require_info_collection_devices(self):
         device_set = set()

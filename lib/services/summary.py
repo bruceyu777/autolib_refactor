@@ -15,7 +15,7 @@ from .output import output
 from .template_env import web_server_env
 
 TEMPLATE_FILENAME = "summary.template"
-LOADED_SUMMARY_TEMAPLTE = web_server_env.get_template(TEMPLATE_FILENAME)
+LOADED_SUMMARY_TEMPLATE = web_server_env.get_template(TEMPLATE_FILENAME)
 
 
 class OutputFileType(IntEnum):
@@ -188,7 +188,7 @@ class Summary:
         if self.end_time != NOT_APPLICABLE:
             duration = int((self.end_time - self.start_time).total_seconds())
 
-        rendered_content = LOADED_SUMMARY_TEMAPLTE.render(
+        rendered_content = LOADED_SUMMARY_TEMPLATE.render(
             env_file=env.get_env_file_name(),
             test_file=env.get_test_file_name(),
             start_time=self.start_time,

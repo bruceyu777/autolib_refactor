@@ -64,5 +64,5 @@ def setup_logger(in_debug_mode, is_group_test, env_config_filename):
     logger.setLevel(log_level)
     setattr(logger, "in_debug_mode", in_debug_mode)
     add_stdout_stream()
-    job_log_hanlder = add_file_stream(in_debug_mode)
-    setattr(logger, "job_log_hanlder", job_log_hanlder)
+    job_log_handler = add_file_stream(in_debug_mode)
+    setattr(logger, "job_log_handler", job_log_handler)
