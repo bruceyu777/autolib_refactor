@@ -28,15 +28,18 @@ class OutputFileType(IntEnum):
 
 class TestStatus(Enum):
 
-    NOT_TESTED = "NOT TESTED"
     TESTING = "TESTING"
     TESTED = "TESTED"
     PASSED = "PASSED"
     FAILED = "FAILED"
     PENDING = "PENDING"
+    NOT_TESTED = "AWAITING TESTING"
 
     def __str__(self):
         return self.value
+
+
+NOT_APPLICABLE = "N/A"
 
 
 class Summary:
@@ -45,7 +48,7 @@ class Summary:
         self.testscripts = collections.defaultdict(tuple)
         self.testcases = collections.defaultdict(tuple)
         self.start_time = datetime.now().replace(microsecond=0)
-        self.end_time = "NA"
+        self.end_time = NOT_APPLICABLE
         self.qaid_script_mapping = {}
 
     def get_output_filename(self, output_type):
@@ -77,10 +80,10 @@ class Summary:
     def add_testscript(self, script_path):
         id_ = Path(script_path).stem
         self.add_qaid_script_mapping(id_, script_path)
-        self.testscripts[id_] = (TestStatus.NOT_TESTED, "NA")
+        self.testscripts[id_] = (TestStatus.NOT_TESTED, NOT_APPLICABLE)
         self._generate()
 
-    def update_testscript(self, id_, status, duration="NA"):
+    def update_testscript(self, id_, status, duration=NOT_APPLICABLE):
         self.testscripts[id_] = (status, duration)
         self._generate()
 
@@ -181,8 +184,8 @@ class Summary:
             if status is TestStatus.NOT_TESTED
         ]
         statistics = self._statistic_testcases()
-        duration = "NA"
-        if self.end_time != "NA":
+        duration = NOT_APPLICABLE
+        if self.end_time != NOT_APPLICABLE:
             duration = int((self.end_time - self.start_time).total_seconds())
 
         rendered_content = LOADED_SUMMARY_TEMAPLTE.render(

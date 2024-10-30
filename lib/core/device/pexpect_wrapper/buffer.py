@@ -29,11 +29,13 @@ class CleanedBuffer(StringIO):
             cleaned_output = re.sub(pattern, "", original_output)
             if original_output != cleaned_output:
                 title = f"*** Clean Pattern '{p_description}' Matched ***"
-                logger.notice(
-                    "%s\nCleaned Content:\n'%s'\n%s",
+                delimiter = "*" * len(title)
+                logger.debug(
+                    "\n%s\n%s\nCleaned Content:\n'%s'\n%s",
+                    delimiter,
                     title,
                     cleaned_output,
-                    "*" * len(title),
+                    delimiter,
                 )
                 original_output = cleaned_output
         return cleaned_output
