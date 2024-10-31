@@ -3,19 +3,16 @@ import re
 import time
 from enum import Enum
 
-from lib.services.image_server import TFTP_SERVER_IP, Image, image_server
+from lib.services.image_server import Image, image_server
 from lib.services.log import logger
-from lib.utilities.exceptions import (
-    ImageDownloadErr,
-    ImageNotFound,
-    ResourceNotAvailable,
-)
+from lib.utilities.exceptions import ImageDownloadErr, ResourceNotAvailable
 
 from .computer import Computer
 from .computer_conn import ComputerConn
 from .vm_builder import VmBuilder
 
 KVM_DEFAULT_IMAGE_FOLDER = r"/home/tester/images/another"
+VIRSH_DEFAULT_TIMEOUT = 60 * 2
 
 
 class VmStatus(Enum):
@@ -67,18 +64,13 @@ class KVM(Computer):
 
     def prepare_image(self, vm_name, release, build):
         image = Image(self.model(vm_name), release, build)
-        image_file = image_server.lookup_image(image)
-        if not image_file:
-            raise ImageNotFound(image)
-        image_location = image_file["parent_dir"]
-        image_name = image_file["name"]
-        command = f"curl http://{TFTP_SERVER_IP}/{image_location}/{image_name} --output {image_name}"
+        image_url = image_server.get_image_http_url(image)
+        image_name = image_url.split("/")[-1]
+        command = f"curl -k {image_url} --output {image_name}"
         self.send_command(command, timeout=60)
-        image = self.unzip_image(image_name)
-        if image:
-            self.image_location = image
-        else:
-            raise ImageDownloadErr(image_name)
+        self.image_location = self.unzip_image(image_name)
+        if not self.image_location:
+            raise ImageDownloadErr("Unable to unzip '{image_name}'")
         logger.debug("<<< image_location: '%s'", self.image_location)
         return self.image_location
 
@@ -166,7 +158,6 @@ class KVM(Computer):
         time.sleep(2)
         self.power_on_vm(vm_name)
         self.wait_until_running(vm_name)
-        logger.notify("%s is created and is running.", vm_name)
 
     def wait_until_running(self, vm_name, time_out=10 * 60):
         start_time = time.perf_counter()
@@ -182,20 +173,20 @@ class KVM(Computer):
     def power_on_vm(self, vm_domain):
         command = f"virsh --connect qemu:///system start {vm_domain}"
         expected_str = rf"Domain {vm_domain} started"
-        return self.send_command(command, expected_str)
+        return self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
 
     def power_off_vm(self, vm_domain, poweroffdelay=10):
         command = f"virsh shutdown {vm_domain}"
-        expected_str = rf"Domain {vm_domain} is being shutdown"
-        self.send_command(command, expected_str)
+        expected_str = rf"Domain '{vm_domain}' is being shutdown"
+        self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
         time.sleep(poweroffdelay)
         vm_status = self.retr_vm_status(vm_domain)
         return vm_status is None or vm_status is VmStatus.SHUTOFF
 
     def remove_vm(self, vm_domain):
         command = f"virsh undefine {vm_domain}"
-        expected_str = rf"Domain {vm_domain} has been undefined"
-        return self.send_command(command, expected_str)
+        expected_str = rf"Domain '{vm_domain}' has been undefined"
+        return self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
 
     def create_vm(self, **kwargs):
         template = (
@@ -211,6 +202,5 @@ class KVM(Computer):
 
         command = template.format(**kwargs)
         expected_str = "Domain creation completed"
-        self.send_command(command, expected_str)
-
+        self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
         return command

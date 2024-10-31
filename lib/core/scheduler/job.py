@@ -2,8 +2,8 @@ import os
 import sys
 import webbrowser
 
-from lib.core.scheduler.web_server import WebServer
 from lib.services import env, logger, oriole, output
+from lib.services.web_server import WebServer
 
 from .group_task import GroupTask
 from .script_task import ScriptTask
@@ -23,7 +23,8 @@ class Job:
     def execute_script(self):
         task = self.init_task()
         task.run(self.args)
-        output.zip_autotest_log()
+        if not self.args.debug:
+            output.zip_autotest_log()
 
     def start_http_server(self):
         ip, port = env.get_local_http_server_conf()

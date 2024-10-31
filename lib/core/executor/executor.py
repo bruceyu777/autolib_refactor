@@ -1,19 +1,22 @@
 import logging
-import os
 import pdb
 import re
-import sys
-import zipfile
-from collections import defaultdict
 from pathlib import Path
 
-from lib.services import add_logger_handler, env, logger, oriole, output, summary
-from lib.utilities.exceptions import ReportUnderPCWithoutDut
-from lib.utilities.util import sleep_with_print
+from lib.services import (
+    ScriptResultManager,
+    TestStatus,
+    add_logger_handler,
+    env,
+    logger,
+    output,
+    summary,
+)
+from lib.utilities.exceptions import OperationFailure, TestFailed
+from lib.utilities.util import sleep_with_progress
 
 from ..compiler.compiler import compiler
 from ..compiler.vm_code import VMCode
-from .cmd_exec_chker import CmdExecChecker
 from .debugger import Debugger
 from .if_stack import if_stack
 
@@ -26,18 +29,16 @@ class Executor:
         self.devices = devices
         self.vmcodes = vmcodes
         self.cur_device = None
-        self.expect_result = defaultdict(list)
+        self.result_manager = ScriptResultManager(self.script)
         self.lines = []
         self.last_line_number = None
         self.program_counter = 0  # abbreviated as"pc"
         self.need_report = need_report
-        self.report_testcases = {}
         self.script_type = script_type
         self.scripts = {}
         self.log_file_handler = None
         self.debugger = None
         self.need_stop = False
-        self.testcase_dev_info = {}
         self.log_file = None
         self.auto_login = True
 
@@ -51,9 +52,10 @@ class Executor:
         self.log_file_handler = handler
 
     def __enter__(self):
-        logger.notice("Start executing script: %s", self.script)
+        logger.notice("\n** Start executing script ==> %s", self.script)
         summary.dump_script_start_time_to_brief_summary()
-        self._add_file_handler()
+        if getattr(logger, "in_debug_mode", False):
+            self._add_file_handler()
         with open(self.script, "r", encoding="utf-8") as f:
             self.lines = [line.strip() for line in f]
             self.debugger = Debugger(self.lines, self.vmcodes)
@@ -61,18 +63,10 @@ class Executor:
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.need_report:
-            self.report_all()
+            self.report_script_result()
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
-        logger.notice("Finished executing script: %s", self.script)
-        self.zip_running_log()
-
-    def zip_running_log(self):
-        zip_file = output.compose_log_file(Path(self.script).stem, "autotest.zip")
-        log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
-        with zipfile.ZipFile(zip_file, "w", zipfile.ZIP_DEFLATED) as zipf:
-            zipf.write(log_file, arcname=os.path.basename(log_file))
-        os.remove(log_file)
+        logger.notice("\n** Finished executing script ==> %s", self.script)
 
     def clear_devices_buffer(self):
         for device in self.devices.values():
@@ -91,7 +85,7 @@ class Executor:
 
     def _is_reset_command(self, cmd):
         pattern = re.compile(
-            r"(exe.*factoryreset.*|exe.*forticarrier-license|resetFirewall)"
+            r"(exe.*factoryreset.*|exe.*(?:forticarrier|factory|crypto)-license|resetFirewall)"
         )
         return re.match(pattern, cmd)
 
@@ -102,11 +96,6 @@ class Executor:
             return
 
         cmd = parameters[0]
-        cmd = cmd.replace("myexec", "exec")
-        cmd = cmd.replace("mynext", "next")
-        cmd = cmd.replace("myset", "set")
-        cmd = cmd.replace("mydelete", "delete")
-        cmd = cmd.replace("myend", "end")
 
         if self._is_reset_command(cmd) and self.auto_login:
             self._resetFirewall(cmd)
@@ -121,7 +110,7 @@ class Executor:
             pattern = parameters[1]
             timeout = int(parameters[2])
             *_, cli_output = self.cur_device.send_command(cmd, pattern, timeout)
-        CmdExecChecker(self.script, self.last_line_number, cmd, cli_output).check()
+        self.result_manager.check_cli_error(self.last_line_number, cmd, cli_output)
 
     def _clearbuff(self, _):
         self.cur_device.clear_buffer()
@@ -135,8 +124,10 @@ class Executor:
 
     def _resetFirewall(self, cmd):
         if not cmd:
-            cmd = "exe factoryreset"
+            cmd = "execute factoryreset"
         self.cur_device.reset_firewall(cmd)
+        sleep_with_progress(1)
+        # to avoid some error message message other commands
 
     def _send_literal(self, parameters):
         if (
@@ -211,10 +202,28 @@ class Executor:
                         return f'"{previous_command}"', 3
         return retry_command, -1
 
+    def _log_expect_result(self, is_succeeded, qaid, rule, fail_match, timeout_timer):
+        if is_succeeded:
+            logger.debug(
+                "\n* Expect Succeeded(%s) *\nRule: '%s'\n'fail_match' Flag: %s\nTimeout Timer: %ss\n\n",
+                qaid,
+                rule,
+                fail_match,
+                timeout_timer,
+            )
+        else:
+            logger.notice(
+                "\n* Expect Failure(%s) *\nRule: '%s'\n'fail_match' Flag: %s\nTimeout Timer: %ss\n\n",
+                qaid,
+                rule,
+                fail_match,
+                timeout_timer,
+            )
+
     def _expect(self, parameters):
         (
             rule,
-            testcase_id,
+            qaid,
             wait_seconds,
             fail_match,
             _,
@@ -242,40 +251,18 @@ class Executor:
             is_succeeded = bool(matched) ^ fail_match
             cnt += 1
 
-        self.expect_result[testcase_id].append(
-            (
-                is_succeeded,
-                self.last_line_number,
-                self.lines[self.last_line_number - 1],
-                cli_output,
-            )
+        self.result_manager.add_qaid_expect_result(
+            qaid,
+            is_succeeded,
+            self.last_line_number,
+            self.lines[self.last_line_number - 1],
+            cli_output,
         )
-        result_str = "Succeeded" if is_succeeded else "Failed"
-        if is_succeeded:
-            logger.info(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
-                testcase_id,
-                rule,
-                fail_match,
-                wait_seconds,
-            )
-        else:
-            logger.notice(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
-                testcase_id,
-                rule,
-                fail_match,
-                wait_seconds,
-            )
-            summary.dump_err_command_to_brief_summary(
-                f"{testcase_id} failed at line {self.last_line_number}: {self.lines[self.last_line_number - 1]}."
-            )
+        self._log_expect_result(is_succeeded, qaid, rule, fail_match, wait_seconds)
 
     def _expect_OR(self, parameters):
         print(parameters)
-        (rule1, rule2, fail1_match, fail2_match, testcase_id, wait_seconds) = parameters
+        (rule1, rule2, fail1_match, fail2_match, qaid, wait_seconds) = parameters
         wait_seconds = int(wait_seconds)
         fail1_match = fail1_match == "match"
         fail2_match = fail2_match == "match"
@@ -286,41 +273,28 @@ class Executor:
         rule2 = self._normalize_regexp(rule2)
         result2, cli_output2 = self.cur_device.expect(rule2, wait_seconds)
 
-        result = bool(result1) ^ fail1_match | bool(result2) ^ fail2_match
-        self.expect_result[testcase_id].append(
-            (
-                result,
-                self.last_line_number,
-                self.lines[self.last_line_number - 1],
-                f"output of {rule1}:\n{cli_output1}\noutput of {rule2}:\n{cli_output2}\n",
-            )
+        is_succeeded = bool(result1) ^ fail1_match | bool(result2) ^ fail2_match
+        self.result_manager.add_qaid_expect_result(
+            qaid,
+            is_succeeded,
+            self.last_line_number,
+            self.lines[self.last_line_number - 1],
+            f"output of {rule1}:\n{cli_output1}\noutput of {rule2}:\n{cli_output2}\n",
         )
 
-        result_str = "Succeeded" if result else "Failed"
-        if result:
-            logger.info(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
-                testcase_id,
-                (rule1, rule2),
-                (fail1_match, fail2_match),
-                wait_seconds,
-            )
-        else:
-            logger.notice(
-                "%s to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
-                result_str,
-                testcase_id,
-                (rule1, rule2),
-                (fail1_match, fail2_match),
-                wait_seconds,
-            )
+        self._log_expect_result(
+            is_succeeded,
+            qaid,
+            (rule1, rule2),
+            (fail1_match, fail2_match),
+            wait_seconds,
+        )
 
     def _myftp(self, parameters):
         (
             rule,
             ip,
-            testcase_id,
+            qaid,
             fail_match,
             wait_seconds,
             user_name,
@@ -342,20 +316,20 @@ class Executor:
 
         result, cli_output = self.cur_device.expect(rule, wait_seconds)
 
-        self.expect_result[testcase_id].append(
-            (
-                bool(result) ^ fail_match,
-                self.last_line_number,
-                self.lines[self.last_line_number - 1],
-                cli_output,
-            )
+        is_succeeded = bool(result) ^ fail_match
+        self.result_manager.add_qaid_expect_result(
+            qaid,
+            is_succeeded,
+            self.last_line_number,
+            self.lines[self.last_line_number - 1],
+            cli_output,
         )
 
-        result_str = "Succeeded" if bool(result) ^ fail_match else "Failed"
+        result_str = TestStatus.PASSED if is_succeeded else TestStatus.FAILED
         logger.info(
             "%s to to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
             result_str,
-            testcase_id,
+            qaid,
             rule,
             fail_match,
             wait_seconds,
@@ -363,18 +337,18 @@ class Executor:
         self.cur_device.send_line("quit")
         self.cur_device.search(".+")
 
-        if result_str != "Succeeded":
+        if result_str is not TestStatus.PASSED:
             if action == "stop":
-                sys.exit(-1)
-            elif action == "nextgroup":
-                self.need_stop = True
+                raise OperationFailure("FTP Failed and user requested to STOP!!!")
+            if action == "nextgroup":
+                raise TestFailed("FTP failed and user requested to go to next!!!")
 
     def _mytelnet(self, parameters):
         (
             _,
             rule,
             ip,
-            testcase_id,
+            qaid,
             fail_match,
             wait_seconds,
             user_name,
@@ -389,20 +363,19 @@ class Executor:
         self.cur_device.search("Password:")
         self.cur_device.send_line(password)
         result, cli_output = self.cur_device.expect(rule, wait_seconds)
-        self.expect_result[testcase_id].append(
-            (
-                bool(result) ^ fail_match,
-                self.last_line_number,
-                self.lines[self.last_line_number - 1],
-                cli_output,
-            )
+        is_succeeded = bool(result) ^ fail_match
+        self.result_manager.add_qaid_expect_result(
+            qaid,
+            is_succeeded,
+            self.last_line_number,
+            self.lines[self.last_line_number - 1],
+            cli_output,
         )
-
-        result_str = "Succeeded" if bool(result) ^ fail_match else "Failed"
+        result_str = "Succeeded" if is_succeeded else "Failed"
         logger.info(
             "%s to to expect for testcase: %s, with rule:%s and fail_match: %s in %ss.",
             result_str,
-            testcase_id,
+            qaid,
             rule,
             fail_match,
             wait_seconds,
@@ -422,107 +395,45 @@ class Executor:
         )
 
     def _compare(self, parameters):
-        var1, var2, testcase_id, fail_match = parameters
+        var1, var2, qaid, fail_match = parameters
         var1 = env.get_var(var1)
         var2 = env.get_var(var2)
-        result = (str(var1) == str(var2)) ^ (fail_match == "eq")
-        self.expect_result[testcase_id].append(
-            (
-                result,
-                self.last_line_number,
-                self.lines[self.last_line_number - 1],
-                f"v1:{var1} v2:{var2}",
-            )
+        is_succeeded = (str(var1) == str(var2)) ^ (fail_match == "eq")
+        self.result_manager.add_qaid_expect_result(
+            qaid,
+            is_succeeded,
+            self.last_line_number,
+            self.lines[self.last_line_number - 1],
+            f"v1:{var1} v2:{var2}",
         )
 
-        result_str = "Succeeded" if result else "Failed"
+        result_str = "Succeeded" if is_succeeded else "Failed"
         logger.info(
             "%s to to compare for testcase: %s, fail_match: %s.",
             result_str,
-            testcase_id,
+            qaid,
             fail_match,
         )
 
     def _comment(self, parameters):
         comment = parameters[0]
-        logger.notify(comment)
+        logger.info(comment)
         summary.dump_str_to_brief_summary(comment)
 
-    def report_to_oriole(self, testcase_id, device_info):
-        is_succeeded = all(result for result, *_ in self.expect_result[testcase_id])
-
-        res_str = "passed" if is_succeeded else "failed"
-        logger.info("Testcase %s %s", testcase_id, res_str)
-        result = oriole.report(testcase_id, is_succeeded, device_info)
-
-        summary.update_testcase(testcase_id, self.expect_result[testcase_id], result)
-        return is_succeeded
-
-    def _get_failure_details(self):
-        return ",".join(
-            f"{line_number}: {line}"
-            for _, details in self.expect_result.items()
-            for result, line_number, line, _ in details
-            if not result
+    def report_script_result(self):
+        device_require_collect = (
+            self.result_manager.get_require_info_collection_devices()
         )
-
-    def _get_brief_result(self):
-        failure_lines = " ".join(
-            f"{line_number}"
-            for _, details in self.expect_result.items()
-            for result, line_number, line, _ in details
-            if not result
-        )
-        if failure_lines:
-            return f"Failed {failure_lines}"
-        return "Passed"
-
-    def report_all(self):
-        is_script_succeeded = True
-        devices_info = {}
-        for testcase_id in self.expect_result:
-            if testcase_id in self.testcase_dev_info:
-                is_succeed = self.report_to_oriole(
-                    testcase_id, self.testcase_dev_info[testcase_id]
-                )
-                if not is_succeed:
-                    is_script_succeeded = False
-            else:
-                if testcase_id in self.report_testcases:
-                    dev = self.report_testcases[testcase_id]
-                    if dev not in devices_info:
-                        devices_info[dev] = self.__collect_dut_info(dev)
-                    is_succeed = self.report_to_oriole(testcase_id, devices_info[dev])
-                    if not is_succeed:
-                        is_script_succeeded = False
-
-        res_str = "passed" if is_script_succeeded else "failed"
-        summary.update_testscript(Path(self.script).stem, res_str)
-        if not is_script_succeeded:
-            summary.add_failed_testscript(
-                Path(self.script).stem, self.script, self._get_failure_details()
-            )
-        result = self._get_brief_result()
-        summary.dump_result_to_brief_summary(
-            Path(self.script).stem, self.script, result
-        )
+        devices_info = {
+            dev: self.__collect_dut_info(dev) for dev in device_require_collect
+        }
+        self.result_manager.report_script_result(devices_info)
 
     def _report(self, parameters):
         testcase_id = parameters[0]
-        if testcase_id not in self.expect_result:
-            logger.error("Results for %s could not be found", testcase_id)
-        self.report_testcases[testcase_id] = self.cur_device.dev_name
-
-        if not self.cur_device.dev_name.startswith("PC"):
-            return
-        if testcase_id in self.testcase_dev_info:
-            return
-        dut = env.get_dut()
-        if dut is None:
-            raise ReportUnderPCWithoutDut(
-                "Please specify DUT or collect device info ahead when reporting under PC section."
-            )
-        self.report_testcases[testcase_id] = dut
+        self.result_manager.add_report_qaid_and_dev_map(
+            testcase_id, self.cur_device.dev_name
+        )
 
     def __collect_dev_info_for_oriole(self, device):
         collect_on_the_fly = env.get_dut_info_on_fly()
@@ -543,29 +454,28 @@ class Executor:
         return dut_info_for_oriole
 
     def _collect_dev_info(self, parameters):
-        testcase_id = parameters[0]
+        qaid = parameters[0]
         device = self.cur_device.dev_name
-        self.testcase_dev_info[testcase_id] = self.__collect_dev_info_for_oriole(device)
+        device_info = self.__collect_dev_info_for_oriole(device)
+        self.result_manager.add_dev_info_requested_by_user(qaid, device_info)
 
     def _setvar(self, parameters):
         rule, name = parameters
-        print(rule)
         rule = self._normalize_regexp(rule)
         logger.info("rule in set_var is %s", rule)
         match, _ = self.cur_device.expect(rule)
         if match:
             value = match.group(1)
             env.add_var(name, value)
-            logger.info("Succeeded to set variable %s to (%s)", name, value)
-            return
-        logger.error("Failed to execute setvar.")
-        return
+            logger.info("Succeeded to set variable %s to '%s'", name, value)
+        else:
+            logger.error("Failed to execute setvar.")
 
     def _varexpect(self, parameters):
         (
             _,
             variable,
-            testcase_id,
+            qaid,
             str_wait_seconds,
             fail_match,
             _,
@@ -580,20 +490,19 @@ class Executor:
         if value.startswith('"') and value.endswith('"'):
             value = value[1:-1]
         result, cli_output = self.cur_device.expect(value, wait_seconds)
-
-        self.expect_result[testcase_id].append(
-            (
-                bool(result) ^ fail_match,
-                self.last_line_number,
-                self.lines[self.last_line_number - 1],
-                cli_output,
-            )
+        is_succeeded = bool(result) ^ fail_match
+        self.result_manager.add_qaid_expect_result(
+            qaid,
+            is_succeeded,
+            self.last_line_number,
+            self.lines[self.last_line_number - 1],
+            cli_output,
         )
-        result_str = "Succeeded" if bool(result) ^ fail_match else "Failed"
+        result_str = "Succeeded" if is_succeeded else "Failed"
         logger.info(
             "%s to expect for testcase: %s, with variable:%s value: (%s) and fail_match: %s in %ss.",
             result_str,
-            testcase_id,
+            qaid,
             variable,
             value,
             fail_match,
@@ -602,7 +511,7 @@ class Executor:
 
     def _sleep(self, parameters):
         seconds = int(parameters[0])
-        sleep_with_print(seconds, logger_func=logger.notice)
+        sleep_with_progress(seconds, logger_func=logger.notice)
 
     def _forcelogin(self, _):
         self.cur_device.force_login()
@@ -756,7 +665,7 @@ class Executor:
                     self.last_line_number is None
                     or self.last_line_number != line_number
                 ):
-                    logger.notify(f"{line_number} {self.lines[line_number - 1]}")
+                    logger.debug("%d  %s", line_number, self.lines[line_number - 1])
                     self.last_line_number = line_number
             func = getattr(self, f"_{code.operation}")
             parameters = code.parameters
@@ -783,7 +692,7 @@ class Executor:
             if value is not None:
                 _string = _string.replace(m, str(value))
             else:
-                logger.notify("Failed to find the value for %s", var_name)
+                logger.error("Failed to find the value for %s", var_name)
         return _string
 
     def _variable_interpolation(self, original_parameter):

@@ -1,3 +1,4 @@
+import re
 import time
 
 from lib.services import env, logger
@@ -19,8 +20,9 @@ class FortiVM(FosDev):
     def reset_firewall(self, cmd):
         if self.is_vdom_enabled:
             self._goto_global_view()
-        logger.info("Override '%s' command to keep vm license!", cmd)
-        cmd = "execute factoryreset keepvmlicense"
+        if re.match("^exe.*?factoryreset$", cmd):
+            logger.info("Override '%s' command to keep vm license!", cmd)
+            cmd = "execute factoryreset keepvmlicense"
         self.send_line(cmd)
         self.search("y/n", 30)
         self.send_line("y")

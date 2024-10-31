@@ -5,7 +5,7 @@ from lib.services import UPGRADE, Image, env, image_server, logger, platform_man
 from lib.utilities.exceptions import KernelPanicErr, RestoreFailure
 
 from .common import BURN_IMAGE_STAGE
-from .device import Device
+from .device import DEFAULT_PROMPTS, Device
 from .fosdev_conn import FosDevConn
 
 DEFAULT_MGMT = "port1"
@@ -17,7 +17,6 @@ ERROR_INFO = (
     "failed command",
 )
 TEN_SECONDS = 10
-DEFAULT_PATTERN = r"# $"
 
 
 class FosDev(Device):
@@ -56,20 +55,6 @@ class FosDev(Device):
         self.send_command("")
         self.clear_buffer()
 
-    def get_device_info(self, on_fly=False):
-        if self._device_info is None or on_fly:
-            t1 = time.perf_counter()
-            system_status = self.system_status
-            t2 = time.perf_counter()
-            logger.info("It takes %s s to collect system status.", t2 - t1)
-            t1 = time.perf_counter()
-            autoupdate_versions = self.get_autoupdate_versions()
-            t2 = time.perf_counter()
-            logger.info("It takes %s s to collect autoupdate versions.", t2 - t1)
-
-            self._device_info = {**system_status, **autoupdate_versions}
-        return self._device_info
-
     def set_output_mode(self, mode="standard", is_vdom_enabled=None):
         is_vdom_enabled = is_vdom_enabled or self.is_vdom_enabled
         if is_vdom_enabled:
@@ -80,12 +65,6 @@ class FosDev(Device):
             time.sleep(0.5)
         if is_vdom_enabled:
             self._return_to_user_view()
-
-    def is_reset_command(self, command):
-        pattern = re.compile(
-            r"(exe.*factoryreset.*|exe.*forticarrier-license|exe.*restore)"
-        )
-        return re.match(pattern, command)
 
     def update_settings_after_reset(self):
         self.conn.login("")
@@ -107,16 +86,17 @@ class FosDev(Device):
         self.keep_running = keep_running
 
     def force_login(self):
-        logger.info("Start force logout and then login.")
+        logger.debug("Start force logout and then login.")
         cnt = 0
         while cnt < 3:
             ctrl_c = "\x03"
             ctrl_d = "\x04"
             logger.debug("Start sending ctrl_c and ctrl_d.")
             self.conn.send(ctrl_c)
-            time.sleep(0.5)
+            time.sleep(1)
             self.conn.send(ctrl_d)
-            time.sleep(0.5)
+            time.sleep(1)
+            # NOTE: if the interval is too short, for FVM simulated console, it may hang
             m, _ = self.conn.expect("login:", 10)
             if m is None:
                 logger.debug("Failed to execute ctrl-d in the device.")
@@ -231,16 +211,16 @@ class FosDev(Device):
 
     def restore_image(self, release, build, need_reset=True, need_burn=False):
         if not need_burn and need_reset:
-            logger.notify("Start reset firewall.")
+            logger.debug("Start reset firewall.")
             self.reset_firewall("exe factoryreset")
 
-        logger.notify("Start configuring output mode to be standard.")
+        logger.debug("Start configuring output mode to be standard.")
         self.set_output_mode()
-        logger.notify("Succeeded configuring output mode to be standard.")
+        logger.debug("Succeeded configuring output mode to be standard.")
         self.model = self.system_status["platform"]
-        logger.notify("Start configuring mgmt settings.")
+        logger.debug("Start configuring mgmt settings.")
         self.pre_mgmt_settings()
-        logger.notify("Finished configuring mgmt settings.")
+        logger.debug("Finished configuring mgmt settings.")
         if self.is_vdom_enabled:
             self._goto_global_view()
         image = Image(self.image_prefix(), release, build, UPGRADE)
@@ -308,20 +288,17 @@ class FosDev(Device):
                 "mgmt_ip/mgmt_mask/mgmt_gw in device config file is not configured."
             )
 
-    def send_command(self, command, pattern=DEFAULT_PATTERN, timeout=TEN_SECONDS):
-        if pattern != DEFAULT_PATTERN:
-            match, output = super().send_command(command, pattern, timeout)
-        else:
-            match, output = super().send_command(command, timeout=timeout)
+    def send_command(self, command, pattern=DEFAULT_PROMPTS, timeout=TEN_SECONDS):
+        match, output = super().send_command(command, pattern, timeout=timeout)
         is_succeeded = self._if_succeeded_to_execute_command(output, command)
         return is_succeeded, match, output
 
     def _if_succeeded_to_execute_command(self, result, command):
         if any(err in result for err in ERROR_INFO):
+            logger.error("Failed to execute command: '%s'.", command)
             error_report = result.splitlines()
-            logger.error("Failed to execute command: %s.", command)
-            error_info = " ".join(error_report[2:-2])
-            logger.error("Error information: %s", error_info)
+            error_info = "\n".join(error_report[2:-2])
+            logger.error("Error information: \n'%s'\n", error_info)
             return False
-        logger.info("Succeeded to execute command %s.", command)
+        logger.debug("Succeeded to execute command '%s'.", command)
         return True

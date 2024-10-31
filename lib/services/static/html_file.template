@@ -1,0 +1,5 @@
+{% extends "base.template" %}
+
+{% block content %}
+ {{ file_content | safe }}
+{% endblock %}

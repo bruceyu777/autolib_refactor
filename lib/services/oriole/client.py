@@ -6,34 +6,37 @@ import time
 
 import requests
 
+from lib.services.environment import env
 from lib.services.fos import platform_manager
+from lib.services.log import logger
+from lib.services.output import output
+from lib.services.summary import summary
 
-from ..environment import env
-from ..log import logger
-from ..output import output
-from ..summary import summary
-from .meta import HOST, ORIOLE_FIELD_FOS_SOURCE, ORIOLE_REPORT_FIXED_FIELDS, PORT
-
-REPORT_FILE = "report.json"
+from .meta import (
+    ORIOLE_FIELD_FOS_SOURCE,
+    ORIOLE_REPORT_FIXED_FIELDS,
+    ORIOLE_SUBMIT_API_URL,
+    REPORT_FILE,
+)
 
 
 class OrioleClient:
+
     def __init__(self):
         self.user = None
         self.password = None
         self.specified_fields = None
-        self.api = f"http://{HOST}:{PORT}/api/"
-        self.file_name = output.compose_summary_file(REPORT_FILE)
         self.submit_flag = "None"
         self.reports = []
         self.release_tag = None
 
     def set_user_cfg(self, args):
-        self.user = env.get_section_var("ORIOLE", "USER")
-        self.password = env.get_section_var("ORIOLE", "ENCODE_PASSWORD")
         self.submit_flag = (
             args.submit_flag if hasattr(args, "submit_flag") else self.submit_flag
         )
+        if self.submit_flag:
+            self.user = env.get_section_var("ORIOLE", "USER")
+            self.password = env.get_section_var("ORIOLE", "ENCODE_PASSWORD")
         selected_fields = env.filter_env_section_items("ORIOLE", "RES_FIELD")
         self.specified_fields = {k.lower(): v for k, v in selected_fields.items()}
         if "RES_FIELD_MARK" not in self.specified_fields:
@@ -42,14 +45,15 @@ class OrioleClient:
     def send_oriole(self, user, password, report, release_tag):
         response = None
         try:
-            url = self.api + "oriole"
             payload = {
                 "user": user,
                 "password": password,
                 "report": report,
                 "release_tag": release_tag,
             }
-            response = requests.request("POST", url, data=payload, timeout=60)
+            response = requests.request(
+                "POST", ORIOLE_SUBMIT_API_URL, data=payload, timeout=60
+            )
             succeeded = response.status_code == 200
         except Exception:
             logger.exception("Failed to report to oriole!")
@@ -59,7 +63,7 @@ class OrioleClient:
             if response is not None:
                 logger.error("Error details from Oriole: %s", response.text)
             else:
-                logger.error("Unable to access to %s", url)
+                logger.error("Unable to access to %s", ORIOLE_SUBMIT_API_URL)
         return succeeded
 
     def submit(self):
@@ -76,7 +80,7 @@ class OrioleClient:
             else:
                 logger.error("Failed to report to oriole.")
         t2 = time.perf_counter()
-        logger.notify("It takes %s s to submit.", t2 - t1)
+        logger.info("It takes %.1f s to submit.", t2 - t1)
         return succeeded
 
     def gen_plt_info_for_oriole(self, device_info, report):
@@ -147,12 +151,9 @@ class OrioleClient:
                 else:
                     new_lines.append(line)
         report_str = "\n".join(new_lines)
-        with open(self.file_name, "w") as f:
+        report_filename = output.compose_summary_file(REPORT_FILE)
+        with open(report_filename, "w") as f:
             f.write(report_str)
-
-    @staticmethod
-    def _compose_filename():
-        return "oriole_report.json"
 
 
 oriole = OrioleClient()

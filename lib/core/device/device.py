@@ -11,27 +11,32 @@ MAX_TIMEOUT_FOR_REBOOT = 10 * 60
 
 UNIVERSAL_PROMPTS = (r"(?<!--)[$#>]\s?$", r"(?P<windows_prompt>\:.*?\>)")
 
+FOS_LOGIN_PROMPT = r"[\w\-]{1,35} login:\s*$"
+
 FOS_UNIVERSAL_PROMPTS = (
-    r"^[\w\-]{1,35} login:\s*$",
+    FOS_LOGIN_PROMPT,
     r"[P|p]assword:\s*$",
 )
 
 AUTO_PROCEED_RULE_MAP = {
     r"\(y/n\)$": "y",
-    r"\(yes/no.*\)\??": "yes",
+    r"\(yes/no.*\)\?*$": "yes",
     r"\[Y/N\]\?": "Y",
-    r"to accept\): ": "a",
-    r"\[confirm\]": "y",
-    r"--More-- $": " ",
+    r"to accept\): $": "a",
+    r"\[confirm\]$": "y",
+    r"--More--\s*$": " ",
 }
 
-SYSCTRL_COMAND = (r"Admin:\s*$",)
+AUTO_PROCEED_PATTERNS = "|".join(AUTO_PROCEED_RULE_MAP.keys())
+MAX_AUTO_PROCEED_TIMES = 6
+
+SYSCTRL_COMMAND = (r"Admin:\s*$",)
 FTP_NAME_PROMPT = (r"Name\s*\(.+\):\s*$",)
 DEFAULT_PROMPTS = "|".join(
     UNIVERSAL_PROMPTS
     + FOS_UNIVERSAL_PROMPTS
     + tuple(AUTO_PROCEED_RULE_MAP.keys())
-    + SYSCTRL_COMAND
+    + SYSCTRL_COMMAND
     + FTP_NAME_PROMPT
 )
 DISABLE = "disable"
@@ -55,11 +60,13 @@ class Device:
         self.keep_running = False
         self.confirm_with_newline = False
         self.wait_for_confirm = False
-        self.connect()
         self.embeded_conn = False
-        self.fnsysctl = False
+        self.connect()
         self.license_info = {}
         self._extract_license_info()
+
+    def __str__(self):
+        return f"{type(self).__name__}({self.dev_name})"
 
     def _reconnect_if_exited(self):
         expected_switch_prompts = (
@@ -70,30 +77,30 @@ class Device:
                 "", expected_switch_prompts, DEFAULT_TIMEOUT_FOR_PROMPT
             )
             if matched is None:
-                logger.notify(
+                logger.error(
                     "Failed to switch to device:%s, start reconnecting.",
                     self.dev_name,
                 )
                 self.connect()
-                logger.notify("Device:%s is reconnected.", self.dev_name)
-            logger.info("The output is %s.", output)
-            logger.info("The matched is %s.", matched)
+                logger.debug("Device:%s is reconnected.", self.dev_name)
+            logger.debug("The output is %s.", output)
+            logger.debug("The matched is %s.", matched)
         except Exception:
-            logger.notify(
+            logger.debug(
                 "Exception happened when switching to device:%s, start reconnecting.",
                 self.dev_name,
             )
             self.connect()
-            logger.notify("Device:%s is reconnected.", self.dev_name)
+            logger.debug("Device:%s is reconnected.", self.dev_name)
 
     def switch(self, retry=0):
         if retry > 3:
-            logger.info("Failed to switch device: %s", self.dev_name)
+            logger.debug("Failed to switch device: %s", self.dev_name)
         try:
             if self.keep_running:
                 return
             self._reconnect_if_exited()
-            logger.info("Start login device %s", self.dev_name)
+            logger.debug("Start login device %s", self.dev_name)
             self.force_login()
             self.clear_buffer()
 
@@ -137,16 +144,16 @@ class Device:
         return False
 
     def sysctl_login(self, s):
-        for key in SYSCTRL_COMAND:
+        for key in SYSCTRL_COMMAND:
             if re.match(key, s):
                 return True
         return False
 
     @property
     def system_status(self):
-        self.clear_buffer()
-        *_, system_info_raw = self.send_command("get system status", timeout=10)
-        logger.debug("System info captured: %s", system_info_raw)
+        *_, system_info_raw = self.send_command(
+            "get system status", pattern="Last reboot reason.*?# $", timeout=10
+        )
         selected_lines = [
             l.split(": ", maxsplit=1) for l in system_info_raw.splitlines() if ": " in l
         ]
@@ -166,11 +173,11 @@ class Device:
             t1 = time.perf_counter()
             system_status = self.system_status
             t2 = time.perf_counter()
-            logger.info("It takes %s s to collect system status.", t2 - t1)
+            logger.debug("It takes %.1f s to collect system status.", t2 - t1)
             t1 = time.perf_counter()
             autoupdate_versions = self.get_autoupdate_versions()
             t2 = time.perf_counter()
-            logger.info("It takes %s s to collect autoupdate versions.", t2 - t1)
+            logger.debug("It takes %.1f s to collect autoupdate versions.", t2 - t1)
             system_status_selected = {
                 k: v for k, v in system_status.items() if k not in autoupdate_versions
             }
@@ -190,7 +197,7 @@ class Device:
             self._goto_global_view()
         self.clear_buffer()
         *_, versions_raw = self.send_command("diag autoupdate versions", timeout=10)
-        logger.info("The autoupdate version is\n%s", versions_raw)
+        logger.debug("The autoupdate version is\n%s", versions_raw)
         pattern = re.compile(
             r"\r\n([^\r\n]+)\r\n--+\r\nVersion: ([0-9.]+)[ \r\n]", flags=re.M | re.S
         )
@@ -211,48 +218,86 @@ class Device:
     def _return_to_user_view(self):
         self.send_command("end")
 
+    def _handle_embeded_session(self, command):
+        new_session_commands = ("telnet ", "ssh ", "sshpass ", "ftp ")
+        if command.startswith(new_session_commands):
+            self.embeded_conn = True
+        if command == "exit":
+            self.embeded_conn = False
+        return self.embeded_conn
+
+    def _translate_signal_command(self, command):
+        mapping = {
+            "ctrl_b": "\x02",
+            "ctrl_c": "\x03",
+            "ctrl_d": "\x04",
+            "backspace": "\x08",
+        }
+        return mapping.get(command.strip(), command)
+
+    def _process_command(self, command):
+        command = self._translate_signal_command(command)
+        self._handle_embeded_session(command)
+        return command
+
+    @staticmethod
+    def is_reboot_command(command):
+        reboot_command_patterns = (
+            r"^exe[^\s]*\s+reboot",
+            r"^exe[^\s]*\s+format",
+            r"^exe[^\s]*\s+vm-license\s+[^\s]+",
+            r"^exe[^\s]*\s+restore\s+(image|config|vmlicense)",
+            r"^diag[^\s]*\s+sys[^\s]*\s+flash[^\s]*\s+format",
+            r"^diag[^\s]*\s+deb[^\s]*\s+kernel\s+sysrq\s+command\s+crash",
+        )
+        return any(re.match(pattern, command) for pattern in reboot_command_patterns)
+
+    def _send_command(self, command, pattern, timeout):
+        self.clear_buffer()
+        pattern = f"{pattern}|{AUTO_PROCEED_PATTERNS}"
+        command = self._process_command(command)
+        start_time = time.time()
+        auto_proceed_times = 0
+        matched, output = self.conn.send_command(command, pattern, timeout)
+        logger.info(output)
+        while time.time() - start_time < timeout:
+            command = self.require_confirm(matched.group())
+            if command is None:
+                break
+            if auto_proceed_times > MAX_AUTO_PROCEED_TIMES:
+                logger.warning("Stopping AUTOPROCEED by sending CTRL_C")
+                matched, additional_output = self.conn.send_command("\x03", pattern, 3)
+                logger.info(additional_output)
+                output += additional_output
+                break
+            matched, additional_output = self.conn.send_command(
+                command, pattern, timeout
+            )
+            logger.info(additional_output)
+            output += additional_output
+            auto_proceed_times += 1
+        else:
+            logger.debug("* TIMEOUT * Unable to match pattern...")
+        return matched, output
+
     def send_command(
         self,
         command,
         pattern=DEFAULT_PROMPTS,
-        timeout=MAX_TIMEOUT_FOR_REBOOT,
+        timeout=DEFAULT_TIMEOUT_FOR_PROMPT,
     ):
-        if command == "ctrl_c":
-            command = "\x03"
-        if command == "ctrl_d":
-            command = "\x04"
-
-        if command.startswith(("telnet ", "ssh ", "sshpass ", "ftp ")):
-            self.embeded_conn = True
-        if command == "exit":
-            self.embeded_conn = False
-        if self.wait_for_confirm:
-            expected_pattern = "|".join(AUTO_PROCEED_RULE_MAP.keys())
-        else:
-            expected_pattern = pattern
-        matched, output = self.conn.send_command(command, expected_pattern, timeout)
-        if self.wait_for_confirm:
-            self.wait_for_confirm = False
-        if matched:
-            logger.info("Matched group is '%s'", matched.group())
-        while matched is not None:
-            confirm_str = self.require_confirm(matched.group())
-            if confirm_str:
-                logger.info("Matched group is '%s'", confirm_str)
-                matched, output = self.conn.send_command(confirm_str, pattern, timeout)
-            elif self.require_login(matched.group()) and not self.embeded_conn:
-                logger.info("Start login:")
-                if not self.fnsysctl:
-                    self.conn.login()
-                else:
-                    self.fnsysctl = False
-                break
-            elif self.sysctl_login(matched.group()):
-                logger.info("Fnsysctl login:")
-                self.fnsysctl = True
-                break
-            else:
-                break
+        if self.embeded_conn:
+            return self._send_command(command, pattern, timeout)
+        is_reboot_command = self.is_reboot_command(command)
+        if is_reboot_command and pattern == DEFAULT_PROMPTS:
+            pattern = FOS_LOGIN_PROMPT
+            timeout = MAX_TIMEOUT_FOR_REBOOT
+            time.sleep(0.1)
+            # NOTE: if previous command is 'get system status' and the first character of
+            # the command will be eaten by FOS without this delay, it will not work.
+        matched, output = self._send_command(command, pattern, timeout)
+        if is_reboot_command:
+            self.conn.login()
         return matched, output
 
     def start_record_terminal(self, folder_name):

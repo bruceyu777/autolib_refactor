@@ -12,10 +12,11 @@ class Compiler:
     def _compile_file(self, file_name):
         if file_name in self.files:
             return
-        lexer = Lexer(file_name)
+        in_debug_mode = getattr(logger, "in_debug_mode", False)
+        lexer = Lexer(file_name, dump_token=in_debug_mode)
         tokens, lines = lexer.parse()
         parser = Parser(file_name, tokens, lines)
-        vm_codes, devices, called_files = parser.run()
+        vm_codes, devices, called_files = parser.run(dump_code_flag=in_debug_mode)
 
         self.files[file_name] = vm_codes
         self.devices |= devices
@@ -26,7 +27,7 @@ class Compiler:
 
     def run(self, file_name):
         self._compile_file(file_name)
-        logger.notice("Compiled %s", file_name)
+        logger.debug("Compiled %s", file_name)
 
     def retrieve_vm_codes(self, file_name):
         return self.files[file_name]

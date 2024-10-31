@@ -37,6 +37,9 @@ class ScriptSyntax:
         self.line_pattern = self.generate_line_pattern()
         self.token_pattern = self.generate_token_pattern()
 
+    def get_deprecated_cmd_replace_patterns(self):
+        return self.syntax.get("deprecated_commands_replacement", {})
+
     def is_valid_command(self, command):
         return command.startswith(tuple(self.syntax["valid_commands"]))
 

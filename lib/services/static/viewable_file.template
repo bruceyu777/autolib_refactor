@@ -1,0 +1,8 @@
+{% extends "base.template" %}
+
+{% block content %}
+    <pre class="line-numbers"><code class="language-shell">{{file_content}}</code></pre>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-bash.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
+{% endblock %}

@@ -38,9 +38,8 @@ class OutputBuffer:
         t1 = time.perf_counter()
         result = regex.search(pattern, self.output[pos:])
         t2 = time.perf_counter()
-
-        logger.debug("pattern match for %s takes %s s", pattern, t2 - t1)
-        logger.debug("the result is %s", result)
+        logger.debug("pattern match for %s takes %.1f s", pattern, t2 - t1)
+        logger.debug("the matched result is '%s'", result)
         return result
 
     def expect(self, pattern):
@@ -67,6 +66,19 @@ class OutputBuffer:
         return regex_flags
 
     @staticmethod
+    def _to_line_buffer_pattern(pattern):
+        patterns_to_update = {
+            r"\.\*": r"[^\n\r]*",
+            r"^\(\^": r"^(",
+            r"\$*\)\$*": r")",
+            r"[\r\n\\r\\n]$": r"[^\r\n]",
+            r"^\^": r"(?:[\n\r]|^)",
+        }
+        for original, target in patterns_to_update.items():
+            pattern = regex.sub(original, target, pattern)
+        return pattern
+
+    @staticmethod
     def _split_flag_and_pattern(pattern):
         """
         (?i) — Case Insensitive: Enables case-insensitive matching.
@@ -85,20 +97,21 @@ class OutputBuffer:
         if match:
             flags = match.group("flags")
             pattern = match.group("pattern")
-        if "s" not in flags:
-            flags += "s"
+        for flag in ("s", "m"):
+            if flag not in flags:
+                flags += flag
         if "n" in flags:
             # in tcl/tk, (?n) was used to disable newline matching
             flags = flags.replace("n", "")
-        else:
-            flags += "m"
-            # by default in tcl/tk, the match pattern is (?sm)
+            pattern = OutputBuffer._to_line_buffer_pattern(pattern)
         return flags, pattern
 
     @staticmethod
     def _convert_tcl_to_python_pattern(pattern):
-        logger.info("The original pattern is: %s", pattern)
+        logger.debug("The original pattern is: %s", pattern)
         flags, pattern = OutputBuffer._split_flag_and_pattern(pattern)
         regex_flags = OutputBuffer._to_regex_flags(flags)
-        logger.info("The converted pattern is: '%s', flags: '%s'", pattern, regex_flags)
+        logger.debug(
+            "The converted pattern is: '%s', flags: '%s'", pattern, regex_flags
+        )
         return regex.compile(pattern, flags=regex_flags)

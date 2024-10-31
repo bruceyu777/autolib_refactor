@@ -4,6 +4,7 @@ import pexpect
 
 from lib.services import logger
 from lib.utilities.exceptions import LoginDeviceFailed
+from lib.utilities.util import sleep_with_progress
 
 from .common import BURN_IMAGE_STAGE
 from .dev_conn import DevConn
@@ -16,7 +17,7 @@ MAX_VIEW_LAYER = 5
 
 
 class FosDevConn(DevConn):
-    RETRY_MAX_TIME = 15
+    RETRY_MAX_TIME = 3
     FOS_DEFAULT_PASSWORD = ""
 
     def __init__(self, dev_name, connection, user_name, password, cur_stage):
@@ -29,13 +30,13 @@ class FosDevConn(DevConn):
 
     def _connected(self):
         self._client.sendline("")
-        logger.info("enter into connect")
+        logger.debug("enter into connect")
         index = self._client.expect_exact(
             ["login:", "#", "Password:", pexpect.TIMEOUT, pexpect.EOF]
         )
-        logger.info("enter into connect: the index is %s", index)
+        logger.debug("enter into connect: the index is %s", index)
         if index in [0, 1, 2]:
-            logger.info(
+            logger.debug(
                 "In connected, current buffer output is %s",
                 self._client.before + self._client.after,
             )
@@ -44,10 +45,10 @@ class FosDevConn(DevConn):
         elif index == 1:
             self.conn_state = "_cache_logged"
         elif index == 2:
-            logger.info("Password appears before login, ignored it.")
+            logger.debug("Password appears before login, ignored it.")
             self.conn_state = "_retry"
         elif index == 3:
-            logger.error("\nFailed to login %s, will retry it again.", self.dev_name)
+            logger.debug("\nFailed to login %s, will retry it again.", self.dev_name)
             self.conn_state = "_retry"
         else:
             logger.error("\nFailed to login %s as connection is closed.", self.dev_name)
@@ -55,21 +56,21 @@ class FosDevConn(DevConn):
 
     def _cache_logged(self):
         view_layer = 0
-        logger.info("Enter into cache logged.")
+        logger.debug("Enter into cache logged.")
         if not self.init_view:
             self.conn_state = "_logged_in"
             return
         while view_layer < MAX_VIEW_LAYER:
             self._client.sendline("")
-            logger.info("Start expecting prompts.")
+            logger.debug("Start expecting prompts.")
             index = self._client.expect_exact(
                 ["#", ") #", pexpect.TIMEOUT, pexpect.EOF]
             )
-            logger.info(
+            logger.debug(
                 "In connected, current buffer output is %s",
                 self._client.before + self._client.after,
             )
-            logger.info("Finished expecting prompts.")
+            logger.debug("Finished expecting prompts.")
             if index == 0:
                 self.conn_state = "_logged_in"
                 return
@@ -101,7 +102,7 @@ class FosDevConn(DevConn):
             self.use_default_password = True
             self.conn_state = "_retry"
         elif index == 2:
-            logger.info("Required to reset password.")
+            logger.debug("Required to reset password.")
             self.conn_state = "_reset_password"
 
     def _reset_password(self):
@@ -113,31 +114,33 @@ class FosDevConn(DevConn):
         self.conn_state = "_logged_in"
 
     def _retry(self):
+        self._client.sendline("\n")
+        time.sleep(0.1)
         self._client.sendcontrol("c")
         if self.retry_cnt > self.RETRY_MAX_TIME:
             logger.error("\nFailed to login after retry for %s times", self.retry_cnt)
             self.conn_state = "_failed"
             return
-        time.sleep(60)
+        sleep_with_progress(60 * self.retry_cnt)
         self.retry_cnt += 1
         self.conn_state = "_connected"
 
     def login(self, reset=False, init_view=True):
         if self.cur_stage == BURN_IMAGE_STAGE:
-            logger.info("Do not need to login the device for burning image.")
+            logger.debug("Do not need to login the device for burning image.")
             return
 
         self.init_view = init_view
-        logger.info("enter into login")
+        logger.debug("enter into login")
         try:
-            logger.info("Start sending line.")
+            logger.debug("Start sending line.")
             self._client.sendline("")
-            logger.info("Start reading.")
+            logger.debug("Start reading.")
             self._client.expect(".+")
         except pexpect.TIMEOUT:
-            logger.info("No more characters cleared for login.")
+            logger.debug("No more characters cleared for login.")
 
-        logger.info(
+        logger.debug(
             "current buffer output for login is %s",
             self._client.before + self._client.after,
         )
@@ -150,7 +153,7 @@ class FosDevConn(DevConn):
         if self.conn_state == "_failed":
             raise LoginDeviceFailed(self.conn)
         if self.conn_state == "_logged_in":
-            logger.info("Succeeded to login the device: %s. ", self.dev_name)
+            logger.debug("Succeeded to login the device: %s. ", self.dev_name)
 
 
 if __name__ == "__main__":

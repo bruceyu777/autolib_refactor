@@ -38,7 +38,7 @@
     "rename",
     "myexec",
     "move",
-    "cleanbuff",
+    "clean_buffer",
     "admin",
     "expect_ctrl_c",
     "restore_image",
@@ -281,5 +281,14 @@
         [["identifier", "number"], null]
       ]
     ]
+  },
+  "deprecated_commands_replacement": {
+    "^myexe[^\\s]*\\s+(.*)$": "execute \\1",
+    "^mynext(.*?)": "next",
+    "^myset[^\\s]*\\s+(.*)$": "set \\1",
+    "^mydel[^\\s]*\\s+(.*)$": "delete \\1",
+    "^myend": "end",
+    "^pcsend[^\\s]*\\s+(.*)$": "send_literal \"\\1\"",
+    "^sendraw[^\\s]*\\s+(.*)$": "send_literal \\1"
   }
 }

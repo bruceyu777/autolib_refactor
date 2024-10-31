@@ -1,0 +1,25 @@
+{% extends "base.template" %}
+
+{% block content %}
+<table>
+    <thead>
+        <tr>
+            <th>File Name</th>
+            <th class="file-size">File Size</th>
+            <th class="file-date">Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in directory_list %}
+            <tr>
+                <td class="file-name">
+                    <span class="file-icon {{ item.icon }}"></span>
+                    <a href="{{ item.link }}">{{ item.display_name }}</a>
+                </td>
+                <td class="file-size">{{ item.size or '-' }}</td>
+                <td class="file-date">{{ item.date or '-' }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

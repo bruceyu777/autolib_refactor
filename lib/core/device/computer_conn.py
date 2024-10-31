@@ -5,8 +5,7 @@ import pexpect
 from lib.services import env, logger
 
 from .dev_conn import DevConn
-from .log_file import LogFile
-from .pexpect_wrapper import Spawn
+from .pexpect_wrapper import LogFile, Spawn
 
 
 class ComputerConn(DevConn):
@@ -20,7 +19,7 @@ class ComputerConn(DevConn):
             ]
         )
 
-        logger.info("enter into connect: the index is %s", index)
+        logger.debug("enter into connect: the index is %s", index)
         if index == 0:
             self._client.sendline("yes")
             self.login()
@@ -34,9 +33,7 @@ class ComputerConn(DevConn):
 
     def send_command(self, command, pattern, timeout):
         # make sure to match the output after command is send
-
         # self._read_output()
-
         # For diag commands, there are 3 types of output that could
         # be expected:
         # 1 output will be continue untill user input another command
@@ -45,13 +42,13 @@ class ComputerConn(DevConn):
 
         # pdb.set_trace()
         cur_pos = len(self.output_buffer)
-        logger.info("current command is %s", command)
-        logger.info("current pos in send_command is %s", cur_pos)
-        logger.info(
-            "current output in send_command is %s", self.output_buffer[cur_pos:]
+        logger.debug("current command is '%s'", command)
+        logger.debug("current pos in send_command is %s", cur_pos)
+        logger.debug(
+            "current output in send_command is '%s'", self.output_buffer[cur_pos:]
         )
-        logger.info("Current pattern is %s", pattern)
-        self.client.sendline(command)
+        logger.debug("Current pattern is '%s'", pattern)
+        self.send_line(command)
 
         # For commands like this:
         # fosqa@ztna-client:~$ forticlient vpn edit sslvpn
@@ -71,22 +68,28 @@ class ComputerConn(DevConn):
             logger.warning("Failed to match %s in %s s.", pattern, timeout)
             return m, output
 
+    def _new_client(self):
+        if self._client:
+            self.close()
+        buffer_for_pexpect = self.get_clean_buffer_init_class()
+        self._client = Spawn(
+            self.conn,
+            buffer_for_pexpect,
+            logger.job_log_handler,
+            encoding="utf-8",
+            echo=False,
+            logfile=sys.stdout,
+            codec_errors="ignore",
+        )
+        self.log_file = LogFile(self._client, self.dev_name)
+        script = env.get_var("testing_script")
+        record = "setup" if script is None else script
+        self.start_record(record)
+
     @property
     def client(self):
-        if self._client is None:
-            buffer_for_pexpect = self.get_clean_buffer_init_class()
-            self._client = Spawn(
-                self.conn,
-                buffer_for_pexpect,
-                encoding="utf-8",
-                echo=False,
-                logfile=sys.stdout,
-                codec_errors="ignore",
-            )
-            self.log_file = LogFile(self._client, self.dev_name)
-            script = env.get_var("testing_script")
-            record = "setup" if script is None else script
-            self.start_record(record)
+        if not self._client or not self._client.isalive():
+            self._new_client()
             self.login()
             self.resume_stdout()
         return self._client

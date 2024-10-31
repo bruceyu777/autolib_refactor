@@ -22,5 +22,8 @@ setproctitle
 synlinkpy==0.0.13
 tftpy==0.8.2
 tomli
+tqdm
 typing-extensions
 urllib3
+wget
+zipp

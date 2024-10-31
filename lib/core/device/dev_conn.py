@@ -3,12 +3,12 @@ import sys
 import time
 
 import pexpect
+import ptyprocess
 
 from lib.services import env, logger
 
-from .log_file import LogFile
 from .output_buffer import OutputBuffer
-from .pexpect_wrapper import Spawn, new_buffer_init_class
+from .pexpect_wrapper import LogFile, Spawn, new_buffer_init_class
 
 READ_WAIT_TIME = 120
 WAIT_TIME = 60
@@ -44,34 +44,44 @@ class DevConn:
     def get_clean_buffer_init_class(self):
         device_type = self.dev_name.split("_")[0]
         buffer_clean_pattern = env.get_buffer_clean_pattern_by_dev_type(device_type)
-        return new_buffer_init_class(device_type, buffer_clean_pattern)
+        cls = new_buffer_init_class(device_type, buffer_clean_pattern)
+        return cls
+
+    def _new_client(self):
+        if self._client:
+            self.close()
+        buffer_for_pexpect = self.get_clean_buffer_init_class()
+        self._client = Spawn(
+            self.conn,
+            buffer_for_pexpect,
+            logger.job_log_handler,
+            encoding="utf-8",
+            echo=True,
+            logfile=sys.stdout,
+            codec_errors="ignore",
+        )
+        self.log_file = LogFile(self._client, self.dev_name)
+        script = env.get_var("testing_script")
+        record = "setup" if script is None else script
+        self.start_record(record)
 
     @property
     def client(self):
-        if self._client is None:
-            buffer_for_pexpect = self.get_clean_buffer_init_class()
-            self._client = Spawn(
-                self.conn,
-                buffer_for_pexpect,
-                encoding="utf-8",
-                echo=True,
-                logfile=sys.stdout,
-                codec_errors="ignore",
-            )
-            self.log_file = LogFile(self.client, self.dev_name)
-            script = env.get_var("testing_script")
-            if script is not None:
-                self.start_record(script)
-            else:
-                self.start_record("setup")
-            # self.pause_stdout()
+        if not self._client or not self._client.isalive():
+            self._new_client()
             self.login()
-            # self.resume_stdout()
         return self._client
 
     def close(self):
-        self.client.sendline("exit")
-        self._client = None
+        try:
+            self._client.close()
+        except (
+            AttributeError,
+            OSError,
+            pexpect.ExceptionPexpect,
+            ptyprocess.PtyProcessError,
+        ) as e:
+            logger.debug("Failed to close the client(%s).", e)
 
     def login(self):
         raise NotImplementedError
@@ -86,26 +96,25 @@ class DevConn:
         # 1 output will be continue untill user input another command
         # 2 #
         # 3 need confirmStart configuring output mode to be standard.
-        # pdb.set_trace()
         cur_pos = len(self.output_buffer)
-        logger.info("current command is %s", command)
-        logger.info("current pos in send_command is %s", cur_pos)
-        logger.info(
-            "current output in send_command is %s", self.output_buffer[cur_pos:]
+        logger.debug("current command is '%s'", command)
+        logger.debug("current pos in send_command is %s", cur_pos)
+        logger.debug(
+            "current output in send_command is\n'%s'", self.output_buffer[cur_pos:]
         )
-        logger.info("Current pattern is %s", pattern)
+        logger.debug("Current pattern is '%s'", pattern)
 
         if command.endswith("?"):
-            self.client.send(command)
+            self.send(command)
         elif command == "nan_enter":
-            self.client.send("\x0d")
+            self.send("\x0d")
         elif command.startswith("backspace"):
             cnt = int(command.split(" ")[1])
             for _ in range(cnt):
-                self.client.send("\x08")
-            self.client.send("\x0d")
+                self.send("\x08")
+            self.send("\x0d")
         else:
-            self.client.sendline(command)
+            self.send_line(command)
         # make sure to match the output after command is send
         try:
             m, output = self.search(re.escape(command), ONE_SECOND, cur_pos)
@@ -115,7 +124,7 @@ class DevConn:
         if m:
             match_pos = match_pos + m.start()
         else:
-            logger.info(
+            logger.debug(
                 "current output in send_command is %s", self.output_buffer[match_pos:]
             )
         try:
@@ -130,12 +139,12 @@ class DevConn:
 
         logger.debug("The ouput for expect is: \n'%s'", output)
         if m is not None:
-            logger.info(
+            logger.debug(
                 "The buffer size is %s, the matched index is %s",
                 len(self.output_buffer),
                 m.end(),
             )
-            logger.info(
+            logger.debug(
                 "The buffer content that has been cleared is %s",
                 self.output_buffer[: m.end()],
             )
@@ -182,7 +191,7 @@ class DevConn:
     def _log_output(output):
         separator = "\n" + "-" * 80 + "\n"
         content = f"{separator} {output} {separator}"
-        logger.info("Buffer content is :%s", content)
+        logger.debug("Buffer content is :%s", content)
 
     def _dump_to_buffer(self):
         output = self.client.before + self.client.after
@@ -196,7 +205,7 @@ class DevConn:
             self._dump_to_buffer()
             return True
         except pexpect.TIMEOUT:
-            logger.info("No more characters captured.")
+            logger.debug("No more characters captured.")
             return False
 
     def start_record(self, folder_name):
@@ -210,7 +219,3 @@ class DevConn:
 
     def resume_stdout(self):
         self.log_file.resume_stdout()
-
-
-if __name__ == "__main__":
-    pass

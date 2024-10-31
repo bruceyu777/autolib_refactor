@@ -3,7 +3,7 @@ import time
 
 import pexpect
 
-from lib.services.image_server import UPGRADE, Image, image_server
+from lib.services.image_server import IMAGE_SERVER_IP, UPGRADE, Image, image_server
 from lib.services.log import logger
 
 from .bios import BIOS
@@ -24,7 +24,7 @@ class FortiGate(FosDev):
 
     def restore_image(self, release, build, need_reset=True, need_burn=False):
         if need_burn:
-            logger.notify("Start burn image.")
+            logger.debug("Start burn image.")
             self.burn_image(release, build)
             self.set_stage("start_from_login")
             self.login_firewall_after_reset()
@@ -170,11 +170,10 @@ class FortiGate(FosDev):
             "set_net_mask", "burn_netmask", fallback="255.255.255.0"
         )
         self._set_option_from_config("set_vlan_id", "bios_vlan_id", fallback="-1")
-        self._set_option_value("set_tftp_server_ip", "172.18.52.254")
+        self._set_option_value("set_tftp_server_ip", IMAGE_SERVER_IP)
         self.extract_model_from_boot_info(bootup_output)
         image = Image(self.image_prefix(), release, build, UPGRADE)
-        image_file = image_server.lookup_image(image)
-        image_loc = f"{image_file['parent_dir']}/{image_file['name']}"
+        image_loc = image_server.locate_image(image)
         logger.info("The image location is %s", image_loc)
         self._set_option_value("set_firmware_filename", f"{image_loc}")
         self.send(BIOS.command["review_tftp_settings"])

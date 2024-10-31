@@ -1,5 +1,6 @@
 import logging
 import sys
+from pathlib import Path
 
 from .output import output
 
@@ -30,33 +31,38 @@ def add_logger_handler(handler, level, formatter):
     logger.addHandler(handler)
 
 
-def add_stdout_stream(in_debug_mode):
+def add_stdout_stream():
     handler = logging.StreamHandler(sys.stdout)
-    if in_debug_mode:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
-        add_logger_handler(handler, logging.DEBUG, formatter)
-        return
     formatter = logging.Formatter("%(message)s")
-
-    add_logger_handler(handler, logging.ERROR, formatter)  # pylint: disable= no-member
     add_logger_handler(handler, logging.NOTICE, formatter)  # pylint: disable= no-member
 
 
 def add_file_stream(in_debug_mode):
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    if in_debug_mode:
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+    else:
+        formatter = logging.Formatter("%(message)s")
     log_file = output.compose_summary_file("autotest.log")
     handler = logging.FileHandler(log_file)
     level = logging.DEBUG if in_debug_mode else logging.INFO
     add_logger_handler(handler, level, formatter)
+    return handler
 
 
-def set_logger(in_debug_mode):
-    logger.setLevel(logging.DEBUG)
-    add_logging_level("NOTIFY", logging.INFO + 5)
+def update_output_subfolder(is_group_test, env_config_filename):
+    test_type = "group" if is_group_test else "script"
+    folder_suffix = f"{test_type}--{Path(env_config_filename).stem}"
+    output.update_output_folder_suffix(folder_suffix)
+
+
+def setup_logger(in_debug_mode, is_group_test, env_config_filename):
+    update_output_subfolder(is_group_test, env_config_filename)
     add_logging_level("NOTICE", logging.INFO + 10)
-    add_stdout_stream(in_debug_mode)
-    add_file_stream(in_debug_mode)
+    log_level = logging.DEBUG if in_debug_mode else logging.INFO
+    logger.setLevel(log_level)
+    setattr(logger, "in_debug_mode", in_debug_mode)
+    add_stdout_stream()
+    job_log_handler = add_file_stream(in_debug_mode)
+    setattr(logger, "job_log_handler", job_log_handler)

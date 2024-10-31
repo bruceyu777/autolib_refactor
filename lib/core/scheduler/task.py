@@ -3,8 +3,8 @@ import time
 from pathlib import Path
 from time import perf_counter
 
-from lib.services import env, logger, oriole, summary
-from lib.utilities.exceptions import FileNotExist, NotSupportedDevice
+from lib.services import TestStatus, env, logger, oriole, summary
+from lib.utilities.exceptions import FileNotExist, GeneralException, NotSupportedDevice
 
 from ..compiler.compiler import compiler
 from ..device.forti_vm import FortiVM
@@ -38,7 +38,7 @@ class Task:
                 )
 
     def init_devices(self):
-        logger.notify("Devices used during the test %s", list(self.devices.keys()))
+        logger.debug("Devices used during the test %s", list(self.devices.keys()))
         for dev_name in self.devices:
             t1 = perf_counter()
             if env.is_vm_device(dev_name):
@@ -70,7 +70,7 @@ class Task:
     def activate_vm_licenses(self):
         vms = [dev_name for dev_name in self.devices if env.is_vm_device(dev_name)]
         if vms and env.need_deploy_vm():
-            logger.notify(
+            logger.info(
                 "Sleep 10s for the console to able to be connected for new deployed vms."
             )
             time.sleep(10)
@@ -90,7 +90,7 @@ class Task:
 
     def _start_record_terminal(self, script_id):
         for dev in self.devices.values():
-            logger.info("Start record terminal for %s", dev)
+            logger.debug("Start record terminal for %s", dev)
             dev.start_record_terminal(script_id)
 
     def _stop_record_terminal(self, _):
@@ -106,15 +106,20 @@ class Task:
     def execute_script(self, script, vm_codes, devices):
         script_id = Path(script).stem
         start = perf_counter()
-        summary.update_testscript(script_id, "Testing")
+        summary.update_testscript(script_id, TestStatus.TESTING)
         self._record_testing_script(script_id)
         self._start_record_terminal(script_id)
-        with Executor(script, vm_codes, devices) as executor:
-            executor.execute()
-        self._stop_record_terminal(script_id)
-        end = perf_counter()
-        duration = int(end - start)
-        summary.update_testscript_duration(script_id, duration)
+        try:
+            with Executor(script, vm_codes, devices) as executor:
+                executor.execute()
+        except Exception:
+            summary.update_testscript(script_id, TestStatus.FAILED)
+            raise
+        finally:
+            self._stop_record_terminal(script_id)
+            end = perf_counter()
+            duration = int(end - start)
+            summary.update_testscript_duration(script_id, duration)
 
     def execute(self):
         raise NotImplementedError
@@ -131,13 +136,17 @@ class Task:
             return
         self.setup_devices()
         t3 = perf_counter()
-        self.execute()
-        t4 = perf_counter()
-        if args.submit_flag != "none":
-            oriole.submit()
-        self.summary()
-        t5 = perf_counter()
-        logger.notify("Compiling takes %d s ", t2 - t1)
-        logger.notify("Setting up devices takes %d s", t3 - t2)
-        logger.notify("Executing testcases takes %d s", t4 - t3)
-        logger.notify("Generating summary report takes %d s", t5 - t4)
+        try:
+            self.execute()
+        except GeneralException:
+            logger.exception("Task Execution Failure...")
+        finally:
+            t4 = perf_counter()
+            if args.submit_flag != "none":
+                oriole.submit()
+            self.summary()
+            t5 = perf_counter()
+            logger.debug("Compiling takes %.1f s ", t2 - t1)
+            logger.debug("Setting up devices takes %.1f s", t3 - t2)
+            logger.debug("Executing testcases takes %.1f s", t4 - t3)
+            logger.debug("Generating summary report takes %.1f s", t5 - t4)

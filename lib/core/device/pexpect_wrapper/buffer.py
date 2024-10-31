@@ -24,14 +24,18 @@ class CleanedBuffer(StringIO):
 
     @lru_cache(maxsize=128, typed=True)
     def _clean_by_pattern(self, original_output):
-        cleaned_output = original_output
+        cleaned_output = original_output.encode("utf-8")
         for p_description, pattern in self.COMPILED_CLEAN_PATTERN.items():
             cleaned_output = re.sub(pattern, "", original_output)
             if original_output != cleaned_output:
+                title = f"*** Clean Pattern '{p_description}' Matched ***"
+                delimiter = "*" * len(title)
                 logger.debug(
-                    "Pattern matched for cleaning: '%s'\n**** CLEANED ****\n'%s'",
-                    p_description,
-                    original_output,
+                    "\n%s\n%s\nCleaned Content:\n'%s'\n%s",
+                    delimiter,
+                    title,
+                    cleaned_output,
+                    delimiter,
                 )
                 original_output = cleaned_output
         return cleaned_output

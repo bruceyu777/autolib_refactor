@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Test Report</title>
+        <style>
+            h2 {
+                text-align: center;
+                font-size: 24px;
+                font-weight: 600;
+                color: #333;
+                margin: 20px 0 10px;
+                border-bottom: 2px solid #4CAF50;
+                padding-bottom: 5px;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 10px 0;
+                font-size: 16px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            th, td {
+                text-align: center;
+                padding: 12px;
+                border: 1px solid #dddddd;
+            }
+
+            th {
+                background-color: #f8f8f8 !important; /* Changed header color to neutral */
+                font-weight: lighter !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+
+            tr:nth-child(even) {
+                background-color: #f2f2f2;
+            }
+
+            tr:hover {
+                background-color: #e9f5e9;
+            }
+
+            a {
+                text-decoration: none;
+            }
+
+            a:hover {
+                text-decoration: underline;
+            }
+
+            .summary-table td {
+                text-align: center;
+            }
+
+            .success {
+                background-color: #c8e6c9;
+                color: #388e3c;
+                font-weight: bold;
+            }
+
+            .failure {
+                background-color: #ffcdd2 !important;;
+                color: #d32f2f;
+                font-weight: bold;
+            }
+
+            .not-tested {
+                background-color: #e0e0e0;
+                color: #757575;
+                font-weight: bold;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+
+            .file-info, .test-summary {
+                margin-bottom: 30px;
+            }
+
+            .status-testing {
+                color: #ffffff;
+                background-color: #00796b !important; /* Dark teal color for readability */
+                font-weight: bold;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                animation: pulse 1.5s infinite;
+            }
+
+            .status-testing a {
+                color: #ffffff; /* Set to white or any color you prefer */
+                text-decoration: none; /* Remove underline if desired */
+            }
+
+            .status-testing a:visited {
+                color: #ffffff; /* Ensure visited links maintain the same color */
+            }
+
+            /* Define the pulsing effect */
+            @keyframes pulse {
+                0% {
+                    opacity: 1;
+                }
+                50% {
+                    opacity: 0.8;
+                }
+                100% {
+                    opacity: 1;
+                }
+            }
+
+        </style>
+        <script>
+
+            function saveScrollPosition() {
+                const currentScroll = contentElement.scrollTop;
+                sessionStorage.setItem('scrollPosition', currentScroll);
+            }
+
+            const contentElement = document.querySelector(".content");
+            contentElement.addEventListener('scroll', saveScrollPosition);
+
+            function restoreScrollPosition() {
+                const scrollPosition = sessionStorage.getItem('scrollPosition');
+                if (scrollPosition) {
+                    console.log("Restore to position: ", scrollPosition)
+                    contentElement.scrollTop = parseInt(scrollPosition, 10);
+                }
+            }
+
+            function autoReload() {
+                saveScrollPosition();
+                setTimeout(() => {
+                    location.reload();
+                }, 10000);
+            }
+
+            function updateTestStatus() {
+                const rows = document.querySelectorAll("table#summary_table tbody tr");
+                rows.forEach(row => {
+                    const statusCell = row.cells[1]; // Select the second cell, which holds the status
+                    if (statusCell && statusCell.textContent.trim().toLowerCase() === 'testing') {
+                        row.classList.add("status-testing");
+                    }
+                });
+            }
+
+            window.onload = function() {
+                restoreScrollPosition();
+                autoReload();
+                updateTestStatus();
+            };
+
+        </script>
+    </head>
+    <body>
+        <div class="container">
+            <!-- AutoTest Running Info -->
+            <div class="file-info">
+                <h2>AutoTest Running Info</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>Environment File</th>
+                            <th>Test File</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><a href="/{{env_file}}">{{env_file}}</a></td>
+                            <td><a href="/{{test_file}}">{{test_file}}</a></td>
+                            <td>{{start_time}}</td>
+                            <td>{{end_time}}</td>
+                            <td>{{duration}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Testcases Result Summary -->
+            <div class="test-summary">
+                <h2>Test Case Result Summary</h2>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Total Test Case</th>
+                            <th>Passed</th>
+                            <th>Failed</th>
+                            <th>Not Tested</th>
+                            <th>Passed Percentage (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{total_number}}</td>
+                            <td>{{passed_number}}</td>
+                            <td>{{failed_number}}</td>
+                            <td>{{not_tested_number}}</td>
+                            <td class="{{'success' if failed_number == 0 else 'failure'}}">{{passed_percentage}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Testcases Summary -->
+            <div class="test-summary">
+                <h2>Test Case Summary</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>QAID</th>
+                            <th>Result</th>
+                            <th>Oriole Reported</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for testcase in testcase_results %}
+                        <tr>
+                            <td><a href="/{{qaid_script_mapping[testcase.id]}}">{{testcase.id}}</a></td>
+                            <td class="{{'success' if testcase.res else 'failure'}}">
+                                {{'PASSED' if testcase.res else 'FAILED'}}
+                            </td>
+                            <td class="{{'success' if testcase.reported else 'failure'}}">
+                                {{'REPORTED' if testcase.reported else 'NOT REPORTED'}}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% for testcase in not_tested_cases %}
+                        <tr>
+                            <td>{{testcase}}</td>
+                            <td class="not-tested">N/A</td>
+                            <td class="not-tested">N/A</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Failed Testcases Details -->
+            {% if failed_number != 0 %}
+            <div class="test-summary">
+                <h2>Test Case Failure Details</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>QAID</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for testcase in testcase_results %}
+                        {% if not testcase.res %}
+                        <tr>
+                            <td><a href="/{{qaid_script_mapping[testcase.id]}}">{{testcase.id}}</a></td>
+                            <td>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Line Number</th>
+                                            <th>Expected</th>
+                                            <th>Output</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for detail in testcase.details %}
+                                        <tr>
+                                            <td>{{detail.line_num}}</td>
+                                            <td>{{detail.expect}}</td>
+                                            <td>{{detail.output}}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+           <!-- Testscript Summary -->
+            <div class="test-summary">
+                <h2>Test Script Summary</h2>
+                <table id="summary_table">
+                    <thead>
+                        <tr>
+                            <th>Test Script</th>
+                            <th>Status</th>
+                            <th>Elapsed Time (s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for id, (status, duration) in testscripts.items() %}
+                        <tr>
+                            <td><a href="/{{qaid_script_mapping[id]}}">{{id}}</a></td>
+                            <td>{{status}}</td>
+                            <td>{{duration}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </body>
+</html>

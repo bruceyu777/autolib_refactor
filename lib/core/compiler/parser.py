@@ -33,15 +33,16 @@ class Parser:
 
     def _add_vm_code(self, line_number, operation, parameters):
         if operation == "report":
-            summary.add_testcase(parameters[0])
+            summary.add_testcase(parameters[0], self.file_name)
         vm_code = VMCode(line_number, operation, parameters)
         self.vm_codes.append(vm_code)
         return vm_code
 
-    def run(self):
+    def run(self, dump_code_flag=False):
         while self._cur_token is not None:
             self._script()
-        self.dump_vm_codes()
+        if dump_code_flag:
+            self.dump_vm_codes()
         return self.vm_codes, self.devices, self.called_files
 
     def _script(self):

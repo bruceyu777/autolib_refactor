@@ -5,7 +5,7 @@ import os
 import sys
 
 from lib.core.scheduler.job import Job
-from lib.services import logger, set_logger
+from lib.services import logger, setup_logger
 from lib.services.summary import summary
 
 
@@ -74,7 +74,7 @@ none: do not submit any testcase result to Oriole.
 succeeded: only submit succeeded testcases' result to Oriole."""
 
 
-__version__ = "V3R10B0003"
+__version__ = "V3R10B0004"
 
 
 def parse_cli_args():
@@ -163,23 +163,23 @@ def parse_cli_args():
 
 def main():
     args = parse_cli_args()
-    set_logger(args.debug)
-
     if not (args.script or args.group):
         logger.error("Please speicify the testcase script or testcase group.")
         sys.exit(-1)
 
-    logger.notice("**** Start test job with AUTOLIB - %s. ****", __version__)
+    setup_logger(args.debug, args.group, args.script or args.group)
+    logger.notice("\n**** Start test job with AUTOLIB - %s. ****", __version__)
+    logger.notice("CLI from user: %s", " ".join(sys.argv))
+    logger.notice("Test Environment: %s", args.env)
     if args.script:
-        logger.notice("Test script is %s", args.script)
+        logger.notice("Test Script: %s", args.script)
         test_file = args.script
     else:
-        logger.notice("Test group is %s", args.group)
+        logger.notice("Test Group: %s", args.group)
         test_file = args.group
-    logger.notice("Test environment file is %s", args.env)
 
     summary.dump_str_to_brief_summary(
-        f"Environment File: {args.env}, Test File: {test_file}"
+        f"# Environment File: {args.env}\n# Test File: {test_file}\n"
     )
 
     try:

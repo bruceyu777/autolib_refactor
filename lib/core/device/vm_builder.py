@@ -1,7 +1,7 @@
 import time
 
 from lib.services.environment import env
-from lib.utilities.exceptions import ItemNotDefined, ResourceNotAvailable
+from lib.utilities.exceptions import ResourceNotAvailable
 
 
 class VmBuilder:
@@ -26,7 +26,9 @@ class VmBuilder:
     def _calc_cpu_mem(self):
         vm_type = self.vm_cfg.get("vm_type", None)
         if vm_type is None:
-            raise ItemNotDefined(f"{self.vm_name}:VM_TYPE")
+            raise ResourceNotAvailable(
+                f"Unable to locate VM_TYPE in conf for {self.vm_name}"
+            )
         self.params["memory"] = self.vm_cfg.get(
             "memory", self.VM_SPECS[vm_type]["memory"]
         )
