@@ -1,8 +1,9 @@
 import logging
 import pdb
 import re
-from pathlib import Path
+from typing import Union
 
+from lib.core.compiler import Group, IncludeScript, Script
 from lib.services import (
     ScriptResultManager,
     TestStatus,
@@ -12,32 +13,22 @@ from lib.services import (
     output,
     summary,
 )
-from lib.utilities.exceptions import OperationFailure, TestFailed
-from lib.utilities.util import sleep_with_progress
+from lib.utilities import OperationFailure, TestFailed, sleep_with_progress
 
-from ..compiler.compiler import compiler
-from ..compiler.vm_code import VMCode
-from .debugger import Debugger
 from .if_stack import if_stack
 
 
 class Executor:
-    def __init__(
-        self, script, vmcodes, devices, need_report=True, script_type="SCRIPT"
-    ):
+    def __init__(self, script: Union[Script, Group], devices, need_report=True):
         self.script = script
         self.devices = devices
-        self.vmcodes = vmcodes
         self.cur_device = None
         self.result_manager = ScriptResultManager(self.script)
-        self.lines = []
         self.last_line_number = None
         self.program_counter = 0  # abbreviated as"pc"
         self.need_report = need_report
-        self.script_type = script_type
         self.scripts = {}
         self.log_file_handler = None
-        self.debugger = None
         self.need_stop = False
         self.log_file = None
         self.auto_login = True
@@ -46,7 +37,7 @@ class Executor:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        log_file = output.compose_log_file(Path(self.script).stem, "autotest.log")
+        log_file = output.compose_log_file(self.script.id, "autotest.log")
         handler = logging.FileHandler(log_file)
         add_logger_handler(handler, logging.DEBUG, formatter)
         self.log_file_handler = handler
@@ -56,9 +47,6 @@ class Executor:
         summary.dump_script_start_time_to_brief_summary()
         if getattr(logger, "in_debug_mode", False):
             self._add_file_handler()
-        with open(self.script, "r", encoding="utf-8") as f:
-            self.lines = [line.strip() for line in f]
-            self.debugger = Debugger(self.lines, self.vmcodes)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -90,7 +78,7 @@ class Executor:
         return re.match(pattern, cmd)
 
     def _command(self, parameters):
-        if self.script_type == "GROUP":
+        if isinstance(self.script, Group):
             _, script_file, *_ = parameters[0].split()
             self.scripts[self.last_line_number] = script_file
             return
@@ -116,7 +104,7 @@ class Executor:
         self.cur_device.clear_buffer()
 
     def _breakpoint(self, _):
-        self.debugger.breakpoint()
+        self.script.breakpoint()
 
     def _enter_dev_debugmode(self, _):
         # pylint: disable=forgotten-debug-statement
@@ -125,9 +113,14 @@ class Executor:
     def _resetFirewall(self, cmd):
         if not cmd:
             cmd = "execute factoryreset"
-        self.cur_device.reset_firewall(cmd)
+        self.cur_device.reset_config(cmd)
         sleep_with_progress(1)
         # to avoid some error message message other commands
+
+    def _resetFAP(self, cmd):
+        if not cmd:
+            cmd = "factoryreset"
+        self.cur_device.reset_config(cmd)
 
     def _send_literal(self, parameters):
         if (
@@ -193,7 +186,9 @@ class Executor:
     def _handle_need_retry_expect(self, retry_command):
         if env.need_retry_expect():
             if retry_command is None:
-                previous_vm_code = self.vmcodes[self.program_counter - 1]
+                previous_vm_code = self.script.get_compiled_code_line(
+                    self.program_counter - 1
+                )
                 if previous_vm_code.operation == "command":
                     previous_command = previous_vm_code.parameters[0]
                     if previous_command.startswith(
@@ -255,13 +250,11 @@ class Executor:
             qaid,
             is_succeeded,
             self.last_line_number,
-            self.lines[self.last_line_number - 1],
             cli_output,
         )
         self._log_expect_result(is_succeeded, qaid, rule, fail_match, wait_seconds)
 
     def _expect_OR(self, parameters):
-        print(parameters)
         (rule1, rule2, fail1_match, fail2_match, qaid, wait_seconds) = parameters
         wait_seconds = int(wait_seconds)
         fail1_match = fail1_match == "match"
@@ -278,7 +271,6 @@ class Executor:
             qaid,
             is_succeeded,
             self.last_line_number,
-            self.lines[self.last_line_number - 1],
             f"output of {rule1}:\n{cli_output1}\noutput of {rule2}:\n{cli_output2}\n",
         )
 
@@ -321,7 +313,6 @@ class Executor:
             qaid,
             is_succeeded,
             self.last_line_number,
-            self.lines[self.last_line_number - 1],
             cli_output,
         )
 
@@ -368,7 +359,6 @@ class Executor:
             qaid,
             is_succeeded,
             self.last_line_number,
-            self.lines[self.last_line_number - 1],
             cli_output,
         )
         result_str = "Succeeded" if is_succeeded else "Failed"
@@ -403,7 +393,6 @@ class Executor:
             qaid,
             is_succeeded,
             self.last_line_number,
-            self.lines[self.last_line_number - 1],
             f"v1:{var1} v2:{var2}",
         )
 
@@ -430,10 +419,9 @@ class Executor:
         self.result_manager.report_script_result(devices_info)
 
     def _report(self, parameters):
-        testcase_id = parameters[0]
-        self.result_manager.add_report_qaid_and_dev_map(
-            testcase_id, self.cur_device.dev_name
-        )
+        qaid = parameters[0]
+        dut = self.cur_device.dev_name if self.cur_device else env.get_dut()
+        self.result_manager.add_report_qaid_and_dev_map(qaid, dut)
 
     def __collect_dev_info_for_oriole(self, device):
         collect_on_the_fly = env.get_dut_info_on_fly()
@@ -495,7 +483,6 @@ class Executor:
             qaid,
             is_succeeded,
             self.last_line_number,
-            self.lines[self.last_line_number - 1],
             cli_output,
         )
         result_str = "Succeeded" if is_succeeded else "Failed"
@@ -511,6 +498,7 @@ class Executor:
 
     def _sleep(self, parameters):
         seconds = int(parameters[0])
+        seconds = env.get_actual_timer(self.cur_device.dev_name, seconds)
         sleep_with_progress(seconds, logger_func=logger.notice)
 
     def _forcelogin(self, _):
@@ -538,17 +526,31 @@ class Executor:
         return f"'{exp}'"
 
     def eval_expression(self, expression):
-        logger.debug("Original expression is %s", expression)
         new_expression = " ".join([self.normalize_exp(e) for e in expression])
         logger.debug("Normalized expression is %s", new_expression)
-        return eval(new_expression)  # pylint:disable=eval-used
+        try:
+            return eval(new_expression)  # pylint:disable=eval-used
+        except Exception:  # pylint:disable=broad-except
+            logger.exception("Evaludation Failed!!")
+            logger.info(
+                "%s <=== %s",
+                expression,
+                "Evaluation Failed, review and file a ticket for Automation team if necessary!",
+            )
+        return None
 
     def jump_to(self, line_number):
-        while self.vmcodes[self.program_counter].line_number != line_number:
+        while (
+            self.script.get_compiled_code_line(self.program_counter).line_number
+            != line_number
+        ):
             self.program_counter += 1
 
     def jump_back(self, line_number):
-        while self.vmcodes[self.program_counter].line_number != line_number:
+        while (
+            self.script.get_compiled_code_line(self.program_counter).line_number
+            != line_number
+        ):
             self.program_counter -= 1
 
     def _if_not_goto(self, parameters):
@@ -635,37 +637,30 @@ class Executor:
         self.cur_device = self.devices[dev_name]
 
     def _include(self, parameters):
-        file_name = parameters[0]
-        vm_codes = compiler.retrieve_vm_codes(file_name)
-        vm_codes = vm_codes.copy()
-        if self.cur_device is not None:
-            vm_codes.insert(
-                0,
-                VMCode(
-                    None,
-                    "with_device",
-                    (self.cur_device.dev_name,),
-                ),
-            )
-        with Executor(file_name, vm_codes, self.devices, False) as executor:
+        if self.cur_device is None:
+            include_script = IncludeScript(parameters[0])
+        else:
+            include_script = IncludeScript(parameters[0], self.cur_device.dev_name)
+        with Executor(include_script, self.devices, False) as executor:
             executor.cur_device = self.cur_device
             executor.execute()
 
     def execute(self):
-        while self.program_counter < len(self.vmcodes):
-            code = self.vmcodes[self.program_counter]
-            if code.line_number is not None:
-                self.program_counter = self.debugger.run(
-                    code.line_number, self.program_counter
-                )
-            code = self.vmcodes[self.program_counter]
+        while self.program_counter < self.script.get_program_counter_limit():
+            self.program_counter, code = self.script.update_code_to_execute(
+                self.program_counter
+            )
             if code.operation not in ["comment", "with_device"]:
                 line_number = code.line_number
                 if (
                     self.last_line_number is None
                     or self.last_line_number != line_number
                 ):
-                    logger.debug("%d  %s", line_number, self.lines[line_number - 1])
+                    logger.debug(
+                        "%d  %s",
+                        line_number,
+                        self.script.get_script_line(line_number - 1),
+                    )
                     self.last_line_number = line_number
             func = getattr(self, f"_{code.operation}")
             parameters = code.parameters

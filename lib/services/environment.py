@@ -1,10 +1,14 @@
 import csv
 import json
 import re
+import time
 from collections import defaultdict
 from pathlib import Path
 
+from lib.utilities import OperationFailure, sleep_with_progress
+
 from .env_parser import EnvParser, FosConfigParser
+from .image_server import ImageServer
 from .log import logger
 
 BUFFER_CLEAN_PATTERN_SOURCE = (
@@ -61,6 +65,28 @@ class Environment:
             filepath = BUFFER_CLEAN_PATTERN_SOURCE
         return filepath
 
+    def get_performance_scale(self, dev_name):
+        platform_name = self.user_env.get(dev_name, "PLATFORM", fallback="")
+        try:
+            platform_number_str = re.search(r"(\d+)[^\d]", platform_name).group(1)
+            platform_number = int(platform_number_str)
+        except (AttributeError, ValueError):
+            platform_number = 100
+            logger.error(
+                "Cannot get platform number from platform name %s", platform_name
+            )
+        if platform_number <= 100:
+            return 1.2
+        if platform_number > 100:
+            return 0.8
+        return 1
+
+    def get_actual_timer(self, dev_name, time_units):
+        if self.is_cfg_option_enabled("GLOBAL", "DYNAMIC_SCALE_TIMER"):
+            device = dev_name if self.is_fos_device(dev_name) else self.get_dut()
+            return round(time_units * self.get_performance_scale(device), 2)
+        return time_units
+
     @property
     def buffer_clean_pattern(self):
         if self._buffer_clean_pattern is None:
@@ -88,6 +114,9 @@ class Environment:
 
     def is_fos_device(self, device_name):
         return any(map(device_name.startswith, Environment.fos_device_types))
+
+    def is_running_on_vm(self):
+        return self.is_cfg_option_enabled("GLOBAL", "RUNNING_AS_VM")
 
     def get_dev_cfg(self, device_name):
         cfg = None
@@ -144,6 +173,12 @@ class Environment:
     def is_cfg_option_enabled(self, section, option, fallback=False):
         return self.user_env.is_option_enabled(section, option, fallback=fallback)
 
+    def get_restore_image_args(self):
+        return self.args.release, self.args.build, self.args.reset, self.args.burn
+
+    def need_burn_fos_image(self):
+        return self.args.burn
+
     def need_deploy_vm(self):
         return self.is_cfg_option_enabled("GLOBAL", "DEPLOY_NEW_VM")
 
@@ -154,18 +189,38 @@ class Environment:
         )
         self.env_file = self.args.env
         self.test_file = self.args.script or self.args.group
+        if self.args.wait_image_ready_timer:
+            self.wait_for_image_ready()
+
+    def wait_for_image_ready(self):
+        start_time = time.time()
+        timeout_timer = self.args.wait_image_ready_timer * 60 * 60
+        while time.time() - start_time <= timeout_timer:
+            try:
+                ImageServer().get_build_files(
+                    self.args.project, self.args.release, self.args.build
+                )
+                return True
+            except OperationFailure:
+                logger.warning(
+                    "Will retry to check the availability of the requested image later!"
+                )
+                sleep_with_progress(10 * 60)
+        raise OperationFailure(
+            f"No Image available for {self.args.project}(v{self.args.release}build{self.args.build})"
+        )
 
     def get_vm_host(self, vm_name):
         return self.user_env.get(vm_name, "HOSTED_ON")
 
-    def get_section_var(self, section, variable):
+    def get_section_var(self, section, variable, fallback=None):
         logger.debug(
             "self.user_env.get(%s, %s, fallback=None): %s",
             section,
             variable,
-            self.user_env.get(section, variable, fallback=None),
+            self.user_env.get(section, variable, fallback=fallback),
         )
-        return self.user_env.get(section, variable, fallback=None)
+        return self.user_env.get(section, variable, fallback=fallback)
 
     @staticmethod
     def escape_single_percent(var_val):
@@ -214,6 +269,13 @@ class Environment:
     def get_dut(self):
         return self.user_env.get("GLOBAL", "DUT")
 
+    def is_fap_dut(self):
+        dut = self.get_dut()
+        return dut and dut.startswith("FAP")
+
+    def get_fap_controller(self, fap):
+        return self.user_env.get(fap, "CONTROLLER")
+
     def get_dut_info_on_fly(self):
         return self.user_env.get("GLOBAL", "DUT_INFO_ON_FLY")
 
@@ -237,15 +299,15 @@ class Environment:
     def need_keep_alive(self):
         return self.is_cfg_option_enabled("GLOBAL", "KEEP_ALIVE")
 
-    def filter_env_section_items(self, section_name, start_string):
-        selected_items = {}
+    def filter_section_items(self, section_name, prefix):
         for section in self.user_env.sections():
             if section == section_name:
-                for key, value in self.user_env.items(section):
-                    tokens = key.split("_")
-                    if tokens[0] == start_string:
-                        selected_items[tokens[1]] = value
-        return selected_items
+                return {
+                    k[len(prefix) :]: v
+                    for k, v in self.user_env.items(section)
+                    if k.startswith(prefix)
+                }
+        return {}
 
 
 env = Environment()
@@ -255,9 +317,8 @@ if __name__ == "__main__":
     env_parser = EnvParser("./lib/testcases/env/fgt.env")
     env.set_user_defined_env(env_parser.env)
     value_for_test = "aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%%%3D"
-    env.set_section_var("GLOBAL", "local_http_server_port", value_for_test)
-    env_parser.show()
-    result = env.get_section_var("GLOBAL", "local_http_server_port")
+    env.set_section_var("GLOBAL", "LOCAL_HTTP_SERVER_PORT", value_for_test)
+    result = env.get_section_var("GLOBAL", "LOCAL_HTTP_SERVER_PORT")
     assert result == value_for_test
     decoded_script = env.variable_interpolation(
         "This is a test GLOBAL:MGMT_IP-FGT_A:MGMT-FGT_A:MGMT_GW"

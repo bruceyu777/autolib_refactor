@@ -1,0 +1,1019 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "EMS APIs for FortiSASE",
+    "version": "1.0.0",
+    "title": "EMS APIs",
+    "contact": {
+      "email": "you@your-company.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "host": "virtserver.swaggerhub.com",
+  "basePath": "/Jos56/SASE/1.0.0",
+  "tags": [
+    {
+      "name": "zero trust tags",
+      "description": "Zero Trust tags CRUD"
+    },
+    {
+      "name": "zero trust rules",
+      "description": "Zero Trust rules CRUD"
+    },
+    {
+      "name": "classification custom tags",
+      "description": "classification custom tags CRUD"
+    },
+    {
+      "name": "importance tags",
+      "description": "client importance tag update"
+    },
+    {
+      "name": "profile",
+      "description": "profile update"
+    },
+    {
+      "name": "certificate",
+      "description": "certificates CRUD"
+    }
+  ],
+  "schemes": ["https"],
+  "paths": {
+    "/api/v1/tags/zero_trust/index": {
+      "get": {
+        "tags": ["zero trust tags"],
+        "summary": "Get list of zero trust rule tags",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "list of zero trust tags",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/tagItem"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "BasicAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tags/zero_trust/{id}/get": {
+      "get": {
+        "tags": ["zero trust tags"],
+        "summary": "Gets a zero trust tag by ID.",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "tag id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zero trust tag details",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/tagDetails"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tags/zero_trust/get_tags": {
+      "get": {
+        "tags": ["zero trust tags"],
+        "summary": "Gets the list of all zero trust tags and the client count",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Zero trust tags and client counts",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/tagClientCount"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tags/zero_trust/create": {
+      "post": {
+        "tags": ["zero trust tags"],
+        "summary": "Creates a new zero trust tag",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item created"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/tags/zero_trust/{id}/delete": {
+      "delete": {
+        "tags": ["zero trust tags"],
+        "summary": "Deletes a zero trust tag by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/tags/zero_trust/{id}/endpoints": {
+      "get": {
+        "tags": ["zero trust tags"],
+        "summary": "Gets endpoints for tags.",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "default": 50
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zero trust tags and associated endpoints",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/tagEndpoint"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tag_rules/zero_trust/index": {
+      "get": {
+        "tags": ["zero trust rules"],
+        "summary": "Get list of zero trust rule sets",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "sort_col",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sort_ord",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "default": 50
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Zero trust rule sets",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ruleSetItem"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tag_rules/zero_trust/{id}/get": {
+      "get": {
+        "tags": ["zero trust rules"],
+        "summary": "Gets a zero trust rule set by ID",
+        "produces": ["application/json"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "zero trust rule set detials",
+            "schema": {
+              "$ref": "#/definitions/ruleSetItemDetailed"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tag_rules/zero_trust/create": {
+      "post": {
+        "tags": ["zero trust rules"],
+        "summary": "Creates a new zero trust rule set",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/ruleSetPOST"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item created"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/tag_rules/zero_trust/{id}/update": {
+      "put": {
+        "tags": ["zero trust rules"],
+        "summary": "Updates an existing zero trust rule set.",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/ruleSetPOST"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item updated"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/tag_rules/zero_trust/{id}/delete": {
+      "delete": {
+        "tags": ["zero trust rules"],
+        "summary": "Deletes a zero trust rule set by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/tags/custom/get": {
+      "get": {
+        "tags": ["classification custom tags"],
+        "summary": "Get classification custom tags",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "classification custom tags",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/classificationCustomTag"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tags/custom/create": {
+      "post": {
+        "tags": ["classification custom tags"],
+        "summary": "Create a custom tag and assign it to the endpoint. Creating a new tag is always followed by assigning it to a endpoint",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item created"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/tags/custom/delete": {
+      "post": {
+        "tags": ["classification custom tags"],
+        "summary": "Remove custom tag",
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "query",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/tags/custom/add": {
+      "post": {
+        "tags": ["classification custom tags"],
+        "summary": "Set clients' custom tag.",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content_1"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "items created"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/tags/custom/remove": {
+      "post": {
+        "tags": ["classification custom tags"],
+        "summary": "Remove tag from endpoints",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content_2"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "items deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{uid}/tags/custom/add": {
+      "post": {
+        "tags": ["classification custom tags"],
+        "summary": "Set a single client's custom tag by uid.",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content_3"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item created"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{uid}/tags/custom/remove": {
+      "post": {
+        "tags": ["classification custom tags"],
+        "summary": "Remove tag from a single endpoint by uid",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content_4"
+            }
+          },
+          {
+            "name": "uid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "items deleted"
+          }
+        }
+      }
+    },
+    "/api/v1/tags/importance/index": {
+      "get": {
+        "tags": ["importance tags"],
+        "summary": "Get importance tags",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "importance tags",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/classificationCustomTag"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/tags/importance/update": {
+      "post": {
+        "tags": ["importance tags"],
+        "summary": "Set clients' importance tag.",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content_5"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "items updated"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/sase/get": {
+      "get": {
+        "tags": ["profile"],
+        "summary": "Get sase profile",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "SASE default profile",
+            "schema": {
+              "$ref": "#/definitions/inline_response_200"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/sase/update": {
+      "post": {
+        "tags": ["profile"],
+        "summary": "Update sase profile",
+        "consumes": ["multipart/form-data"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content_6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "profile updated"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/upload": {
+      "post": {
+        "tags": ["certificate"],
+        "summary": "Uploading a certificate",
+        "consumes": ["multipart/form-data"],
+        "parameters": [
+          {
+            "in": "body",
+            "name": "content",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/content_7"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "profile updated"
+          },
+          "400": {
+            "description": "invalid input, object invalid"
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/index": {
+      "get": {
+        "tags": ["certificate"],
+        "summary": "Get list of certificates, filterable",
+        "produces": ["application/json"],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of certificates",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/classificationCustomTag"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/certificates/{id}/delete": {
+      "delete": {
+        "tags": ["certificate"],
+        "summary": "Deletes a certificate by ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "item deleted"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "tagItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "rule_sets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ruleSet"
+          }
+        }
+      }
+    },
+    "ruleSet": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "tagDetails": {
+      "type": "object",
+      "properties": {
+        "tag_name": {
+          "type": "string"
+        },
+        "client_count": {
+          "type": "integer"
+        }
+      }
+    },
+    "tagClientCount": {
+      "type": "object",
+      "properties": {
+        "tag_id": {
+          "type": "integer"
+        },
+        "tag_name": {
+          "type": "string"
+        },
+        "client_count": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "integer"
+        }
+      }
+    },
+    "tagEndpoint": {
+      "type": "object",
+      "properties": {
+        "device_id": {
+          "type": "integer"
+        },
+        "host": {
+          "type": "string"
+        },
+        "ip_addr": {
+          "type": "string"
+        },
+        "os_version": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "created": {
+          "type": "string"
+        },
+        "tagname": {
+          "type": "string"
+        }
+      }
+    },
+    "TEXT_FILTER": {
+      "type": "object",
+      "required": ["match", "query", "type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "default": "string"
+        },
+        "match": {
+          "type": "string",
+          "default": "any"
+        },
+        "query": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "ruleSetItem": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "boolean"
+        },
+        "comments": {
+          "type": "string"
+        },
+        "tag_id": {
+          "type": "integer"
+        },
+        "tag_name": {
+          "type": "string"
+        }
+      }
+    },
+    "ruleSetItemDetailed": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "boolean"
+        },
+        "comments": {
+          "type": "string"
+        },
+        "tag_id": {
+          "type": "integer"
+        },
+        "tag_name": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ruleSetItemDetailed_rules"
+          }
+        }
+      }
+    },
+    "ruleSetPOST": {
+      "type": "object",
+      "required": ["name", "rules", "status", "tag"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "boolean"
+        },
+        "tag": {
+          "type": "integer"
+        },
+        "comments": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ruleSetPOST_rules"
+          }
+        }
+      }
+    },
+    "classificationCustomTag": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "content": {
+      "type": "object",
+      "required": ["device_id", "tag_name"],
+      "properties": {
+        "tag_name": {
+          "type": "string"
+        },
+        "device_id": {
+          "type": "integer"
+        }
+      }
+    },
+    "content_1": {
+      "type": "object",
+      "required": ["ids", "tag_id"],
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "tag_id": {
+          "type": "integer"
+        }
+      }
+    },
+    "content_2": {
+      "type": "object",
+      "required": ["ids", "tag_id"],
+      "properties": {
+        "tag_id": {
+          "type": "integer"
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "content_3": {
+      "type": "object",
+      "required": ["ids", "tag_id"],
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "tag_id": {
+          "type": "integer"
+        }
+      }
+    },
+    "content_4": {
+      "type": "object",
+      "required": ["tag_id"],
+      "properties": {
+        "tag_id": {
+          "type": "integer"
+        }
+      }
+    },
+    "content_5": {
+      "type": "object",
+      "required": ["ids", "importance"],
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "importance": {
+          "type": "integer"
+        }
+      }
+    },
+    "inline_response_200": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "content_6": {
+      "type": "object",
+      "required": ["config"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "forti_product_id": {
+          "type": "integer"
+        },
+        "config": {
+          "type": "string",
+          "format": "json"
+        },
+        "mobileconfig": {
+          "type": "string",
+          "format": "binary"
+        }
+      }
+    },
+    "content_7": {
+      "type": "object",
+      "properties": {
+        "cert": {
+          "type": "string",
+          "format": "binary"
+        }
+      }
+    },
+    "ruleSetItemDetailed_rules": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "content": {
+          "type": "string"
+        },
+        "negative": {
+          "type": "boolean"
+        },
+        "os": {
+          "type": "string"
+        },
+        "type": {
+          "type": "integer"
+        }
+      }
+    },
+    "ruleSetPOST_rules": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "negative": {
+          "type": "boolean"
+        },
+        "os": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

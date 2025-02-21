@@ -118,26 +118,32 @@
         <script>
 
             function saveScrollPosition() {
-                const currentScroll = contentElement.scrollTop;
+                const currentScroll = document.body.scrollTop || document.documentElement.scrollTop;
                 sessionStorage.setItem('scrollPosition', currentScroll);
+                console.log("Saved scroll position:", currentScroll);
             }
-
-            const contentElement = document.querySelector(".content");
-            contentElement.addEventListener('scroll', saveScrollPosition);
 
             function restoreScrollPosition() {
                 const scrollPosition = sessionStorage.getItem('scrollPosition');
                 if (scrollPosition) {
-                    console.log("Restore to position: ", scrollPosition)
-                    contentElement.scrollTop = parseInt(scrollPosition, 10);
+                    console.log("Restoring scroll position:", scrollPosition);
+                    document.body.scrollTop = parseInt(scrollPosition, 10); // For Safari
+                    document.documentElement.scrollTop = parseInt(scrollPosition, 10); // For Chrome, Firefox, IE, Opera
                 }
             }
 
+            function requireReload() {
+                const rows = document.querySelectorAll("table#summary_table tbody tr");
+                return Array.from(rows).some(row => {
+                    const statusCell = row.cells[1];
+                    return statusCell && statusCell.textContent.trim().toLowerCase().includes('testing');
+                });
+            }
+
             function autoReload() {
-                saveScrollPosition();
                 setTimeout(() => {
                     location.reload();
-                }, 10000);
+                }, 30000); // Adjust this timeout as needed
             }
 
             function updateTestStatus() {
@@ -151,10 +157,16 @@
             }
 
             window.onload = function() {
-                restoreScrollPosition();
-                autoReload();
-                updateTestStatus();
+                if (requireReload()) {
+                    autoReload();
+                    setTimeout(restoreScrollPosition, 50);
+                    updateTestStatus();
+                }
             };
+
+            // Attach the saveScrollPosition function to the window's scroll event
+            document.body.addEventListener('scroll', saveScrollPosition);
+            document.documentElement.addEventListener('scroll', saveScrollPosition);
 
         </script>
     </head>

@@ -1,3 +1,3 @@
-from .buffer import new_buffer_init_class
 from .log_file import LogFile
+from .output_buffer import OutputBuffer
 from .spawn import Spawn

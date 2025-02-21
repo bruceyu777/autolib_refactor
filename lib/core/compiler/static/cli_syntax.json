@@ -46,7 +46,8 @@
     "wait_for_confirm",
     "auto_login",
     "sudo",
-    "send_literal"
+    "send_literal",
+    "resetFAP"
   ],
   "script": ["api", "section", "command", "keyword", "include", "comment"],
   "api": {
@@ -227,6 +228,7 @@
     "breakpoint": ["parse", []],
     "enter_dev_debugmode": ["parse", []],
     "resetFirewall": ["parse", []],
+    "resetFAP": ["parse", []],
     "clear_buffer": ["parse", [["number", null]]],
     "clean_buffer": ["parse", []],
     "keep_running": ["parse", [["number", null]]],

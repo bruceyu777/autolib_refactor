@@ -2,8 +2,9 @@ import os
 import re
 from configparser import _UNSET, ConfigParser
 
-from lib.services.output import output
-from lib.utilities.exceptions import FileNotExist, ScriptSyntaxError
+from lib.utilities import FileNotExist, ScriptSyntaxError
+
+from .output import output
 
 
 class FosConfigParser(ConfigParser):
@@ -172,34 +173,12 @@ class EnvParser:
         self.config.read_string(process_config)
         self._dereference()
 
-    def show(self):
-        for section in self.config.sections():
-            for key, value in self.config.items(section):
-                print(section, key, value)
-            if section == "ORIOLE":
-                for key, value in self.config.items(section):
-                    print(key)
-                    if key.startswith("field"):
-                        print(f"key: {key}, value:{value}.")
-
-    def filter_section_items(self, section_name, start_string):
-        res = {}
-        for section in self.config.sections():
-            if section == section_name:
-                for key, value in self.config.items(section):
-                    token, real_key, *_ = key.split("_")
-                    if token == start_string:
-                        res[real_key] = value
-        return res
-
 
 if __name__ == "__main__":
     envParser = EnvParser("./lib/testcases/env/fgt.env")
-    envParser.show()
     envParser.env.set(
-        "GLOBAL", "local_http_server_ip", r"aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%%3D"
+        "GLOBAL", "LOCAL_HTTP_SERVER_IP", r"aHR0cHM6Ly8xNzIuMTguNjIuODY6NDQ0My8%%3D"
     )
-    envParser.show()
     try:
         EnvParser("./lib/testcases/env/fgt_wrong.env")
         assert False

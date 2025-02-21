@@ -5,19 +5,22 @@ import re
 import time
 
 import requests
+import urllib3
 
+from lib.services._summary import summary
 from lib.services.environment import env
 from lib.services.fos import platform_manager
 from lib.services.log import logger
 from lib.services.output import output
-from lib.services.summary import summary
 
 from .meta import (
-    ORIOLE_FIELD_FOS_SOURCE,
+    ORIOLE_FIELD_SOURCE,
     ORIOLE_REPORT_FIXED_FIELDS,
     ORIOLE_SUBMIT_API_URL,
     REPORT_FILE,
 )
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 class OrioleClient:
@@ -37,10 +40,9 @@ class OrioleClient:
         if self.submit_flag:
             self.user = env.get_section_var("ORIOLE", "USER")
             self.password = env.get_section_var("ORIOLE", "ENCODE_PASSWORD")
-        selected_fields = env.filter_env_section_items("ORIOLE", "RES_FIELD")
+        selected_fields = env.filter_section_items("ORIOLE", "RES_FIELD_")
         self.specified_fields = {k.lower(): v for k, v in selected_fields.items()}
-        if "RES_FIELD_MARK" not in self.specified_fields:
-            self.specified_fields["mark"] = "AutoLib_v3"
+        self.specified_fields.setdefault("mark", "AutoLib_v3")
 
     def send_oriole(self, user, password, report, release_tag):
         response = None
@@ -50,9 +52,13 @@ class OrioleClient:
                 "password": password,
                 "report": report,
                 "release_tag": release_tag,
+                "project": "FAP" if env.is_fap_dut() else "FOS",
             }
+            taskpath_template = env.get_section_var("ORIOLE", "TASK_PATH")
+            if taskpath_template:
+                payload["task_path"] = taskpath_template.format(RELEASE=release_tag)
             response = requests.request(
-                "POST", ORIOLE_SUBMIT_API_URL, data=payload, timeout=60
+                "POST", ORIOLE_SUBMIT_API_URL, data=payload, timeout=60, verify=False
             )
             succeeded = response.status_code == 200
         except Exception:
@@ -83,8 +89,12 @@ class OrioleClient:
         logger.info("It takes %.1f s to submit.", t2 - t1)
         return succeeded
 
+    @staticmethod
+    def get_field_source():
+        return ORIOLE_FIELD_SOURCE["FAP" if env.is_fap_dut() else "FOS"]
+
     def gen_plt_info_for_oriole(self, device_info, report):
-        for k, fos_sources in ORIOLE_FIELD_FOS_SOURCE.items():
+        for k, fos_sources in OrioleClient.get_field_source().items():
             value = " ".join([device_info.get(f, "") for f in fos_sources])
             report[k] = value
         if env.get_vm_nic():
@@ -127,7 +137,9 @@ class OrioleClient:
             if self.submit_flag == "all" or (
                 self.submit_flag == "succeeded" and is_passed
             ):
-                self.release_tag = device_info["version"]
+                self.release_tag = (
+                    env.get_section_var("ORIOLE", "RELEASE") or device_info["version"]
+                )
                 self.reports.append(product_report)
                 self.dump()
         return result
@@ -161,10 +173,12 @@ oriole = OrioleClient()
 
 if __name__ == "__main__":
     oriole.send_oriole(
-        "zhaod",
-        "UW14SlIwTkJSVXBCWjFwS1FuY3hWRlY0TVZGQ1VVSlVVMUZWUkZkblpFcFZiRTVTUVVaU1ZsZG5UbFJCZDBGTQ==",
+        "rainxiao",
+        "UW14SlI****",
         {
             "time": "2024-05-06 11:55:58",
+            "project": "FOS",
+            "task_path": "/FOS/7.6.0/Regression",
             "platform_id": "FGT_60F",
             "release": "7.6.0",
             "build": "3361",

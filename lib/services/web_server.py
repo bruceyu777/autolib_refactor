@@ -9,8 +9,7 @@ from urllib.parse import quote
 import psutil
 import setproctitle
 
-from lib.services.log import logger
-
+from .log import logger
 from .template_env import web_server_env
 
 
@@ -30,6 +29,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         ".py",
         ".md",
         ".json",
+        ".yaml",
     )
 
     @staticmethod
@@ -68,8 +68,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def format_size(self, size):
         for unit in ["B", "KiB", "MiB", "GiB"]:
             if size < 1024.0:
-                return f"{size:.1f} {unit}"
+                break
             size /= 1024.0
+        return f"{size:.1f} {unit}"
 
     def format_date(self, timestamp):
         return datetime.fromtimestamp(timestamp).strftime("%Y-%b-%d %H:%M")
@@ -148,7 +149,7 @@ class WebServer:
     def __init__(self, ip, port):
         self.ip = ip
         self.port = int(port)
-        self.process_name = "web_server_autotest"
+        self.process_name = "autotest-portal"
 
     def create(self):
         server_address = ("", self.port)
@@ -186,7 +187,7 @@ class WebServer:
                     self.port,
                 )
                 return True
-            logger.notice(
+            logger.warning(
                 (
                     "Another service is already on port %d, you can specify another port in"
                     " your env file if you want to use web server."
@@ -225,5 +226,5 @@ class WebServer:
         self.start()
 
 
-if __name__ == "__main__":
-    WebServer("127.0.0.1", 8080).create()
+def launch_webserver_on(ip_address, port):
+    WebServer(ip_address, port).create_process()

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from lib.services import logger, output, summary
-from lib.utilities.exceptions import ScriptSyntaxError
+from lib.utilities import ScriptSyntaxError
 
 from .syntax import script_syntax
 from .vm_code import VMCode

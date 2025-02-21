@@ -1,24 +1,29 @@
-from lib.services import summary
+from time import perf_counter
 
-from ..compiler.compiler import compiler
-from ..compiler.group_parser import GroupParser
+from lib.core.compiler import Group
+from lib.core.executor import Executor
+from lib.services import logger, summary
+
 from .task import Task
 
 
 class GroupTask(Task):
-    def __init__(self, script):
-        super().__init__(script)
-        self.group_parser = GroupParser()
+
+    script_init_class = Group
 
     def compile(self):
-        self.group_parser.parse(self.script)
-
-        for script in self.group_parser.scripts.values():
-            compiler.run(script)
+        self.script.parse(Executor)
+        for script in self.script.included_scripts.values():
             summary.add_testscript(script)
 
     def execute(self):
-        for script in self.group_parser.scripts.values():
+        for script in self.script.included_scripts.values():
             self.keepalive_devices()
-            vm_codes = compiler.retrieve_vm_codes(script)
-            self.execute_script(script, vm_codes, self.devices)
+            self.execute_script(script, self.devices)
+
+    def run(self, args):
+        t1 = perf_counter()
+        self.compile()
+        t2 = perf_counter()
+        logger.debug("Compile scripts used %.1f s", t2 - t1)
+        super().run(args)

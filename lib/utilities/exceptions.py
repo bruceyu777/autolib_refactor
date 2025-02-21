@@ -65,6 +65,11 @@ class ImageDownloadErr(BlockingException):
         super().__init__(self.message)
 
 
+class ImageInstallErr(BlockingException):
+    def __init__(self, value):
+        super().__init__("Image Install Error: %s" % value)
+
+
 class ResourceNotAvailable(BlockingException):
     def __init__(self, value):
         self.message = "Resource is NOT avaiable: %s!!" % value
@@ -79,7 +84,7 @@ class KernelPanicErr(BlockingException):
 
 class RestoreFailure(GeneralException):
     def __init__(self, device, release, build):
-        self.message = "Restore failure: %s %s %s!!" % device, release, build
+        self.message = f"Restore failure: {device}, {release}, {build}!!"
         super().__init__(self.message)
 
 

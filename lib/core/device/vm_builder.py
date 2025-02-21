@@ -24,15 +24,15 @@ class VmBuilder:
         self.build = build
 
     def _calc_cpu_mem(self):
-        vm_type = self.vm_cfg.get("vm_type", None)
+        vm_type = self.vm_cfg.get("VM_TYPE", None)
         if vm_type is None:
             raise ResourceNotAvailable(
                 f"Unable to locate VM_TYPE in conf for {self.vm_name}"
             )
         self.params["memory"] = self.vm_cfg.get(
-            "memory", self.VM_SPECS[vm_type]["memory"]
+            "MEMORY", self.VM_SPECS[vm_type]["memory"]
         )
-        self.params["vcpu"] = self.VM_SPECS[vm_type]["vcpu"]
+        self.params["vcpu"] = self.vm_cfg.get("VCPU", self.VM_SPECS[vm_type]["vcpu"])
 
     def _pre_nic_dev_list(
         self,
@@ -43,17 +43,17 @@ class VmBuilder:
     ):
         tmp = "--network source={},source_mode=%s,driver_queues=%s,model=%s,type=%s "
         template = tmp % (source_mode, driver_queues, model, ntype)
-        nics = self.host.get_cfg("nic_list", "")
+        nics = self.host.get_cfg("NIC_LIST", "")
         if nics:
             return "".join(template.format(dev) for dev in nics.strip().split())
-        if self.host.get_cfg("non_sriov", "no") == "yes":
+        if self.host.get_cfg("NON_SRIOV", "no") == "yes":
             error = f"\nRequire NIC_LIST for {self.vm_name} while NON_SRIOV was set!\n"
             raise ResourceNotAvailable(error)
         return ""
 
     def _pre_pci_dev_list(self):
         temp = "--host-device=pci_{} "
-        pci_dev = self.host.get_cfg("pci_id_list", "")
+        pci_dev = self.host.get_cfg("PCI_ID_LIST", "")
         if pci_dev:
             return "".join(
                 temp.format(dev.replace(":", "_").replace(".", "_"))
@@ -62,7 +62,7 @@ class VmBuilder:
         return ""
 
     def _calc_portlist(self):
-        if self.host.get_cfg("non_sriov", "no") == "yes":
+        if self.host.get_cfg("NON_SRIOV", "no") == "yes":
             port_list = self._pre_nic_dev_list(self.params["vcpu"])
         else:
             port_list = self._pre_pci_dev_list()
@@ -81,7 +81,7 @@ class VmBuilder:
         return cli.format(diskfile, disksize, disk_format, diskbus, cache)
 
     def _create_log_disk(self):
-        disk_size = self.vm_cfg.get("log_disk_size", 30)
+        disk_size = self.vm_cfg.get("LOG_DISK_SIZR", 30)
         disk_size = round(float(disk_size), 2)
         disk_file_name = self.gen_log_disk_file_name(disk_size)
         _, disk_img = self.host.create_a_disk(
@@ -96,7 +96,7 @@ class VmBuilder:
         self.params["image_type"] = image_location.split(".")[-1]
 
     def _get_console_access_info(self):
-        conn = self.vm_cfg.get("connection")
+        conn = self.vm_cfg.get("CONNECTION")
         ip, port = conn.split()
         self.params["serial_ip"] = ip
         self.params["serial_port"] = port
@@ -111,8 +111,8 @@ class VmBuilder:
         self.params.update(
             {
                 "mgmt_nic": self.host.get_mgmt_nic(),
-                "network_type": self.host.get_cfg("network_type", "direct"),
-                "uuid": self.vm_cfg.get("uuid", None),
+                "network_type": self.host.get_cfg("NETWORK_TYPE", "direct"),
+                "uuid": self.vm_cfg.get("UUID", None),
             }
         )
         self.host.create_vm(**self.params)

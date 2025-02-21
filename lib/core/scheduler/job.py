@@ -2,16 +2,28 @@ import os
 import sys
 import webbrowser
 
-from lib.services import env, logger, oriole, output
-from lib.services.web_server import WebServer
+from lib.services import env, launch_webserver_on, logger, oriole, output, summary
 
 from .group_task import GroupTask
-from .script_task import ScriptTask
+from .task import Task as ScriptTask
 
 
 class Job:
     def __init__(self, args):
         self.args = args
+        self.log_job_start_info()
+
+    def log_job_start_info(self):
+        if self.args.script:
+            logger.notice("Test Script: %s", self.args.script)
+            test_file = self.args.script
+        else:
+            logger.notice("Test Group: %s", self.args.group)
+            test_file = self.args.group
+
+        summary.dump_str_to_brief_summary(
+            f"# Environment File: {self.args.env}\n# Test File: {test_file}\n"
+        )
 
     def init_task(self):
         return (
@@ -29,7 +41,7 @@ class Job:
     def start_http_server(self):
         ip, port = env.get_local_http_server_conf()
         if ip and port:
-            WebServer(ip, port).start()
+            launch_webserver_on(ip, port)
         else:
             sys.exit(0)
 
@@ -45,7 +57,8 @@ class Job:
 
         summary_url = f"http://{host}:{port}/{output.get_current_output_dir()}/summary"
         logger.notice(f"Summary: {summary_url}/summary.html")
-        webbrowser.open_new(summary_url)
+        if self.args.portal:
+            webbrowser.open_new(summary_url)
 
     def create_child_process(self):
         pid = os.fork()

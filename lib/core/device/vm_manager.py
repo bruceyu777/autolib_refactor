@@ -44,9 +44,11 @@ class VmManager:
         return self.vm_hosts[vm_name].retr_vm_status(vm_name)
 
     def deploy_vms(self):
-        release, build = env.args.release, env.args.build
-        if not all([release, build]):
-            logger.error("Release and build must be specified for deploying vms.")
+        release, build, *_ = env.get_restore_image_args()
+        if not release or not build:
+            logger.error(
+                "\n*** Release and build must be specified for deploying vms! ***\n"
+            )
             sys.exit(-1)
 
         for vm_name, host in self.vm_hosts.items():

@@ -19,9 +19,9 @@ class ScriptSyntax:
     }
 
     LINE_PATTERN_TABLE = {
-        "commented_section": r"#\s*\[.*\]",
+        "commented_section": r"#\s*\[[A-Z_0-9]+\]",
         "commented_line": r"#.*",
-        "section": r"\[(?P<section_name>.+)\]",
+        "section": r"\[(?P<section_name>[A-Z_0-9]+)\]",
         "statement": "",
         "comment": r"[Cc]omment[s]*\s*:*\s*(?P<comment_content>.*)",
         "include": r"include\s+(?P<file_name>.+)",

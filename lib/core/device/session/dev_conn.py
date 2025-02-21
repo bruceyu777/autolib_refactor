@@ -6,15 +6,14 @@ import pexpect
 import ptyprocess
 
 from lib.services import env, logger
+from lib.services import output as OUTPUT
 
-from .output_buffer import OutputBuffer
-from .pexpect_wrapper import LogFile, Spawn, new_buffer_init_class
+from .pexpect_wrapper import LogFile, OutputBuffer, Spawn
 
 READ_WAIT_TIME = 120
 WAIT_TIME = 60
 MAX_SEARCH_CNT = 3
 
-CODE_FORMAT = "ascii"
 ERROR_INFO = (
     "command parse error",
     "Unknown action",
@@ -26,12 +25,11 @@ ONE_SECOND = 1
 
 
 class DevConn:
-    def __init__(self, dev_name, connection, user_name, password):
+    def __init__(self, dev_name, connection):
+        # def __init__(self, dev_name, connection, user_name, password):
         self.dev_name = dev_name
         self.conn = connection
-        self._client = None
-        self.user_name = user_name
-        self.password = password
+        self.client = None
         self.output_buffer = OutputBuffer()
         self.log_file = None
         self.cur_pos = 0
@@ -41,40 +39,47 @@ class DevConn:
             del self.log_file
             self.log_file = None
 
-    def get_clean_buffer_init_class(self):
-        device_type = self.dev_name.split("_")[0]
-        buffer_clean_pattern = env.get_buffer_clean_pattern_by_dev_type(device_type)
-        cls = new_buffer_init_class(device_type, buffer_clean_pattern)
-        return cls
+    def _normalize_conn_parameters(self):
+        # disable SSH strict host key checking
+        if "ssh" in self.conn:
+            self.conn += " -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            logger.info("Disable SSH strict host key checking.")
 
-    def _new_client(self):
-        if self._client:
-            self.close()
-        buffer_for_pexpect = self.get_clean_buffer_init_class()
-        self._client = Spawn(
+    def create_session_log_file(self):
+        if self.log_file is None:
+            self.log_file = LogFile(
+                self.client,
+                self.dev_name,
+                filepath_generator=OUTPUT.compose_terminal_file,
+            )
+        return self.log_file
+
+    def connect(self):
+        clean_patterns = env.get_buffer_clean_pattern_by_dev_type(
+            self.dev_name.split("_")[0]
+        )
+        self._normalize_conn_parameters()
+        self.client = Spawn(
             self.conn,
-            buffer_for_pexpect,
+            clean_patterns,
             logger.job_log_handler,
             encoding="utf-8",
             echo=True,
             logfile=sys.stdout,
             codec_errors="ignore",
         )
-        self.log_file = LogFile(self._client, self.dev_name)
+        self.create_session_log_file()
         script = env.get_var("testing_script")
         record = "setup" if script is None else script
         self.start_record(record)
+        return self
 
-    @property
-    def client(self):
-        if not self._client or not self._client.isalive():
-            self._new_client()
-            self.login()
-        return self._client
+    def isalive(self):
+        return self.client and self.client.isalive()
 
     def close(self):
         try:
-            self._client.close()
+            self.client.close()
         except (
             AttributeError,
             OSError,
@@ -82,9 +87,6 @@ class DevConn:
             ptyprocess.PtyProcessError,
         ) as e:
             logger.debug("Failed to close the client(%s).", e)
-
-    def login(self):
-        raise NotImplementedError
 
     def send_command(self, command, pattern, timeout):
         # make sure to match the output after command is send
@@ -118,12 +120,10 @@ class DevConn:
         # make sure to match the output after command is send
         try:
             m, output = self.search(re.escape(command), ONE_SECOND, cur_pos)
-        except pexpect.TIMEOUT:
+            match_pos = cur_pos + m.start()
+        except (pexpect.TIMEOUT, Exception):
             logger.warning("Failed to match %s in %s s.", command, ONE_SECOND)
-        match_pos = cur_pos
-        if m:
-            match_pos = match_pos + m.start()
-        else:
+            match_pos = cur_pos
             logger.debug(
                 "current output in send_command is %s", self.output_buffer[match_pos:]
             )
@@ -157,25 +157,23 @@ class DevConn:
         if pos == -1:
             pos = len(self.output_buffer)
 
-        count, matched = 0, False
+        read_buffer_timeout = ONE_SECOND * 10 if timeout > 100 else ONE_SECOND
+        matched = None
         start_time = time.time()
         end_time = start_time + timeout
-        while True:
-            if timeout > 600:
-                if time.time() >= start_time + (timeout / MAX_SEARCH_CNT) * count:
-                    matched = self.output_buffer.search(pattern, pos)
-                    count += 1
-            else:
-                matched = self.output_buffer.search(pattern, pos)
+        while time.time() <= end_time:
+            matched = self.output_buffer.search(pattern, pos)
             if matched:
                 break
-            if time.time() > end_time:
-                matched = self.output_buffer.search(pattern, pos)
-                break
-
-            self._read_output(ONE_SECOND)
-
+            self._read_output(read_buffer_timeout)
+        time_used = time.time() - start_time
         self._log_output(self.output_buffer)
+        logger.debug(
+            "Pattern - <%s> was matched?  %s, time used: %.1f s",
+            matched,
+            pattern,
+            time_used,
+        )
         return matched, self.output_buffer[pos:]
 
     def clear_buffer(self, pos=None):

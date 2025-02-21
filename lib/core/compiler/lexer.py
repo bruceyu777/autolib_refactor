@@ -5,7 +5,7 @@ from pathlib import Path
 import chardet
 
 from lib.services import logger, output
-from lib.utilities.exceptions import ScriptSyntaxError
+from lib.utilities import ScriptSyntaxError
 
 from .syntax import script_syntax
 

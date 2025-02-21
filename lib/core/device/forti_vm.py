@@ -2,22 +2,32 @@ import re
 import time
 
 from lib.services import env, logger
-from lib.utilities.exceptions import LicenseLoadErr
+from lib.utilities import LicenseLoadErr, sleep_with_progress
 
-from .common import LOGIN_STAGE
 from .fos_dev import FosDev
+from .session import get_session_init_class
 
 MAX_WAIT_TIME_FOR_LIC_UPDATE = 5 * 60
 
 
 class FortiVM(FosDev):
     def __init__(self, dev_name):
-        self.cur_stage = LOGIN_STAGE
         super().__init__(dev_name)
         self.license = None
         self.license_server = None
 
-    def reset_firewall(self, cmd):
+    def get_session_init_class(self):
+        return get_session_init_class(self.is_serial_connection_used(), True)
+
+    def is_serial_connection_used(self):
+        # for FVM we support telnet is serial connection
+        # but currently, telnet was not in CONNECTION
+        return (
+            "telnet" in self.dev_cfg["CONNECTION"]
+            or len(self.dev_cfg["CONNECTION"].split()) == 2
+        )
+
+    def reset_config(self, cmd):
         if self.is_vdom_enabled:
             self._goto_global_view()
         if re.match("^exe.*?factoryreset$", cmd):
@@ -28,12 +38,27 @@ class FortiVM(FosDev):
         self.send_line("y")
         self.login_firewall_after_reset()
 
+    def login_firewall_after_reset(self):
+        if env.is_running_on_vm():
+            # for case when we need to wait for cloud-init script finish
+            sleep_time = float(
+                env.get_section_var(
+                    "GLOBAL", "CLOUD_INIT_DELAY_SECONDS", fallback=3 * 60
+                )
+            )
+            sleep_with_progress(sleep_time)
+        _, cli_output = self.search(f"{self.asking_for_username}$", 10 * 60, -1)
+        self.check_kernel_panic(cli_output)
+        cli_output += self._login(self.DEFAULT_ADMIN, self.DEFAULT_PASSWORD)
+        if "forced to change your" in cli_output:
+            self._handle_password_enforcement()
+
     def _send_reset_command(self):
         self.send_line("exe factoryreset keepvmlicense")
 
     def get_license_by_type(self):
-        license_type = self.dev_cfg.get("license_type", None)
-        license_dir = self.dev_cfg.get("license_dir", None)
+        license_type = self.dev_cfg.get("LICENSE_TYPE", None)
+        license_dir = self.dev_cfg.get("LICENSE_DIR", None)
         if license_dir:
             return license_dir + self.license_info[license_type]["SN"]
         return self.license_info[license_type]["SN"]
@@ -41,29 +66,26 @@ class FortiVM(FosDev):
     def request_license(self):
         mylicense = self.get_license_by_type()
         self.license = mylicense
-        self.license_server = self.dev_cfg.get("license_server", None)
+        self.license_server = self.dev_cfg.get("LICENSE_SERVER", None)
         logger.debug(
             "license: '%s',license_server: '%s'", self.license, self.license_server
         )
         return self.license, self.license_server
 
     def load_license(self):
-        logger.debug(
-            "server: '%s',license_file: '%s'", self.license_server, self.license
-        )
         command = "execute restore vmlicense tftp {} {}".format(
             self.license, self.license_server
         )
         self.send_line(f"{command}")
         self.search("y/n", 30)
         self.send_line("y")
-        self.search("login:", 300, -1)
+        self.search("login:", 5 * 60, -1)
         # NOTE:
         # After license was uploaded, admin will be kicked out to login view
         # and a few seconds later, device will reboot and then go back to
         # login view again, add a delay wait device reboot
         time.sleep(100)
-        _, output = self.search("login:", 300, -1)
+        _, output = self.search("login:", 5 * 60, -1)
         failure = "license install failed."
         if output.find(failure) != -1:
             logger.error("\n%s\n", failure.title())
@@ -77,7 +99,7 @@ class FortiVM(FosDev):
             logger.warning("Use evaluation license!")
             return
         # need all the hosted entity have those atttribute
-        self.pre_mgmt_settings()
+        self.setup_management_access()
         self.request_license()
         self.load_license()
         self.wait_until_valid()
@@ -123,28 +145,26 @@ class FortiVM(FosDev):
         )
         if ret.endswith("login: "):
             self._login(self.DEFAULT_ADMIN, self.TEMP_PASSWORD)
-        logger.debug("<<< 'valid': '%s'", valid)
         return valid
 
     def wait_until_valid(self, timeout=MAX_WAIT_TIME_FOR_LIC_UPDATE):
-        logger.debug(">>> timeout:'%d'", timeout)
         wait_time = 0
+        interval = 10
         while wait_time < timeout:
             self.send_line("")
-            _, ret = self.search("#|login:", 10, -1)
+            _, ret = self.search("#|login:", interval, -1)
             if ret and ret.find("login: ") != -1:
                 self._login(self.DEFAULT_ADMIN, self.TEMP_PASSWORD)
             if self.validate_license():
                 break
-            msg = "\nSleep 20 seconds to wait license activate!\n"
+            msg = f"\nSleep {interval} seconds to wait license activate!\n"
             logger.info(msg)
-            time.sleep(20)
-            wait_time += 20
+            time.sleep(interval)
+            wait_time += interval
         else:
             msg = "Unable to activate license in {} seconds".format(timeout)
             logger.critical(msg)
             raise LicenseLoadErr(msg)
-        logger.debug("<<< activated_flag: '%s'", True)
         return True
 
     def use_evaluation_license(self):
