@@ -1,70 +1,16 @@
 #!/usr/bin/python3
 
 import argparse
-import os
 import sys
 
-from lib.core.scheduler.job import Job
-from lib.services import logger, setup_logger
-from lib.services.summary import summary
-
-
-class Upgrade(argparse.Action):
-    def __init__(self, option_strings, dest, nargs=0, **kwargs):
-        super().__init__(option_strings, dest, nargs=nargs, **kwargs)
-        self.binary_filename = kwargs.get("binary_filename", "AutoLib_v3")
-        self.release_on_server = kwargs.get(
-            "release_on_server", f"http://172.18.52.254/AutoLib/{self.binary_filename}"
-        )
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        self._upgrade()
-
-    def _upgrade(self):
-        # Create a pipe for communication between parent and child processes
-        read_fd, write_fd = os.pipe()
-        pid = os.fork()
-        if pid > 0:
-            self._parent_process(read_fd, write_fd)
-        else:
-            self._child_process(write_fd)
-
-    def _parent_process(self, read_fd, write_fd):
-        os.close(write_fd)
-        with os.fdopen(read_fd) as read_pipe:
-            while True:
-                line = read_pipe.readline()
-                if not line:
-                    break
-                print(line, end="")
-                sys.stdout.flush()
-        sys.exit(0)
-
-    def _child_process(self, write_fd):
-        self._close_unused_fds(write_fd)
-        with os.fdopen(write_fd, "w") as write_pipe:
-            write_pipe.write("Started to upgrade.\n")
-            if self._upgrade_logic():
-                write_pipe.write("Succeeded to upgrade.\n")
-            else:
-                write_pipe.write("Failed to upgrade.\n")
-        sys.exit(0)
-
-    def _close_unused_fds(self, write_fd):
-        max_fd = os.sysconf("SC_OPEN_MAX") if hasattr(os, "sysconf") else 2048
-        for fd in range(3, max_fd):
-            if fd == write_fd:
-                continue
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-
-    def _upgrade_logic(self):
-        os.system(f"rm -rf {self.binary_filename}")
-        exit_status = os.system(f"curl -O {self.release_on_server}")
-        return exit_status == 0
-
+from lib import (
+    Job,
+    Upgrade,
+    imageservice_operations,
+    launch_webserver_on,
+    logger,
+    setup_logger,
+)
 
 PROG_DESCRIPTION = """Regression Test Automation Framework.
 Document link: https://releaseqa-portal.corp.fortinet.com/static/docs/training/autolib_v3_docs/"""
@@ -74,10 +20,93 @@ none: do not submit any testcase result to Oriole.
 succeeded: only submit succeeded testcases' result to Oriole."""
 
 
-__version__ = "V3R10B0004"
+__version__ = "V3R10B0005"
 
 
-def parse_cli_args():
+def create_webserver_parser(parent):
+    parser = parent.add_parser(
+        "webserver",
+        help="Launch AutoLib HTTP Web Server",
+        description="To launch AutoLib HTTP Web Server as Working Portal",
+    )
+    parser.add_argument(
+        "-p", "--port", dest="port", help="Specify port number to listen", default=8080
+    )
+    parser.add_argument(
+        "-i",
+        "--ip_address",
+        dest="ip_address",
+        help="Specify ip address to listen",
+        default="127.0.0.1",
+    )
+
+
+def create_imageservice_parser(parent):
+    parser = parent.add_parser(
+        "imageservice",
+        help="Download or check image information",
+        description="Use this command to check the latest image information or to download image:",
+    )
+    parser.add_argument("--version", action="version", version="%(prog)s 1.1")
+    parser.add_argument(
+        "-b", "--build", dest="build", help="Specify the build number of the image"
+    )
+    parser.add_argument(
+        "-x",
+        "--ext",
+        dest="ext",
+        type=str,
+        default=".out",
+        help="Specify the image file extension",
+    )
+    parser.add_argument(
+        "-r",
+        "--release",
+        dest="release",
+        type=str,
+        default="",
+        help="Specify the major release",
+    )
+    parser.add_argument(
+        "-p",
+        "--project",
+        dest="project",
+        type=str,
+        default="FortiOS",
+        help="Specify the product project",
+    )
+    parser.add_argument(
+        "-d",
+        "--home_dir",
+        dest="home_directory",
+        type=str,
+        default="/tftpboot/",
+        help="Specify where to save downloaded image file",
+    )
+    parser.add_argument(
+        "-f",
+        "--fgt",
+        dest="fortigates",
+        nargs="*",
+        default=[],
+        help=(
+            "1> FortiGate list from env.conf if you upgrade\n"
+            "2> or platform if checking image file path\n"
+            "3> if you have multiple one, use space to separate\n"
+        ),
+    )
+    parser.add_argument(
+        "-q",
+        "--query",
+        dest="only_query",
+        action="store_true",
+        default=False,
+        help="Retrieve image information from the TFTP Server",
+    )
+    return parser
+
+
+def create_main_parser():
     parser = argparse.ArgumentParser(
         prog="AutoLib_v3",
         description=PROG_DESCRIPTION,
@@ -157,30 +186,48 @@ def parse_cli_args():
         default="succeeded",
         help=SUBMIT_HELP,
     )
+    parser.add_argument(
+        "-p",
+        "--project",
+        dest="project",
+        default="FortiOS",
+        help="Specify project for image downloading and checking...",
+    )
+    parser.add_argument(
+        "-w",
+        "--wait_image_ready_timer",
+        type=int,
+        default=0,
+        dest="wait_image_ready_timer",
+        help="Specify a tiemout timer for waiting image ready.(Unit: Hour)",
+    )
+    parser.add_argument(
+        "--portal",
+        dest="portal",
+        action="store_true",
+        default=False,
+        help="Bring up web portal while run autotest",
+    )
+    return parser
+
+
+def parse_cli_args():
+    parser = create_main_parser()
+    subprasers = parser.add_subparsers(dest="command", help="Sub commands")
+    create_webserver_parser(subprasers)
+    create_imageservice_parser(subprasers)
     args = parser.parse_args()
     return args
 
 
-def main():
-    args = parse_cli_args()
+def run_autotest_main(args):
     if not (args.script or args.group):
         logger.error("Please speicify the testcase script or testcase group.")
         sys.exit(-1)
 
-    setup_logger(args.debug, args.group, args.script or args.group)
     logger.notice("\n**** Start test job with AUTOLIB - %s. ****", __version__)
     logger.notice("CLI from user: %s", " ".join(sys.argv))
     logger.notice("Test Environment: %s", args.env)
-    if args.script:
-        logger.notice("Test Script: %s", args.script)
-        test_file = args.script
-    else:
-        logger.notice("Test Group: %s", args.group)
-        test_file = args.group
-
-    summary.dump_str_to_brief_summary(
-        f"# Environment File: {args.env}\n# Test File: {test_file}\n"
-    )
 
     try:
         Job(args).run()
@@ -189,7 +236,32 @@ def main():
         logger.exception("Test job failed.")
         if not args.check:
             sys.exit(-1)
-    sys.exit(0)
+
+
+def run_sub_command_main(args):
+    if args.command == "webserver":
+        launch_webserver_on(args.ip_address, args.port)
+    elif args.command == "imageservice":
+        imageservice_operations(
+            args.fortigates,
+            args.project,
+            args.release,
+            args.build,
+            args.ext,
+            args.only_query,
+            home_directory=args.home_directory,
+        )
+
+
+def main():
+    args = parse_cli_args()
+    setup_logger(
+        args.debug, args.group, args.script or args.group, sub_command=args.command
+    )
+    if args.command:
+        run_sub_command_main(args)
+    else:
+        run_autotest_main(args)
 
 
 if __name__ == "__main__":

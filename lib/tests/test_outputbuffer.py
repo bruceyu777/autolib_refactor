@@ -1,6 +1,6 @@
 import pytest
 
-from lib.core.device.output_buffer import OutputBuffer
+from lib.core.device.pexpect_wrapper import OutputBuffer
 
 
 @pytest.mark.skip()

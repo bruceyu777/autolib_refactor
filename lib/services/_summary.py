@@ -4,7 +4,6 @@ import os
 import shutil
 from datetime import datetime
 from enum import Enum, IntEnum
-from pathlib import Path
 
 # pylint: disable=wrong-import-order, import-error
 from rich.console import Console
@@ -42,7 +41,19 @@ class TestStatus(Enum):
 NOT_APPLICABLE = "N/A"
 
 
+def get_output_filename(output_type):
+    mapping = {
+        OutputFileType.SUMMARY: "summary.html",
+        OutputFileType.BRIEF_SUMMARY: "brief_summary.txt",
+        OutputFileType.FAILED_TESTSCRIPT: "failed_testscripts.txt",
+        OutputFileType.FAILED_COMMAND: "failed_commands.txt",
+    }
+    return output.compose_summary_file(mapping[output_type])
+
+
 class Summary:
+
+    SCRIPT_LINE_MSG_TEMPLATE = "{script_id:15}{script:64}{comment}"
 
     def __init__(self):
         self.testscripts = collections.defaultdict(tuple)
@@ -50,15 +61,6 @@ class Summary:
         self.start_time = datetime.now().replace(microsecond=0)
         self.end_time = NOT_APPLICABLE
         self.qaid_script_mapping = {}
-
-    def get_output_filename(self, output_type):
-        mapping = {
-            OutputFileType.SUMMARY: "summary.html",
-            OutputFileType.BRIEF_SUMMARY: "brief_summary.txt",
-            OutputFileType.FAILED_TESTSCRIPT: "failed_testscripts.txt",
-            OutputFileType.FAILED_COMMAND: "testscript_failed_commands.txt",
-        }
-        return output.compose_summary_file(mapping[output_type])
 
     def add_qaid_script_mapping(self, qaid, source_filepath):
         self.qaid_script_mapping[qaid] = os.path.relpath(source_filepath, os.getcwd())
@@ -77,10 +79,9 @@ class Summary:
         self.testcases[id_] = (status, res, True)
         self._generate()
 
-    def add_testscript(self, script_path):
-        id_ = Path(script_path).stem
-        self.add_qaid_script_mapping(id_, script_path)
-        self.testscripts[id_] = (TestStatus.NOT_TESTED, NOT_APPLICABLE)
+    def add_testscript(self, script):
+        self.add_qaid_script_mapping(script.id, script.source_file)
+        self.testscripts[script.id] = (TestStatus.NOT_TESTED, NOT_APPLICABLE)
         self._generate()
 
     def update_testscript(self, id_, status, duration=NOT_APPLICABLE):
@@ -205,7 +206,7 @@ class Summary:
 
     def _generate(self):
         rendered_content = self._render()
-        summary_filepath = self.get_output_filename(OutputFileType.SUMMARY)
+        summary_filepath = get_output_filename(OutputFileType.SUMMARY)
         with open(summary_filepath, "w+", encoding="utf-8") as f:
             f.write(rendered_content)
         return rendered_content
@@ -229,45 +230,40 @@ class Summary:
         console = Console()
         console.print(table)
 
-    def add_failed_command(self, errors):
-        failed_commands_file_name = self.get_output_filename(
-            OutputFileType.FAILED_COMMAND
+    def write_notes_to_file(
+        self, script_id, script, comment, note_type: OutputFileType
+    ):
+        failed_commands_file_name = get_output_filename(note_type)
+        if note_type in (
+            OutputFileType.FAILED_TESTSCRIPT,
+            OutputFileType.FAILED_COMMAND,
+        ):
+            comment = f"\n{comment}"
+        failed_info = self.SCRIPT_LINE_MSG_TEMPLATE.format(
+            script_id=script_id, script=script, comment=f"{comment}\n\n"
         )
         with open(failed_commands_file_name, "a", encoding="utf-8") as f:
-            f.write(errors)
-        self.dump_err_command_to_brief_summary(f"#### Command Errors: \n{errors}\n")
-
-    def add_failed_testscript(self, script_id, script, comment="Failed testscript"):
-        failed_testscripts_file_name = self.get_output_filename(
-            OutputFileType.FAILED_TESTSCRIPT
-        )
-        with open(failed_testscripts_file_name, "a", encoding="utf-8") as f:
-            f.write(f"{script_id}  {script}\n{comment}\n\n")
-        self.dump_err_command_to_brief_summary(f"#### Expect Failures: \n{comment}\n\n")
-
-    def dump_result_to_brief_summary(self, script_id, script, result):
-        brief_summary_file_name = self.get_output_filename(OutputFileType.BRIEF_SUMMARY)
-        with open(brief_summary_file_name, "a", encoding="utf-8") as f:
-            f.write(f"{script_id} {script} {result.upper()}\n")
+            f.write(failed_info)
+        # add failure or error to to brief summary
+        if note_type is OutputFileType.FAILED_TESTSCRIPT:
+            self.dump_str_to_brief_summary(f"##### Expect Failures:{comment}")
+        if note_type is OutputFileType.FAILED_COMMAND:
+            self.dump_str_to_brief_summary(f"##### Command Errors:{comment}")
 
     def dump_str_to_brief_summary(self, comment):
-        brief_summary_file_name = self.get_output_filename(OutputFileType.BRIEF_SUMMARY)
+        brief_summary_file_name = get_output_filename(OutputFileType.BRIEF_SUMMARY)
         with open(brief_summary_file_name, "a", encoding="utf-8") as f:
             f.write(f"{comment}\n")
 
     def dump_script_start_time_to_brief_summary(self):
-        brief_summary_file_name = self.get_output_filename(OutputFileType.BRIEF_SUMMARY)
+        brief_summary_file_name = get_output_filename(OutputFileType.BRIEF_SUMMARY)
         with open(brief_summary_file_name, "a", encoding="utf-8") as f:
             current_time = datetime.now().replace(microsecond=0)
-            f.write(f"\n# Current Time: {current_time}\n")
-
-    def dump_err_command_to_brief_summary(self, err_info):
-        brief_summary_file_name = self.get_output_filename(OutputFileType.BRIEF_SUMMARY)
-        with open(brief_summary_file_name, "a", encoding="utf-8") as f:
-            f.write(f"# {err_info}\n")
+            f.write(f"# Current Time: {current_time}\n")
 
 
 summary = Summary()
+
 
 if __name__ == "__main__":
     print("begin to copy.")

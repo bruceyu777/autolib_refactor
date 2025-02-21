@@ -5,6 +5,8 @@ import time
 from lib.services.environment import DeviceConfig, env
 from lib.services.log import logger
 
+from ._helper.common import parse_version
+
 DEFAULT_TIMEOUT_FOR_PROMPT = 10
 MAX_TIMEOUT_FOR_REBOOT = 10 * 60
 
@@ -25,6 +27,7 @@ AUTO_PROCEED_RULE_MAP = {
     r"to accept\): $": "a",
     r"\[confirm\]$": "y",
     r"--More--\s*$": " ",
+    r"\(yes/no/\[fingerprint\]\)\? $": "yes",
 }
 
 AUTO_PROCEED_PATTERNS = "|".join(AUTO_PROCEED_RULE_MAP.keys())
@@ -42,28 +45,32 @@ DEFAULT_PROMPTS = "|".join(
 DISABLE = "disable"
 
 
-def _parse_fos_version(version):
-    pattern = re.compile(
-        r"^(?P<platform>[\w-]+)\s+v(?P<version>\d+\.\d+\.\d+),"
-        r"build((?P<build>\d+)),\d+\s+\((?P<release_type>.*?)\)"
-    )
-    matched = pattern.search(version)
-    return matched.groupdict() if matched else {}
-
-
 class Device:
     def __init__(self, dev_name):
         self.dev_name = dev_name
         self.conn = None
         self._device_info = None
         self.dev_cfg: DeviceConfig = env.get_dev_cfg(dev_name)
-        self.keep_running = False
+        self.keep_running = True
         self.confirm_with_newline = False
         self.wait_for_confirm = False
         self.embeded_conn = False
-        self.connect()
+        self.initialize()
         self.license_info = {}
         self._extract_license_info()
+
+    def get_actual_timer(self, timeout_timer):
+        return env.get_actual_timer(self.dev_name, timeout_timer)
+
+    def initialize(self):
+        self.connect()
+
+    def connect(self):
+        raise NotImplementedError
+
+    # pylint: disable=unused-argument
+    def reconnect(self, max_retries=3):
+        self.connect()
 
     def __str__(self):
         return f"{type(self).__name__}({self.dev_name})"
@@ -94,40 +101,50 @@ class Device:
             logger.debug("Device:%s is reconnected.", self.dev_name)
 
     def switch(self, retry=0):
+        # TODO: this one needs more refatoring
         if retry > 3:
             logger.debug("Failed to switch device: %s", self.dev_name)
         try:
+            if not self.conn.isalive():
+                logger.warning("Previous connection was disconnected!")
+                self.reconnect()
             if self.keep_running:
+                ### need to check if connection still valid
                 return
             self._reconnect_if_exited()
             logger.debug("Start login device %s", self.dev_name)
             self.force_login()
             self.clear_buffer()
-
         except Exception as e:
             print(e)
             self.switch(retry + 1)
-
-    def connect(self):
-        raise NotImplementedError
 
     def force_login(self):
         raise NotImplementedError
 
     def expect(self, pattern, timeout=DEFAULT_TIMEOUT_FOR_PROMPT, need_clear=True):
-        return self.conn.expect(pattern, timeout, need_clear)
+        timeout = self.get_actual_timer(timeout)
+        return self._execute_with_reconnect(
+            self.conn.expect, pattern, timeout, need_clear
+        )
 
     def search(self, pattern, timeout=DEFAULT_TIMEOUT_FOR_PROMPT, pos=0):
-        return self.conn.search(pattern, timeout, pos)
+        timeout = self.get_actual_timer(timeout)
+        return self._execute_with_reconnect(self.conn.search, pattern, timeout, pos)
+
+    def _execute_with_reconnect(self, func, *args, **kwargs):
+        if not self.conn.isalive():
+            self.reconnect()
+        return func(*args, **kwargs)
 
     def send_line(self, s):
-        return self.conn.send_line(s)
+        return self._execute_with_reconnect(self.conn.send_line, s)
 
     def send(self, s):
-        return self.conn.send(s)
+        return self._execute_with_reconnect(self.conn.send, s)
 
     def clear_buffer(self):
-        self.conn.clear_buffer()
+        self._execute_with_reconnect(self.conn.clear_buffer)
 
     def require_confirm(self, s):
         for key, val in AUTO_PROCEED_RULE_MAP.items():
@@ -138,44 +155,58 @@ class Device:
         return None
 
     def require_login(self, s):
-        for key in FOS_UNIVERSAL_PROMPTS:
-            if re.match(key, s):
-                return True
-        return False
+        return any(re.match(key, s) for key in FOS_UNIVERSAL_PROMPTS)
 
     def sysctl_login(self, s):
-        for key in SYSCTRL_COMMAND:
-            if re.match(key, s):
-                return True
-        return False
+        return any(re.match(key, s) for key in SYSCTRL_COMMAND)
 
-    @property
-    def system_status(self):
+    def _get_system_status(self):
         *_, system_info_raw = self.send_command(
             "get system status", pattern="Last reboot reason.*?# $", timeout=10
         )
-        selected_lines = [
-            l.split(": ", maxsplit=1) for l in system_info_raw.splitlines() if ": " in l
-        ]
-        if not selected_lines:
-            return {}
-        system_status = dict(selected_lines)
-        if "Version" in system_status:
-            system_status.update(_parse_fos_version(system_status["Version"]))
-        if "Virtual domain configuration" not in system_status:
-            system_status["Virtual domain configuration"] = DISABLE
-        if "BIOS version" not in system_status:
-            system_status["BIOS version"] = "0"
-        return system_status
+        return system_info_raw
+
+    def get_parsed_system_status(self):
+        raw_system_info = self._get_system_status()
+        parsed_status = {}
+        version_date_pattern = re.compile(
+            r"\s*\d+\.\d+(?:\(\d{4}-\d{2}-\d{2} \d{2}:\d{2}\))*"
+        )
+
+        for line in raw_system_info.splitlines():
+            if ": " not in line:
+                continue
+            key, value = (item.strip() for item in line.split(": ", 1))
+            if version_date_pattern.match(value):
+                value = value.split("(")[0]  # Remove date from version
+            parsed_status[key] = value
+
+        if parsed_status:
+            if "Version" in parsed_status:
+                parsed_status.update(parse_version(parsed_status["Version"]))
+
+            default_values = {
+                "Virtual domain configuration": DISABLE,
+                "BIOS version": "0",
+            }
+            for key, default_value in default_values.items():
+                parsed_status.setdefault(key, default_value)
+
+        return parsed_status
 
     def get_device_info(self, on_fly=False):
         if self._device_info is None or on_fly:
             t1 = time.perf_counter()
-            system_status = self.system_status
+            system_status = self.get_parsed_system_status()
             t2 = time.perf_counter()
             logger.debug("It takes %.1f s to collect system status.", t2 - t1)
             t1 = time.perf_counter()
-            autoupdate_versions = self.get_autoupdate_versions()
+            is_vdom_enabled = (
+                system_status.get("Virtual domain configuration", DISABLE) != DISABLE
+            )
+            autoupdate_versions = self.get_autoupdate_versions(
+                is_vdom_enabled=is_vdom_enabled
+            )
             t2 = time.perf_counter()
             logger.debug("It takes %.1f s to collect autoupdate versions.", t2 - t1)
             system_status_selected = {
@@ -184,16 +215,8 @@ class Device:
             self._device_info = {**system_status_selected, **autoupdate_versions}
         return self._device_info
 
-    @property
-    def is_vdom_enabled(self):
-        # for some platform if vdom not enabled, won't have Virtual information in
-        # get system statuss
-        return (
-            self.system_status.get("Virtual domain configuration", DISABLE) != DISABLE
-        )
-
     def get_autoupdate_versions(self, is_vdom_enabled=None):
-        if is_vdom_enabled or self.is_vdom_enabled:
+        if is_vdom_enabled:
             self._goto_global_view()
         self.clear_buffer()
         *_, versions_raw = self.send_command("diag autoupdate versions", timeout=10)
@@ -280,12 +303,16 @@ class Device:
             logger.debug("* TIMEOUT * Unable to match pattern...")
         return matched, output
 
+    def login(self):
+        pass
+
     def send_command(
         self,
         command,
         pattern=DEFAULT_PROMPTS,
         timeout=DEFAULT_TIMEOUT_FOR_PROMPT,
     ):
+        timeout = self.get_actual_timer(timeout)
         if self.embeded_conn:
             return self._send_command(command, pattern, timeout)
         is_reboot_command = self.is_reboot_command(command)
@@ -297,7 +324,7 @@ class Device:
             # the command will be eaten by FOS without this delay, it will not work.
         matched, output = self._send_command(command, pattern, timeout)
         if is_reboot_command:
-            self.conn.login()
+            self.login()
         return matched, output
 
     def start_record_terminal(self, folder_name):

@@ -1,0 +1,168 @@
+VERSION: v1
+
+description: This document describes all supported fields for an ENV file used by FortiOS autolib.
+style guidelines:
+  - KEY requirements: All FIELDs and SECTIONs should use CAPITAL LETTERS with CAMEL CASE.
+  - Acceptable ENABLE values:
+      - true
+      - yes
+  - Acceptable DISABLE values:
+      - false
+      - no
+  - All fields are defined in the format of `<label>: <value>`.
+
+ENV SUPPORTED TYPE:
+  GLOBAL:
+    - description: Global settings for autolib.
+    - mandatory_fields:
+        - DUT: Specifies the DUT label in the ENV file.
+
+    - supported_fields:
+        - VM_HOST_DEF: Path to the VM host configuration file.
+        - KEEP_USED_VM_ON: Determines whether to power off the VM after the test.
+        - REMOVE_USED_VM: Determines whether to remove the VM after the test.
+        - DEPLOY_NEW_VM: Enables or disables new VM deployment.
+        - DUT_INFO_ON_FLY: Dynamically retrieve DUT information.
+        - LOCAL_HTTP_SERVER_IP: Defines the local HTTP server IP address.
+        - LOCAL_HTTP_SERVER_PORT: Defines the local HTTP server port.
+        - VM_NIC: Specifies the VM NIC for reporting to Oriole.
+        - VM_OS: Defines the VM OS for reporting to Oriole.
+        - RETRY_EXPECT: Number of retries for the expect function.
+        - EXEMPT_ERROR_PATTERN_SOURCE: Path to the error exemption pattern file.
+        - LICENSE_INFORMATION: Path to the license `.csv` file, which must contain `sn`, `vdom`, and `expire_date` columns.
+        - RUNNING_AS_VM: Determines whether the script is running on as VM, used for running FGT scripts directly on FortiStack Robot, all FGTs will be takend as VMs.
+        - CLOUD_INIT_DELAY_SECONDS: Number of seconds to delay for VM cloud-init scripts for rebooting action when RUNNING_ON_VM is enabled. Defaults to 3 * 60.
+        - DYNAMIC_SCALE_TIMER:
+            "Dynamically adjusts sleep and expect timer scales based on the device model. \
+            Devices with model >= 1000 use a scale of 0.8, models >= 100 use 1, and models < 100 use 1.2. \
+            If the DUT is not a FortiGate (FGT), the DUT model count is used."
+
+  ORIOLE:
+    - supported_fields:
+        - USER: Oriole username (LDAPID).
+        - ENCODE_PASSWORD: Retrieved from Go -> User Profile -> Encoded Password in Oriole.
+        - RELEASE: Defines the task release version in Oriole. Defaults to DUT release if unspecified.
+        - TASK_PATH: Defaults to `/FOS/{RELEASE}/Regression`; specify a different Oriole task path if needed.
+        - RES_FIELD_XXXX: Defines the XXX field for Oriole result submission.
+        - RES_FIELD_MARK: Defaults to `AutoLib_v3`.
+
+  EMS:
+    - description: Defines an EMS instance. Label format is `EMS_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port.
+        - PROTOCOL:
+            - http
+            - https
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+        - VERSION: EMS version (MAJOR.MINOR.PATCH, e.g., 7.2.1).
+
+  FMG:
+    - description: Defines a FortiManager instance. Label format is `FMG_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port.
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+
+  FSW:
+    - description: Defines a FortiSwitch instance. Label format is `FSW_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port.
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+
+  PC:
+    - description: Defines a PC instance. Label format is `PC_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port.
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+
+  FAP:
+    - description: Defines a FortiAP instance. Label format is `FAP_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port.
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+        - CONTROLLER: Specifies it's controller (must be a defined `FGT` or `FVM` defined in the ENV file).
+        - PLATFORM_GENERATION: Defines the platform hardware generation for Oriole reporting.
+        - TERMINAL_SERVER_VENDOR: Terminal server vendor (default is `cisco`).
+        - TERMINAL_SERVER_USERNAME: Username for the terminal server.
+        - TERMINAL_SERVER_PASSWORD: Password for the terminal server.
+
+  PDU:
+    - description: Defines a PowerController instance. Label format is `PDU_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port (only supports telnet).
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+    - supported_fields:
+        - VENDOR:
+            - NETBOOTER
+            - SCHNEIDER
+
+  FVM:
+    - description: Defines a FortiGate VM instance. Label format is `FVM_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port.
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+        - HOSTED_ON: Specifies the EXS label where the FortiGate VM is hosted.
+        - LICENSE_SERVER: Defines the license server (TFTP) IP address.
+        - LICENSE_DIR: Specifies the license file home directory.
+        - LICENSE_TYPE: Matches the license type defined in `GLOBAL/LICENSE_INFORMATION`.
+        - MGMT_IP: Management IP address for setup (restoring image/license activation).
+        - MGMT_MASK: Management subnet mask for setup.
+        - MGMT_GW: Management gateway for setup.
+        - MGMT_PORT: Management port (default is `port1`).
+        - VM_TYPE:
+            Determines default vCPU and memory specifications for autolib.
+            - VM01
+            - VM02
+            - VM04
+            - VM08
+            - VM16
+            - VM32
+            - VMUL
+    - supported_fields:
+        - VCPU: Overrides the vCPU count for the license type.
+        - MEMORY: Overrides memory allocation for VM provisioning (unit is MB).
+        - LOG_DISK_SIZE: Defines the size of the secondary partition for VM provisioning (default is `30G`).
+
+  FGT:
+    - description: Defines a physical FortiGate or FortiWiFi instance. Label format is `FGT_XXX`.
+    - mandatory_fields:
+        - CONNECTION: Defines access method, IP address, and port.
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+        - BURN_INTERFACE: Interface used for image burning.
+        - BURN_GW: Gateway for the image burn connection.
+        - BURN_IP: IP address for the image burn connection.
+    - supported_fields:
+        - PLATFORM_GENERATION: Defines the platform hardware generation for Oriole reporting.
+        - TERMINAL_SERVER_VENDOR: Terminal server vendor (default is `cisco`).
+        - TERMINAL_SERVER_USERNAME: Username for the terminal server.
+        - TERMINAL_SERVER_PASSWORD: Password for the terminal server.
+        - CISCOPASSWORD: Cisco terminal password (used for clearing terminal server sessions).
+        - MGMT_IP: Management IP address for setup.
+        - MGMT_MASK: Management subnet mask for setup.
+        - MGMT_GW: Management gateway for setup.
+        - MGMT_PORT: Management port (default is `port1`).
+        - BURN_NETMASK: Local network mask for image burn (default is `255.255.255.0`).
+        - BIOS_VLAN_ID: Sets BIOS VLAN ID. If not specified, it resets to `-1`.
+
+HOST ENV SUPPORTED TYPE:
+  KVM:
+    - description: Defines a KVM instance (host environment). Label format is `KVM_XXX`.
+    - mandatory_fields:
+        - USERNAME: Username for authentication.
+        - PASSWORD: Password for authentication.
+        - MANAGEMENT: Management IP address.
+        - ACCESS_PORT: Access port (default is `22`).
+        - ACCESS_PROTOCOL:
+            - ssh
+        - NIC_LIST: NIC list for interface setup (sequence-sensitive, default is `""`).
+        - PCI_ID_LIST: PCI device ID list for interface setup (sequence-sensitive, default is `""`).
+        - NETWORK_TYPE: Network type (default is `direct`).
+    - supported_fields:
+        - NON_SRIOV: Flag for `NON_SRIOV` (default is `no`).

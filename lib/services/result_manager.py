@@ -1,13 +1,12 @@
 import re
 from collections import defaultdict
-from pathlib import Path
 
-from lib.utilities.exceptions import ReportUnderPCWithoutDut
+from lib.utilities import ReportUnderPCWithoutDut
 
+from ._summary import OutputFileType, TestStatus, summary
 from .environment import env
 from .log import logger
 from .oriole import oriole
-from .summary import TestStatus, summary
 
 
 class ScriptResultManager:
@@ -38,8 +37,8 @@ class ScriptResultManager:
         "duplicated with another vip",
     )
 
-    def __init__(self, script_filepath):
-        self.script_filepath = script_filepath
+    def __init__(self, script):
+        self.script = script
         self.cli_errors = []
         self.expect_result = defaultdict(list)
         self.report_qaid_and_dev_map = {}  # qaid: dev_name
@@ -48,20 +47,17 @@ class ScriptResultManager:
     def add_dev_info_requested_by_user(self, testcase_id, dev_info):
         self.dev_info_requested_by_user[testcase_id] = dev_info
 
-    def add_report_qaid_and_dev_map(self, testcase_id, dev_name):
-        if not self.is_a_valid_testcase(testcase_id):
-            logger.error("Results for %s could not be found", testcase_id)
-        self.report_qaid_and_dev_map[testcase_id] = dev_name
-        if (
-            dev_name.startswith("PC")
-            and testcase_id not in self.dev_info_requested_by_user
-        ):
+    def add_report_qaid_and_dev_map(self, qaid, dev_name):
+        if not self.is_a_valid_testcase(qaid):
+            logger.error("Results for %s could not be found", qaid)
+        self.report_qaid_and_dev_map[qaid] = dev_name
+        if dev_name.startswith("PC") and qaid not in self.dev_info_requested_by_user:
             dut = env.get_dut()
             if dut is None:
                 raise ReportUnderPCWithoutDut(
                     "Please specify DUT or collect device info ahead when reporting under PC section."
                 )
-            self.report_qaid_and_dev_map[testcase_id] = dut
+            self.report_qaid_and_dev_map[qaid] = dut
 
     def check_cli_error(self, line_number, command, result):
         failed_pattern = "|".join(ScriptResultManager.CLI_ERROR_PATTERNS)
@@ -77,11 +73,10 @@ class ScriptResultManager:
             f"# Line {line_number: 4}: {command}  <== {error}"
             for line_number, command, error in self.cli_errors
         )
-        return f"{self.script_filepath}\n{errors}\n"
+        return errors
 
-    def add_qaid_expect_result(
-        self, qaid, is_succeeded, line_number, expect_statement, cli_output
-    ):
+    def add_qaid_expect_result(self, qaid, is_succeeded, line_number, cli_output):
+        expect_statement = self.script.get_script_line(line_number)
         self.expect_result[qaid].append(
             (
                 is_succeeded,
@@ -106,7 +101,7 @@ class ScriptResultManager:
             for result, line_number, *_ in details
             if not result
         )
-        return f"Failed {failure_lines}" if failure_lines else "Passed"
+        return f"FAILED {failure_lines}" if failure_lines else "PASSED"
 
     def is_a_valid_testcase(self, testcase_id):
         return testcase_id in self.expect_result
@@ -129,7 +124,7 @@ class ScriptResultManager:
         for qaid in self.expect_result:
             if qaid not in self.report_qaid_and_dev_map:
                 error_msg = f"** QAID - {qaid} in Expect without 'report' ***\n"
-                summary.dump_err_command_to_brief_summary(error_msg)
+                summary.dump_str_to_brief_summary(error_msg)
                 logger.warning("\n%s", error_msg)
                 continue
             if qaid in self.dev_info_requested_by_user:
@@ -143,22 +138,38 @@ class ScriptResultManager:
 
     def report_script_result(self, collected_device_info):
         is_script_succeeded = self.report_script_result_to_oriole(collected_device_info)
-        script_name = Path(self.script_filepath).stem
         result = self.get_brief_result()
         # 1. update summary results
-        summary.dump_result_to_brief_summary(script_name, self.script_filepath, result)
+        summary.write_notes_to_file(
+            self.script.id,
+            self.script.source_file,
+            result,
+            OutputFileType.BRIEF_SUMMARY,
+        )
         summary.update_testscript(
-            script_name, TestStatus.PASSED if is_script_succeeded else TestStatus.FAILED
+            self.script.id,
+            TestStatus.PASSED if is_script_succeeded else TestStatus.FAILED,
         )
         # 2. update failed expect results
         if not is_script_succeeded:
-            summary.add_failed_testscript(
-                script_name, self.script_filepath, self._get_failure_details()
+            expect_failures = f"\n{self._get_failure_details()}"
+            summary.write_notes_to_file(
+                self.script.id,
+                self.script.source_file,
+                expect_failures,
+                OutputFileType.FAILED_TESTSCRIPT,
             )
         # 3. update failed commands
         command_errors = self.get_formatted_command_errors()
         if command_errors:
-            summary.add_failed_command(command_errors)
+            summary.write_notes_to_file(
+                self.script.id,
+                self.script.source_file,
+                command_errors,
+                OutputFileType.FAILED_COMMAND,
+            )
+
+        summary.dump_str_to_brief_summary("\n")
 
     def get_require_info_collection_devices(self):
         device_set = set()

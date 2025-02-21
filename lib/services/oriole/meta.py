@@ -8,23 +8,23 @@ REPORT_FILE = "Oriole_report.json"
 ORIOLE_SUBMIT_API_URL = f"https://{IMAGE_SERVER_FQDN}/api/oriole"
 
 ORIOLE_REPORT_FIXED_FIELDS = {
-    "cidb": "1.00111",
-    "avdb": "1.00000",
+    "cidb": "0.00000",
+    "avdb": "0.00000",
     "dbdb": "0.00000",
-    "nids": "6.00741",
+    "nids": "0.00000",
     "mmdb": "0.00000",
-    "isdb": "6.00741",
-    "flen": "7.00006",
+    "isdb": "0.00000",
+    "flen": "0.00000",
     "total": "1",
-    "aven": "6.00151",
-    "apdb": "6.00741",
-    "nids_ext": "6.00741",
+    "aven": "0.00000",
+    "apdb": "0.00000",
+    "nids_ext": "0.00000",
     "ffdb": "0.00000",
-    "mudb": "1.00001",
-    "bios": "05000006",
-    "ipge": "3.00041",
+    "mudb": "0.00000",
+    "bios": "00000000",
+    "ipge": "0.00000",
     "SN": "FG39E6T018900077",
-    "crdb": "1.00021",
+    "crdb": "0.00000",
     "mcdb": "0.00000",
 }
 
@@ -46,6 +46,27 @@ ORIOLE_FIELD_FOS_SOURCE = {
     "SN": ["Serial-Number"],
     "snmp_mib": ["build"],
 }
+
+
+ORIOLE_FIELD_FAP_SOURCE = {
+    "fos": ["FortiOS"],  # 5.0.3.0123
+    "fcld": ["FortiCloud"],  # 5.0.3.283498
+    "aven": ["av engine"],
+    "avdb": ["av db"],
+    "bios": ["BIOS version"],
+    "build": ["build"],
+    "flen": ["ips engine"],
+    "nids": ["ips db"],
+    "ibdb": ["ips botnet db"],
+    "platform": ["platform"],
+    "SN": ["Serial-Number"],
+    "snmp_mib": ["build"],
+    "apdb": ["app db"],
+}
+
+
+ORIOLE_FIELD_SOURCE = {"FOS": ORIOLE_FIELD_FOS_SOURCE, "FAP": ORIOLE_FIELD_FAP_SOURCE}
+
 
 ORIOLE_FIELD_MAPPING = {
     "AS DB Version": "asever",

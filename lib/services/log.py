@@ -57,12 +57,27 @@ def update_output_subfolder(is_group_test, env_config_filename):
     output.update_output_folder_suffix(folder_suffix)
 
 
-def setup_logger(in_debug_mode, is_group_test, env_config_filename):
+def setup_logger(in_debug_mode, is_group_test, env_config_filename, sub_command=False):
+    log_level = logging.DEBUG if in_debug_mode else logging.INFO
+    if sub_command:
+        enable_log_for_subcommand(log_level)
+    else:
+        enable_log_for_autotest(log_level, is_group_test, env_config_filename)
+
+
+def enable_log_for_autotest(log_level, is_group_test, env_config_filename):
     update_output_subfolder(is_group_test, env_config_filename)
     add_logging_level("NOTICE", logging.INFO + 10)
-    log_level = logging.DEBUG if in_debug_mode else logging.INFO
     logger.setLevel(log_level)
-    setattr(logger, "in_debug_mode", in_debug_mode)
+    setattr(logger, "in_debug_mode", log_level is logging.DEBUG)
     add_stdout_stream()
-    job_log_handler = add_file_stream(in_debug_mode)
+    job_log_handler = add_file_stream(log_level is logging.DEBUG)
     setattr(logger, "job_log_handler", job_log_handler)
+
+
+def enable_log_for_subcommand(level):
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(level)
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.setLevel(level)
+    logger.addHandler(handler)

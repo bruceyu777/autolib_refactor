@@ -1,7 +1,6 @@
 import time
 
 from .computer import Computer
-from .computer_conn import ComputerConn
 from .device import DEFAULT_PROMPTS
 
 
@@ -10,25 +9,9 @@ class Pc(Computer):
         self.need_carriage = False
         super().__init__(dev_name)
 
-    def _compose_conn(self):
-        return self.dev_cfg["Connection"]
-
-    def connect(self):
-        self.conn = ComputerConn(
-            self.dev_name,
-            self._compose_conn(),
-            user_name=self.dev_cfg["Username"],
-            password=self.dev_cfg["Password"],
-        )
-        matched, _ = self.send_command("\r")
-        if matched and matched.group("windows_prompt"):
-            self.need_carriage = True
-
-        self.clear_buffer()
-
     def force_login(self):
         self.conn.close()
-        self.connect()
+        self.initialize()
 
     def send_command(self, command, pattern=DEFAULT_PROMPTS, timeout=5):
         if self.need_carriage:

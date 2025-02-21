@@ -3,12 +3,11 @@ import re
 import time
 from enum import Enum
 
+from lib.services import logger
 from lib.services.image_server import Image, image_server
-from lib.services.log import logger
-from lib.utilities.exceptions import ImageDownloadErr, ResourceNotAvailable
+from lib.utilities import ImageDownloadErr, ResourceNotAvailable, sleep_with_progress
 
 from .computer import Computer
-from .computer_conn import ComputerConn
 from .vm_builder import VmBuilder
 
 KVM_DEFAULT_IMAGE_FOLDER = r"/home/tester/images/another"
@@ -19,6 +18,7 @@ class VmStatus(Enum):
     RUNNING = "running"
     SHUTOFF = "shut off"
     PAUSED = "paused"
+    NONE = ""
 
     @classmethod
     def all_statuses(cls):
@@ -37,25 +37,6 @@ class KVM(Computer):
     def get_dev_name(self):
         return self.dev_name
 
-    def _compose_conn(self):
-        ip = self.dev_cfg["management"]
-        proto = self.dev_cfg.get("access_protocol", "SSH")
-        port = self.dev_cfg.get("access_port", "22")
-        if proto.upper() != "SSH":
-            raise NotImplementedError
-        username = self.dev_cfg["user_name"]
-        return f"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -p {port} {username}@{ip}"
-
-    def connect(self):
-        self.conn = ComputerConn(
-            self.dev_name,
-            self._compose_conn(),
-            self.dev_cfg["user_name"],
-            self.dev_cfg["password"],
-        )
-        self.send_command("")
-        self.clear_buffer()
-
     def get_cfg(self, item_name, default_value=None):
         return self.dev_cfg.get(item_name, default_value)
 
@@ -63,7 +44,7 @@ class KVM(Computer):
         return "FGT_VM64_KVM" if vm_name.startswith("FVM") else "FFW_VM64_KVM"
 
     def prepare_image(self, vm_name, release, build):
-        image = Image(self.model(vm_name), release, build)
+        image = Image(self.model(vm_name), release, build, ".kvm.zip")
         image_url = image_server.get_image_http_url(image)
         image_name = image_url.split("/")[-1]
         command = f"curl -k {image_url} --output {image_name}"
@@ -71,7 +52,6 @@ class KVM(Computer):
         self.image_location = self.unzip_image(image_name)
         if not self.image_location:
             raise ImageDownloadErr("Unable to unzip '{image_name}'")
-        logger.debug("<<< image_location: '%s'", self.image_location)
         return self.image_location
 
     def unzip_image(self, zipped_image, remove_flag=True):
@@ -80,8 +60,6 @@ class KVM(Computer):
         Archive:  FOS_VM64_KVM-v6-build0763-FORTINET.deb.kvm.zip
         inflating: fortios.qcow2
         """
-        template = ">>> zipped_image: '%s', remove_flag: '%s'"
-        logger.debug(template, zipped_image, remove_flag)
         sub_folder = str(int(time.time()))
         target = os.path.join(KVM_DEFAULT_IMAGE_FOLDER, sub_folder)
         command = "unzip -o {} -d {}".format(zipped_image, target)
@@ -96,7 +74,6 @@ class KVM(Computer):
         if remove_flag:
             command = "rm -f %s" % zipped_image
             self.send_command(command)
-        logger.debug("<<< image_name: '%s'", image_name)
         return image_name
 
     def get_mgmt_nic(self):
@@ -104,11 +81,10 @@ class KVM(Computer):
         root@kvm-server:/home/zdl/autolib# ip -o -4 addr show  | grep 10.6.30.139 --color=never
         5: br0    inet 10.6.30.139/24 brd 10.6.30.255 scope global br0\       valid_lft forever preferred_lft forever
         """
-        mgmt_ip = self.dev_cfg.get("management")
+        mgmt_ip = self.dev_cfg.get("MANAGEMENT")
         command = f"ip -o addr show | grep {mgmt_ip}/ --color=never"
         _, ret = self.send_command(command, timeout=10)
         matched_nics = re.findall(r":\s+([^\s]+)\s+inet", ret, flags=re.M)
-
         if not matched_nics:
             logger.error("\nUnable to get management nic with IP(%s)!!!\n", mgmt_ip)
             raise ResourceNotAvailable(
@@ -129,14 +105,21 @@ class KVM(Computer):
         logger.debug("<<< return: '%s', saveas: '%s'", match, saveas)
         return match, saveas
 
+    def wait_vm_to_status(self, vm_name, to_status, timeout=5 * 60):
+        timeout_time = time.time() + timeout
+        while time.time() < timeout_time:
+            vm_status = self.retr_vm_status(vm_name)
+            if vm_status is to_status:
+                return
+            sleep_with_progress(2)
+        raise ResourceNotAvailable(f"VM({vm_name}) is unable to Status({to_status})")
+
     def prepare_for_vm_deployment(self, vm_name):
         vm_status = self.retr_vm_status(vm_name)
-        if vm_status:
+        if vm_status is not VmStatus.NONE:
             if vm_status is VmStatus.RUNNING:
                 self.power_off_vm(vm_name)
-                self.remove_vm(vm_name)
-            if vm_status in (VmStatus.PAUSED, VmStatus.SHUTOFF):
-                self.remove_vm(vm_name)
+            self.remove_vm(vm_name)
 
     def make_vm_ready(self, vm_name):
         status = self.retr_vm_status(vm_name)
@@ -150,43 +133,36 @@ class KVM(Computer):
         match_rule = rf"\S+\s*{vm_name}\s*(?P<status>{'|'.join(supported_status)})"
         list_vm_cmd = "virsh list --all"
         match, _ = self.send_command(list_vm_cmd, match_rule, timeout=10)
-        return VmStatus(match.group("status")) if match else None
+        return (
+            VmStatus(match.group("status"))
+            if match and match.group("status")
+            else VmStatus.NONE
+        )
 
     def deploy_vm(self, vm_name, release, build):
         self.prepare_for_vm_deployment(vm_name)
         VmBuilder(self, vm_name, release, build).create_vm()
-        time.sleep(2)
+        sleep_with_progress(2)
         self.power_on_vm(vm_name)
-        self.wait_until_running(vm_name)
-
-    def wait_until_running(self, vm_name, time_out=10 * 60):
-        start_time = time.perf_counter()
-        while time.perf_counter() - start_time < time_out:
-            if self.retr_vm_status(vm_name) is VmStatus.RUNNING:
-                break
-            time.sleep(2)
-        else:
-            raise ResourceNotAvailable(
-                f"vm '{vm_name}' not ready after '{time_out}'s!!"
-            )
 
     def power_on_vm(self, vm_domain):
         command = f"virsh --connect qemu:///system start {vm_domain}"
-        expected_str = rf"Domain {vm_domain} started"
-        return self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
+        expected_str = rf"Domain '{vm_domain}'self started"
+        self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
+        self.wait_vm_to_status(vm_domain, VmStatus.RUNNING)
 
     def power_off_vm(self, vm_domain, poweroffdelay=10):
         command = f"virsh shutdown {vm_domain}"
         expected_str = rf"Domain '{vm_domain}' is being shutdown"
         self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
-        time.sleep(poweroffdelay)
-        vm_status = self.retr_vm_status(vm_domain)
-        return vm_status is None or vm_status is VmStatus.SHUTOFF
+        sleep_with_progress(poweroffdelay)
+        self.wait_vm_to_status(vm_domain, VmStatus.SHUTOFF)
 
     def remove_vm(self, vm_domain):
-        command = f"virsh undefine {vm_domain}"
+        command = f"virsh undefine {vm_domain} --remove-all-storage"
         expected_str = rf"Domain '{vm_domain}' has been undefined"
-        return self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
+        self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
+        self.wait_vm_to_status(vm_domain, VmStatus.NONE)
 
     def create_vm(self, **kwargs):
         template = (

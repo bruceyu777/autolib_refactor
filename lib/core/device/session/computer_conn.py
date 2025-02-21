@@ -5,31 +5,10 @@ import pexpect
 from lib.services import env, logger
 
 from .dev_conn import DevConn
-from .pexpect_wrapper import LogFile, Spawn
+from .pexpect_wrapper import Spawn
 
 
 class ComputerConn(DevConn):
-    def login(self):
-        index = self._client.expect(
-            [
-                r"\(yes/no/\[fingerprint\]\)\? $",
-                r"[Pp]assword: $",  # Some linux flavor popup is `Password:`
-                pexpect.TIMEOUT,
-                pexpect.EOF,
-            ]
-        )
-
-        logger.debug("enter into connect: the index is %s", index)
-        if index == 0:
-            self._client.sendline("yes")
-            self.login()
-        elif index == 1:
-            self._client.sendline(self.password)
-            self._client.expect(r"[$#\>]\s*")
-        elif index == 2:
-            logger.error("\nTimeout to login.")
-        elif index == 3:
-            logger.error("\nFailed to login %s as connection is closed.", self.dev_name)
 
     def send_command(self, command, pattern, timeout):
         # make sure to match the output after command is send
@@ -68,28 +47,22 @@ class ComputerConn(DevConn):
             logger.warning("Failed to match %s in %s s.", pattern, timeout)
             return m, output
 
-    def _new_client(self):
-        if self._client:
-            self.close()
-        buffer_for_pexpect = self.get_clean_buffer_init_class()
-        self._client = Spawn(
+    def connect(self):
+        clean_patterns = env.get_buffer_clean_pattern_by_dev_type(
+            self.dev_name.split("_")[0]
+        )
+        self._normalize_conn_parameters()
+        self.client = Spawn(
             self.conn,
-            buffer_for_pexpect,
+            clean_patterns,
             logger.job_log_handler,
             encoding="utf-8",
             echo=False,
             logfile=sys.stdout,
             codec_errors="ignore",
         )
-        self.log_file = LogFile(self._client, self.dev_name)
+        self.create_session_log_file()
         script = env.get_var("testing_script")
         record = "setup" if script is None else script
         self.start_record(record)
-
-    @property
-    def client(self):
-        if not self._client or not self._client.isalive():
-            self._new_client()
-            self.login()
-            self.resume_stdout()
-        return self._client
+        return self

@@ -2,8 +2,6 @@ import fcntl
 import os
 import sys
 
-from lib.services import output
-
 
 class MultiIO:
     def __init__(self, *fds):
@@ -35,15 +33,19 @@ class LogFile:
         "interaction": "logfile",
     }
 
-    def __init__(self, client, dev_name):
+    def __init__(self, client, dev_name, filepath_generator=None):
         self.client = client
         self.dev_name = dev_name
         self.fps = []
+        self.filepath_generator = filepath_generator
 
     def start_record(self, folder_name):
         for log_type, log_file in self.FILE_TABLE.items():
             file_name = f"{self.dev_name}_{log_type}.log"
-            file_path = output.compose_terminal_file(folder_name, file_name)
+            if callable(self.filepath_generator):
+                file_path = self.filepath_generator(folder_name, file_name)
+            else:
+                file_path = os.path.join(folder_name, file_name)
             # pylint: disable=consider-using-with
             fp = open(file_path, "a", encoding="utf-8")
 
