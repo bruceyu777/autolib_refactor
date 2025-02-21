@@ -20,7 +20,7 @@ none: do not submit any testcase result to Oriole.
 succeeded: only submit succeeded testcases' result to Oriole."""
 
 
-__version__ = "V3R10B0005"
+__version__ = "V3R10B0006"
 
 
 def create_webserver_parser(parent):
@@ -148,7 +148,7 @@ def create_main_parser():
         dest="debug",
         action="store_true",
         default=False,
-        help="enanble debug",
+        help="enable debug",
         required=False,
     )
     parser.add_argument(
@@ -199,7 +199,7 @@ def create_main_parser():
         type=int,
         default=0,
         dest="wait_image_ready_timer",
-        help="Specify a tiemout timer for waiting image ready.(Unit: Hour)",
+        help="Specify a timeout timer for waiting image ready.(Unit: Hour)",
     )
     parser.add_argument(
         "--portal",
@@ -222,7 +222,7 @@ def parse_cli_args():
 
 def run_autotest_main(args):
     if not (args.script or args.group):
-        logger.error("Please speicify the testcase script or testcase group.")
+        logger.error("Please specify the testcase script or testcase group.")
         sys.exit(-1)
 
     logger.notice("\n**** Start test job with AUTOLIB - %s. ****", __version__)

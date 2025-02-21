@@ -55,11 +55,11 @@ class FortiGate(FosDev):
 
     def powercycle_device(self):
         pdu_name = self.dev_cfg.get("PDU", None)
-        power_contoller = PowerController(pdu_name)
-        power_contoller.login()
-        power_contoller.rebootdev(self.dev_name)
+        power_controller = PowerController(pdu_name)
+        power_controller.login()
+        power_controller.rebootdev(self.dev_name)
         logger.info("Triggered %s reboot with PDU.", self.dev_name)
-        power_contoller.logout()
+        power_controller.logout()
 
     def extract_model_from_boot_info(self, bootinfo):
         """

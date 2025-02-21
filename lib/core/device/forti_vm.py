@@ -98,7 +98,7 @@ class FortiVM(FosDev):
         if self.use_evaluation_license():
             logger.warning("Use evaluation license!")
             return
-        # need all the hosted entity have those atttribute
+        # need all the hosted entity have those attribute
         self.setup_management_access()
         self.request_license()
         self.load_license()

@@ -35,7 +35,7 @@ class FosDev(Device):
 
     def __init__(self, dev_name):
         self.model = self.is_vdom_enabled = ""
-        logger.info("Start calling the device intialization.")
+        logger.info("Start calling the device initialization.")
         super().__init__(dev_name)
 
     def get_parsed_system_status(self):
@@ -371,7 +371,7 @@ class FosDev(Device):
         for cmd in cmdlst:
             self.send_command(cmd)
 
-    def add_staic_route(self, gtw, subnet="0.0.0.0", mask="0.0.0.0", dev="", eid="0"):
+    def add_static_route(self, gtw, subnet="0.0.0.0", mask="0.0.0.0", dev="", eid="0"):
         cmdlst = [
             "config router static",
             f"edit {eid}",
@@ -392,7 +392,7 @@ class FosDev(Device):
                 self.dev_cfg["MGMT_IP"],
                 self.dev_cfg.get("MGMT_MASK", "255.255.255.0"),
             )
-            self.add_staic_route(
+            self.add_static_route(
                 gtw=self.dev_cfg["MGMT_GW"],
                 dev=mgmt_port,
                 eid="1",
