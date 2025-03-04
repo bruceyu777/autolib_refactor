@@ -50,7 +50,7 @@ class FosDev(Device):
         if not "telnet" in self.dev_cfg["CONNECTION"]:
             return False
         return any(
-            k not in self.dev_cfg for k in ("CISCOPASSWORD", "TERMINAL_SERVER_PASSWORD")
+            k in self.dev_cfg for k in ("CISCOPASSWORD", "TERMINAL_SERVER_PASSWORD")
         )
 
     def initialize(self):

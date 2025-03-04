@@ -86,7 +86,7 @@ ENV SUPPORTED TYPE:
         - PASSWORD: Password for authentication.
         - CONTROLLER: Specifies it's controller (must be a defined `FGT` or `FVM` defined in the ENV file).
         - PLATFORM_GENERATION: Defines the platform hardware generation for Oriole reporting.
-        - TERMINAL_SERVER_VENDOR: Terminal server vendor (default is `cisco`).
+        - TERMINAL_SERVER_VENDOR: Terminal server vendor (default is `CISCO`, also support `DIGI`).
         - TERMINAL_SERVER_USERNAME: Username for the terminal server.
         - TERMINAL_SERVER_PASSWORD: Password for the terminal server.
 

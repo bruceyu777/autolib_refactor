@@ -42,7 +42,10 @@ class DevConn:
     def _normalize_conn_parameters(self):
         # disable SSH strict host key checking
         if "ssh" in self.conn:
-            self.conn += " -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            self.conn = self.conn.replace(
+                "ssh ",
+                "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ",
+            )
             logger.info("Disable SSH strict host key checking.")
 
     def create_session_log_file(self):
@@ -122,7 +125,7 @@ class DevConn:
             m, output = self.search(re.escape(command), ONE_SECOND, cur_pos)
             match_pos = cur_pos + m.start()
         except (pexpect.TIMEOUT, Exception):
-            logger.warning("Failed to match %s in %s s.", command, ONE_SECOND)
+            logger.debug("Failed to match %s in %s s.", command, ONE_SECOND)
             match_pos = cur_pos
             logger.debug(
                 "current output in send_command is %s", self.output_buffer[match_pos:]
