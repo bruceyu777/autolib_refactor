@@ -3,6 +3,31 @@
 
 block_cipher = None
 
+import os
+import re
+import subprocess
+import time
+
+def get_linux_version():
+    try:
+        result = subprocess.run(
+            ["cat", "/etc/lsb-release"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True
+        )
+        print("*" * 70)
+        print(result.stdout)
+        print("*" * 70)
+        if result.returncode == 0:
+            matched = re.search(r'DISTRIB_RELEASE=([\d.]+)', result.stdout)
+            if matched:
+                version = matched.group(1)
+                return version.replace(".", "")
+    except Exception as e:
+        print(f"Error detecting Linux version: {e}")
+    return ""
+
 
 a = Analysis(
     ['autotest.py'],
@@ -27,6 +52,10 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+
+linux_version = get_linux_version()
+version_suffix = f"_{linux_version}" if linux_version else ""
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -34,7 +63,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='AutoLib_v3',
+    name=f'AutoLib_v3{version_suffix}',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

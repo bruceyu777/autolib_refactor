@@ -49,5 +49,5 @@ RUN pyinstaller --clean autotest.spec
 # Output executable location
 CMD ["ls", "-lh", "dist"]
 
-# docker build -t pyinstaller -f Ubuntu1804Dockerfile .
-# docker run --rm -v ./:/app -it pyinstaller pyinstaller --clean autotest.spec --log-level=DEBUG
+# docker build -t pyinstaller_b1804 -f Ubuntu1804Dockerfile .
+# docker run --rm -v ./:/app -it pyinstaller_b1804 pyinstaller --clean autotest.spec --log-level=DEBUG
