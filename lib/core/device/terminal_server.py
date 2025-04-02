@@ -22,26 +22,27 @@ class CiscoTerminalServer:
             codec_errors="ignore",
         )
 
-    def _login(self):
-        index = self._client.expect_exact(
-            ["Password:", "#", pexpect.TIMEOUT, pexpect.EOF]
+    def _enable(self):
+        self.client.sendline("enable")
+        index = self.client.expect_exact(
+            ["#", "Password:", pexpect.TIMEOUT, pexpect.EOF]
         )
         if index == 1:
-            return True
-        if index == 0:
+            self.client.sendline(self.password)
+            index = self.client.expect(["#", pexpect.TIMEOUT, pexpect.EOF])
+        return index == 0
+
+    def _login(self):
+        index = self._client.expect_exact(
+            [">", "#", "Password:", pexpect.TIMEOUT, pexpect.EOF]
+        )
+        if index == 2:
             self.client.sendline(self.password)
             index = self.client.expect_exact([">", "#", pexpect.TIMEOUT, pexpect.EOF])
-            if index == 0:
-                self.client.sendline("enable")
-                match_index = self.client.expect_exact(
-                    ["Password:", "#", pexpect.TIMEOUT, pexpect.EOF]
-                )
-                if match_index == 0:
-                    self.client.sendline(self.password)
-                    self.client.expect("#")
-                    return True
-            elif index == 1:
-                return True
+        if index == 0:
+            return self._enable()
+        if index == 1:
+            return True
         raise OperationFailure(
             "login failed. Unexpected response from terminal server."
         )

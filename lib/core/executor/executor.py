@@ -197,6 +197,7 @@ class Executor:
                         return f'"{previous_command}"', 3
         return retry_command, -1
 
+    # pylint: disable=too-many-positional-arguments
     def _log_expect_result(self, is_succeeded, qaid, rule, fail_match, timeout_timer):
         if is_succeeded:
             logger.debug(
@@ -659,7 +660,7 @@ class Executor:
                     logger.debug(
                         "%d  %s",
                         line_number,
-                        self.script.get_script_line(line_number - 1),
+                        self.script.get_script_line(line_number),
                     )
                     self.last_line_number = line_number
             func = getattr(self, f"_{code.operation}")

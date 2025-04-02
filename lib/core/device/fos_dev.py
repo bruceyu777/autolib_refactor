@@ -47,7 +47,7 @@ class FosDev(Device):
         return system_status
 
     def is_serial_connection_used(self):
-        if not "telnet" in self.dev_cfg["CONNECTION"]:
+        if "telnet" not in self.dev_cfg["CONNECTION"]:
             return False
         return any(
             k in self.dev_cfg for k in ("CISCOPASSWORD", "TERMINAL_SERVER_PASSWORD")
@@ -371,6 +371,7 @@ class FosDev(Device):
         for cmd in cmdlst:
             self.send_command(cmd)
 
+    # pylint: disable=too-many-positional-arguments
     def add_static_route(self, gtw, subnet="0.0.0.0", mask="0.0.0.0", dev="", eid="0"):
         cmdlst = [
             "config router static",

@@ -1,3 +1,5 @@
+import re
+
 from lib.services.log import logger
 from lib.utilities import ResourceNotAvailable, sleep_with_progress
 
@@ -6,15 +8,17 @@ from .session import ComputerConn
 
 FIVE_MINUTES = 5 * 60
 DEFAULT_TIMEOUT = FIVE_MINUTES
-DEFAULT_EXPECTED_OUTPUT = r"[#$:]\s?$"
+DEFAULT_EXPECTED_OUTPUT = r"[#$:\>]\s?$"
 
 
 class Computer(Device):
+    password_pattern = r"[Pp]assword:\s*$"
+
     def __init__(self, device_name):
-        super().__init__(device_name)
         self.prompts = DEFAULT_EXPECTED_OUTPUT
         self.timeout = DEFAULT_TIMEOUT
         self.need_carriage = False
+        super().__init__(device_name)
 
     def initialize(self):
         super().initialize()
@@ -65,12 +69,17 @@ class Computer(Device):
         raise ResourceNotAvailable("Max reconnect attempts reached")
 
     def login(self):
-        matched, _ = self.conn.expect(r"[Pp]assword: $", timeout=60)
-        if not matched:
-            logger.error("\nFailed to login %s as connection is closed.", self.dev_name)
-            raise ResourceNotAvailable(f"Unable to login {self.dev_name}")
-        self.conn.send_line(self.dev_cfg["PASSWORD"])
-        self.conn.expect(r"[$#\>]\s*?$", timeout=30)
+        patterns = "|".join([self.password_pattern, self.prompts])
+        matched, output = self.conn.expect(patterns, timeout=20)
+        if re.search(self.prompts, output):
+            logger.info("Already logged in %s.", self.dev_name)
+        else:
+            if not matched:
+                logger.error("\nFailed to get password prompt for %s!", self.dev_name)
+                raise ResourceNotAvailable(f"Unable to login {self.dev_name}")
+            self.conn.send_line(self.dev_cfg["PASSWORD"])
+            self.conn.expect(self.prompts, timeout=30)
+            logger.info("Successfully logged in %s.", self.dev_name)
 
     def force_login(self):
         self.conn.close()

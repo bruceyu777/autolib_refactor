@@ -11,10 +11,18 @@ MAX_WAIT_TIME_FOR_LIC_UPDATE = 5 * 60
 
 
 class FortiVM(FosDev):
+    FORTISTACK_CLOUD_INIT_PASSWORD = "admin"
+
     def __init__(self, dev_name):
         super().__init__(dev_name)
         self.license = None
         self.license_server = None
+
+    @property
+    def DEFAULT_PASSWORD(self):
+        if env.is_running_on_vm():
+            return self.FORTISTACK_CLOUD_INIT_PASSWORD
+        return super().DEFAULT_PASSWORD
 
     def get_session_init_class(self):
         return get_session_init_class(self.is_serial_connection_used(), True)

@@ -5,9 +5,6 @@ from .device import DEFAULT_PROMPTS
 
 
 class Pc(Computer):
-    def __init__(self, dev_name):
-        self.need_carriage = False
-        super().__init__(dev_name)
 
     def force_login(self):
         self.conn.close()
