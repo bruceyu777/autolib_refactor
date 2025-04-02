@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import os
 import sys
 
 from lib import (
@@ -19,15 +20,29 @@ SUBMIT_HELP = """all: submit all testcases' result to Oriole.
 none: do not submit any testcase result to Oriole.
 succeeded: only submit succeeded testcases' result to Oriole."""
 
+# pylint: disable=protected-access
+if hasattr(sys, "_MEIPASS"):
+    # Get the path to the temporary directory where PyInstaller extracts files
+    # This attribute is only available when the application is running
+    # from a PyInstaller bundle.
+    version_file_path = os.path.join(sys._MEIPASS, "version")
+else:
+    # If running from source code, use the current working directory
+    version_file_path = "./version"
 
-__version__ = "V3R10B0006"
+try:
+    with open(version_file_path, "r", encoding="utf-8") as f:
+        __version__ = f.read().strip()
+except FileNotFoundError:
+    print("Error: version file not found.")
+    __version__ = "unknown"
 
 
 def create_webserver_parser(parent):
     parser = parent.add_parser(
         "webserver",
-        help="Launch AutoLib HTTP Web Server",
-        description="To launch AutoLib HTTP Web Server as Working Portal",
+        help="Launch Autotest HTTP Web Server",
+        description="To launch Autotest HTTP Web Server as Working Portal",
     )
     parser.add_argument(
         "-p", "--port", dest="port", help="Specify port number to listen", default=8080
@@ -108,7 +123,7 @@ def create_imageservice_parser(parent):
 
 def create_main_parser():
     parser = argparse.ArgumentParser(
-        prog="AutoLib_v3",
+        prog="autotest",
         description=PROG_DESCRIPTION,
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -117,7 +132,7 @@ def create_main_parser():
         "-u",
         "--upgrade",
         action=Upgrade,
-        help="Upgrade current AutoLib",
+        help="Upgrade current autotest binary to the latest version",
     )
     parser.add_argument(
         "-e",

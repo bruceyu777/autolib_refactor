@@ -34,6 +34,7 @@ a = Analysis(
     pathex=['lib'],
     binaries=[],
     datas=[
+        ("version", "."),
         ("lib/services/fos/static/pltrev.csv", "./lib/services/fos/static/"),
         ("lib/core/compiler/static/cli_syntax.json", "./lib/core/compiler/static/"),
         ("lib/services/static/", "./lib/services/static/"),
@@ -63,7 +64,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name=f'AutoLib_v3{version_suffix}',
+    name=f'autotest{version_suffix}',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

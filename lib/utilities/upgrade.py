@@ -6,7 +6,7 @@ import sys
 class Upgrade(argparse.Action):
     def __init__(self, option_strings, dest, nargs=0, **kwargs):
         super().__init__(option_strings, dest, nargs=nargs, **kwargs)
-        self.binary_filename = kwargs.get("binary_filename", "AutoLib_v3")
+        self.binary_filename = kwargs.get("binary_filename", "autotest")
         self.release_on_server = kwargs.get(
             "release_on_server", f"http://172.18.52.254/AutoLib/{self.binary_filename}"
         )
