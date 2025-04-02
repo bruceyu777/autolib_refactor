@@ -31,7 +31,7 @@ class FortiGate(FosDev):
         conn = " ".join(dev_conn.split(" ")[:2])
         line_no = int(dev_conn.split(" ")[-1]) - 2000
         password = self.dev_cfg.get(
-            "TERMINAL_SERVER_PASSWORD", self.dev_cfg["CISCOPASSWORD"]
+            "TERMINAL_SERVER_PASSWORD", self.dev_cfg.get("CISCOPASSWORD", None)
         )
         username = self.dev_cfg.get("TERMINAL_SERVER_USERNAME")
         vendor = self.dev_cfg.get("TERMINAL_SERVER_VENDOR", "CISCO")

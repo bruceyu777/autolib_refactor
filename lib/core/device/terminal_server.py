@@ -1,3 +1,4 @@
+import re
 import sys
 import time
 
@@ -65,31 +66,36 @@ class CiscoTerminalServer:
 
 
 class DigiTerminalServer(CiscoTerminalServer):
+    prompts = r"#> "
+
     def __init__(self, conn, password, username):
         super().__init__(conn, password)
         self.username = username
 
     def _login(self):
         index = self._client.expect_exact(
-            ["login: ", "#> ", pexpect.TIMEOUT, pexpect.EOF]
+            ["login: ", DigiTerminalServer.prompts, pexpect.TIMEOUT, pexpect.EOF]
         )
         if index == 1:
             return self._client
         if index == 0:
             self.client.sendline(self.username)
             self._client.expect("password:")
-            self.client.expect("#> ")
+            self.client.sendline(self.password or "")
+            self.client.expect(DigiTerminalServer.prompts)
             return self._client
         raise OperationFailure(
             "login failed. Unexpected response from terminal server."
         )
 
     def _retr_session_id(self, line_no):
-        pattern = rf"(\d+)\s+\[\d:A-F.]+\s+serial {line_no}\s+"
         self.client.sendline("who")
-        index = self.client.expect_exact([pattern, pexpect.TIMEOUT, pexpect.EOF])
+        index = self.client.expect(DigiTerminalServer.prompts)
         if index == 0:
-            return self.client.match.group(1)
+            output = self.client.before
+            pattern = rf"(\d+)\s+[\d:A-F.]+\s+serial {line_no}\s"
+            session_match = re.search(pattern, output)
+            return session_match.group(1) if session_match else None
         logger.error("Unexpected response from terminal server.")
         return None
 
@@ -97,7 +103,9 @@ class DigiTerminalServer(CiscoTerminalServer):
         session_id = self._retr_session_id(line_no)
         if session_id is not None:
             self.client.sendline(f"kill {session_id}")
-            self.client.expect_exact(["#> ", pexpect.TIMEOUT, pexpect.EOF])
+            self.client.expect_exact(
+                [DigiTerminalServer.prompts, pexpect.TIMEOUT, pexpect.EOF]
+            )
             time.sleep(1)
             session_id = self._retr_session_id(line_no)
             if session_id is not None:

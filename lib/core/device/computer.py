@@ -70,16 +70,16 @@ class Computer(Device):
 
     def login(self):
         patterns = "|".join([self.password_pattern, self.prompts])
-        matched, output = self.conn.expect(patterns, timeout=20)
-        if re.search(self.prompts, output):
-            logger.info("Already logged in %s.", self.dev_name)
-        else:
-            if not matched:
-                logger.error("\nFailed to get password prompt for %s!", self.dev_name)
-                raise ResourceNotAvailable(f"Unable to login {self.dev_name}")
+        _, output = self.conn.expect(patterns, timeout=20)
+        if re.search(self.password_pattern, output):
             self.conn.send_line(self.dev_cfg["PASSWORD"])
             self.conn.expect(self.prompts, timeout=30)
             logger.info("Successfully logged in %s.", self.dev_name)
+        elif re.search(self.prompts, output):
+            logger.info("Already logged in %s.", self.dev_name)
+        else:
+            logger.error("\nFailed to get password prompt for %s!", self.dev_name)
+            raise ResourceNotAvailable(f"Unable to login {self.dev_name}")
 
     def force_login(self):
         self.conn.close()
