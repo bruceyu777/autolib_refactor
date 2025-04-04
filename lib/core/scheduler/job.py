@@ -52,9 +52,9 @@ class Job:
     def _launch_summary_webpage(self):
         host, port = env.get_local_http_server_conf()
         if not host or not port:
-            logger.error("Unable to get IP and PORT for LOCAL_HTTP_SERVER from env.")
-            return
-
+            logger.warning("Unable to get IP and PORT for LOCAL_HTTP_SERVER from env.")
+            host, port = "127.0.0.1", 8080
+            logger.warning("Use default IP and PORT: %s:%s", host, port)
         summary_url = f"http://{host}:{port}/{output.get_current_output_dir()}/summary"
         logger.notice(f"Summary: {summary_url}/summary.html")
         if self.args.portal:
