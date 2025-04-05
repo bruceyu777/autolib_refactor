@@ -30,27 +30,25 @@ fi
 
 REBUILD=$1
 UBUNTU_VERSION=$2
-BUILD_SUFFIX=${3:-none}  # Default to 'none' if not provided
+BUILD_SUFFIX=$(echo "${3:-none}" | tr '[:lower:]' '[:upper:]')
+REMOTE_HOST="fosqa@172.18.52.254"
 
 if [[ -f "version" ]]; then
     cp version version.bak
     BUILD_NUMBER=$(sed 's/[[:space:]]*$//' version)
 else
-    BUILD_NUMBER="UNKNOWN"
+    echo "Error: 'version' file not found. Cannot proceed with build."
+    exit 1
 fi
 
 update_version_file() {
     local version=$1
-    local suffix_upper
-
-    # Convert BUILD_SUFFIX to uppercase
-    suffix_upper=$(echo "$BUILD_SUFFIX" | tr '[:lower:]' '[:upper:]')
     current_date=$(date "+%Y-%m-%d")
 
-    if [[ "$suffix_upper" == "NONE" ]]; then
+    if [[ "$BUILD_SUFFIX" == "NONE" ]]; then
         echo -n "$BUILD_NUMBER - Compiled on Ubuntu $version on $current_date" > version
     else
-        echo -n "$BUILD_NUMBER($suffix_upper) - Compiled on Ubuntu $version on $current_date" > version
+        echo -n "$BUILD_NUMBER($BUILD_SUFFIX) - Compiled on Ubuntu $version on $current_date" > version
         echo "Updated 'version' file for Ubuntu $version"
     fi
 }
@@ -86,6 +84,51 @@ build_and_run() {
     echo ">>>>>>> Done with image compilation on Ubuntu ${version} <<<<<<<"
 }
 
+# Function to upload files to a remote host
+upload_to_remote() {
+    # Set target folder path based on BUILD_SUFFIX and BUILD_NUMBER
+    if [[ "$BUILD_SUFFIX" == *"DEBUG"* ]]; then
+        local date_suffix
+        date_suffix=$(date "+%Y%m%d")
+        target_folder="/tftp/work_directory/AutoLib/dev_builds/$date_suffix"
+        download_url="https://releaseqa-imageserver.corp.fortinet.com/AutoLib/dev_builds/$date_suffix"
+
+    else
+        version_part="${BUILD_NUMBER%%B*}"
+        build_part="build${BUILD_NUMBER##*B}"
+        target_folder="/tftp/work_directory/AutoLib/$version_part/$build_part"
+        download_url="https://releaseqa-imageserver.corp.fortinet.com/AutoLib/$version_part/$build_part"
+    fi
+
+    echo "Preparing to upload ./dist to $REMOTE_HOST:$target_folder ..."
+
+    # Create remote folder if it doesn't exist
+    if ! ssh "$REMOTE_HOST" "mkdir -p \"$target_folder\""; then
+        echo "Error: Failed to create remote folder on $REMOTE_HOST. Skipping upload."
+        return 1
+    fi
+
+    # Upload dist files
+    if ! scp -r ./dist/* "$REMOTE_HOST:$target_folder/"; then
+        echo "Error: Upload failed. Please verify network connectivity and target folder permissions."
+        return 1
+    fi
+
+    scp ./env_field_description.yaml "$REMOTE_HOST:$target_folder/"
+
+    if [[ "$BUILD_SUFFIX" != *"DEBUG"* ]]; then
+        echo "Uploading ./dist/autotest_1804 to $REMOTE_HOST:$target_folder ..."
+        if ! scp ./dist/autotest_1804 "$REMOTE_HOST:/tftp/work_directory/AutoLib/autotest"; then
+            echo "Error: Upload of autotest_1804 failed."
+            return 1
+        fi
+    fi
+
+    echo "******* DOWNLOAD URL: $download_url *******"
+    echo ">>>>>>> Completed file upload <<<<<<<"
+}
+
+
 # Process Ubuntu version selection
 case "$UBUNTU_VERSION" in
     1804) build_and_run "1804" ;;
@@ -100,8 +143,11 @@ case "$UBUNTU_VERSION" in
         ;;
 esac
 
-# Restore original 'version' file
 cp version.bak version
 rm -f version.bak
+
+if ! upload_to_remote; then
+    echo "Warning: Upload to remote host failed. Please check logs above."
+fi
 
 echo ">>>>>> All Tasks Completed! <<<<<<"
