@@ -207,19 +207,21 @@ class FosDev(Device):
             "formatting",
             "unmounting",
             "system is going down",
+            "serial number is",
         }
         return any(keyword in lowercase_data for keyword in rebooting_patterns)
 
     def _pre_login_handling(self):
         self.send_line("\n")
-        matched, cli_output = self.search(self.asking_for_username, 5, -1)
+        # some VM are very slow, may don't have any output in 5 seconds
+        matched, cli_output = self.search(self.asking_for_username, 60, -1)
         if not matched:
             if self._is_in_rebooting_status(cli_output):
                 matched, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
             else:
                 logger.debug("Sending ctrl + c and d to force logout...")
                 self._send_ctrl_c_and_d()
-                matched, cli_output = self.search(self.asking_for_username, 5, -1)
+                matched, cli_output = self.search(self.asking_for_username, 60, -1)
 
     def _login(self, username, password):
         self._pre_login_handling()

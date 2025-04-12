@@ -180,6 +180,8 @@ class DevConn:
         return matched, self.output_buffer[pos:]
 
     def clear_buffer(self, pos=None):
+        if pos is None:
+            self._read_output()
         self.output_buffer.clear(pos)
 
     def send(self, s):
