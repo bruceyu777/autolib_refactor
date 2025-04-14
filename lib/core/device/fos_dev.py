@@ -214,14 +214,17 @@ class FosDev(Device):
     def _pre_login_handling(self):
         self.send_line("\n")
         # some VM are very slow, may don't have any output in 5 seconds
+        pattern = f"{self.asking_for_username}|# "
+        matched, cli_output = self.search(pattern, 60, -1)
+        if matched and cli_output.endswith(self.asking_for_username):
+            return
+        if not cli_output.endswith("# ") and self._is_in_rebooting_status(cli_output):
+            matched, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
+            return
+        logger.debug("Sending ctrl + c and d to force logout...")
+        self._send_ctrl_c_and_d()
         matched, cli_output = self.search(self.asking_for_username, 60, -1)
-        if not matched:
-            if self._is_in_rebooting_status(cli_output):
-                matched, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
-            else:
-                logger.debug("Sending ctrl + c and d to force logout...")
-                self._send_ctrl_c_and_d()
-                matched, cli_output = self.search(self.asking_for_username, 60, -1)
+        return
 
     def _login(self, username, password):
         self._pre_login_handling()
