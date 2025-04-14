@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from lib.services import env, logger
 
 from .lexer import Lexer
@@ -30,7 +32,10 @@ class Compiler:
         logger.debug("Compiled %s", file_name)
 
     def retrieve_vm_codes(self, file_name):
-        return self.files[file_name]
+        # NOTE:
+        # a single script can be used by multiple device sections
+        # so we need to return a copy, or it will cause wrong result
+        return deepcopy(self.files[file_name])
 
     def retrieve_devices(self):
         return self.devices

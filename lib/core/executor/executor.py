@@ -638,10 +638,14 @@ class Executor:
         self.cur_device = self.devices[dev_name]
 
     def _include(self, parameters):
+        file_name = parameters[0]
         if self.cur_device is None:
-            include_script = IncludeScript(parameters[0])
+            logger.warning(
+                "No device is set for include script, using default device %s",
+            )
+            include_script = IncludeScript(file_name)
         else:
-            include_script = IncludeScript(parameters[0], self.cur_device.dev_name)
+            include_script = IncludeScript(file_name, self.cur_device.dev_name)
         with Executor(include_script, self.devices, False) as executor:
             executor.cur_device = self.cur_device
             executor.execute()
