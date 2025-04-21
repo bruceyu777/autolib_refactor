@@ -8,7 +8,10 @@ from .session import ComputerConn
 
 FIVE_MINUTES = 5 * 60
 DEFAULT_TIMEOUT = FIVE_MINUTES
-DEFAULT_EXPECTED_OUTPUT = r"[#$:\>]\s?$"
+# first part is for windows, second part for general linux, third part for user case like echo multiple line string
+DEFAULT_EXPECTED_OUTPUT = (
+    r"[A-Z]:\\[\w\s.-\\]+>\s?$|[\w.-]+@[\w.-]+:[~/\w.-]+[#\$]\s?$|\>\s$"
+)
 
 
 class Computer(Device):
@@ -73,12 +76,15 @@ class Computer(Device):
         _, output = self.conn.expect(patterns, timeout=20)
         if re.search(self.password_pattern, output):
             self.conn.send_line(self.dev_cfg["PASSWORD"])
-            self.conn.expect(self.prompts, timeout=30)
+            _, output = self.conn.expect(self.prompts, timeout=30)
+        if re.search(self.prompts, output):
             logger.info("Successfully logged in %s.", self.dev_name)
-        elif re.search(self.prompts, output):
-            logger.info("Already logged in %s.", self.dev_name)
         else:
-            logger.error("\nFailed to get password prompt for %s!", self.dev_name)
+            logger.error(
+                "\nFailed to get password prompt for %s!\noutput: '%s'",
+                self.dev_name,
+                output,
+            )
             raise ResourceNotAvailable(f"Unable to login {self.dev_name}")
 
     def force_login(self):
