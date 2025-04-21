@@ -35,11 +35,15 @@ def _to_regex_flags(flags):
 
 def _to_line_buffer_pattern(pattern):
     patterns_to_update = {
+        # Replace greedy wildcards with line-safe equivalents
         r"\.\*": r"[^\n\r]*",
+        r"\.\+": r"[^\n\r]+",
+        # Normalize start-of-line anchors
         r"^\(\^": r"^(",
-        r"\$*\)\$*": r")",
-        r"[\r\n\\r\\n$]*$": r"[^\r\n]",
         r"^\^": r"(?:[\n\r]|^)",
+        # Normalize end-of-line handling
+        r"\$*\)\$*": r")",  # Remove surrounding $ around closing parens
+        r"[\r\n\\r\\n$]*\$": r"[\r\n]*$",  # Normalize $ to allow EOL variations
     }
     for original, target in patterns_to_update.items():
         pattern = regex.sub(original, target, pattern)
