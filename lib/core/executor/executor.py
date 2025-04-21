@@ -25,7 +25,7 @@ class Executor:
         self.cur_device = None
         self.result_manager = ScriptResultManager(self.script)
         self.last_line_number = None
-        self.program_counter = 0  # abbreviated as"pc"
+        self.program_counter = 0  # to read vm_codes
         self.need_report = need_report
         self.scripts = {}
         self.log_file_handler = None
@@ -540,35 +540,36 @@ class Executor:
             )
         return None
 
-    def jump_to(self, line_number):
-        while (
-            self.script.get_compiled_code_line(self.program_counter).line_number
-            != line_number
-        ):
-            self.program_counter += 1
+    def __jump(self, target_line_number, forward=True):
+        # jump to a script line
+        step = 1 if forward else -1
+        while True:
+            code = self.script.get_compiled_code_line(self.program_counter)
+            if code.line_number == target_line_number:
+                break
+            # code.line_number is the real line number in original script
+            self.program_counter += step
 
-    def jump_back(self, line_number):
-        while (
-            self.script.get_compiled_code_line(self.program_counter).line_number
-            != line_number
-        ):
-            self.program_counter -= 1
+    def jump_forward(self, line_number):
+        self.__jump(line_number, forward=True)
+
+    def jump_backward(self, line_number):
+        self.__jump(line_number, forward=False)
 
     def _if_not_goto(self, parameters):
         line_number = parameters[-1]
         expression = parameters[:-1]
-
         if self.eval_expression(expression):
             if_stack.push(True)
             self.program_counter += 1
         else:
             if_stack.push(False)
-            self.jump_to(line_number)
+            self.jump_forward(line_number)
 
     def _else(self, parameters):
         line_number = parameters[-1]
         if if_stack.top():
-            self.jump_to(line_number)
+            self.jump_forward(line_number)
         else:
             self.program_counter += 1
 
@@ -576,14 +577,14 @@ class Executor:
         line_number = parameters[-1]
         expression = parameters[:-1]
         if if_stack.top():
-            self.jump_to(line_number)
+            self.jump_forward(line_number)
         else:
             if self.eval_expression(expression):
                 if_stack.pop()
                 if_stack.push(True)
                 self.program_counter += 1
             else:
-                self.jump_to(line_number)
+                self.jump_forward(line_number)
 
     def _endif(self, _):
         if_stack.pop()
@@ -627,31 +628,27 @@ class Executor:
                     new_expression.append(new_token)
             else:
                 new_expression.append(token)
-        res = self.eval_expression(new_expression)
-        if not res:
-            self.jump_back(line_number)
-        else:
+        if self.eval_expression(new_expression):
             self.program_counter += 1
+        else:
+            self.jump_backward(line_number)
 
     def _with_device(self, parameters):
         dev_name = parameters[0]
         self.cur_device = self.devices[dev_name]
 
     def _include(self, parameters):
-        file_name = parameters[0]
         if self.cur_device is None:
-            logger.warning(
-                "No device is set for include script, using default device %s",
-            )
-            include_script = IncludeScript(file_name)
+            include_script = IncludeScript(parameters[0])
         else:
-            include_script = IncludeScript(file_name, self.cur_device.dev_name)
+            include_script = IncludeScript(parameters[0], self.cur_device.dev_name)
         with Executor(include_script, self.devices, False) as executor:
             executor.cur_device = self.cur_device
             executor.execute()
 
     def execute(self):
-        while self.program_counter < self.script.get_program_counter_limit():
+        total_code_lines = self.script.get_program_counter_limit()
+        while self.program_counter < total_code_lines:
             self.program_counter, code = self.script.update_code_to_execute(
                 self.program_counter
             )

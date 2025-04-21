@@ -13,7 +13,7 @@ class Script:
         if not os.path.exists(source_file):
             raise FileNotExist(source_file)
         self.source_file = source_file
-        compiler.run(source_file)
+        compiler.run(self.source_file)
         self.vm_codes = compiler.retrieve_vm_codes(self.source_file)
         with open(self.source_file, "r", encoding="utf-8") as f:
             self.lines = [line.strip() for line in f]
@@ -25,7 +25,7 @@ class Script:
     def update_code_to_execute(self, program_counter):
         code = self.vm_codes[program_counter]
         if code.line_number is not None:
-            program_counter = self.debug_run(code.line_number, program_counter)
+            program_counter = self.debug_run(code.line_number - 1, program_counter)
             code = self.vm_codes[program_counter]
         return program_counter, code
 
@@ -33,7 +33,7 @@ class Script:
         return len(self.vm_codes)
 
     def get_compiled_code_line(self, line_number):
-        return self.vm_codes[line_number - 1]
+        return self.vm_codes[line_number]
 
     def get_all_involved_devices(self):
         return compiler.devices
