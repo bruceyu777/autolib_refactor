@@ -12,7 +12,8 @@ class Task:
 
     script_init_class = Script
 
-    def __init__(self, script):
+    def __init__(self, script, non_strict_mode=True):
+        self.non_strict_mode = non_strict_mode
         self.script = self.script_init_class(script)
         self.devices = {}
 

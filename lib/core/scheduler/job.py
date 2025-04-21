@@ -27,9 +27,9 @@ class Job:
 
     def init_task(self):
         return (
-            ScriptTask(self.args.script)
+            ScriptTask(self.args.script, non_strict_mode=self.args.non_strict)
             if self.args.script
-            else GroupTask(self.args.group)
+            else GroupTask(self.args.group, non_strict_mode=self.args.non_strict)
         )
 
     def execute_script(self):

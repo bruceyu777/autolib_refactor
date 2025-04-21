@@ -223,6 +223,13 @@ def create_main_parser():
         default=False,
         help="Bring up web portal while run autotest",
     )
+    parser.add_argument(
+        "--non_strict",
+        dest="non_strict",
+        action="store_true",
+        default=False,
+        help="Disable strict mode to allow the script to run even if it contains syntax errors",
+    )
     return parser
 
 
