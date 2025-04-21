@@ -114,7 +114,15 @@ upload_to_remote() {
         return 1
     fi
 
-    scp ./env_field_description.yaml "$REMOTE_HOST:$target_folder/"
+    files_to_upload=(
+    "./AutolibDockerfile"
+    "./env_field_description.yaml"
+    )
+
+    # Loop over files and transfer
+    for file in "${files_to_upload[@]}"; do
+        scp "$file" "$REMOTE_HOST:$target_folder/"
+    done
 
     if [[ "$BUILD_SUFFIX" != *"DEBUG"* ]]; then
         echo "Uploading ./dist/autotest_1804 to $REMOTE_HOST:$target_folder ..."
