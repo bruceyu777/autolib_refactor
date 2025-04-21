@@ -181,7 +181,7 @@ class DevConn:
 
     def clear_buffer(self, pos=None):
         if pos is None:
-            self._read_output()
+            self._read_output(timeout=0.1)
         self.output_buffer.clear(pos)
 
     def send(self, s):
