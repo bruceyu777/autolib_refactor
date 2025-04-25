@@ -8,10 +8,12 @@ from .session import ComputerConn
 
 FIVE_MINUTES = 5 * 60
 DEFAULT_TIMEOUT = FIVE_MINUTES
-# first part is for windows, second part for general linux, third part for user case like echo multiple line string
-DEFAULT_EXPECTED_OUTPUT = (
-    r"[A-Z]:\\[\w\s.-\\]+>\s?$|[\w.-]+@[\w.-]+:[~/\w.-]+[#\$]\s?$|\>\s$"
-)
+PATTERNS = [
+    r"(?P<windows_prompt>[A-Za-z]:\\[\w\s.-\\]+\>)",  # for windows
+    r"[\w.-]+@[\w.-]+:[~/\w.-]+[#\$]\s?$",  # for general linux
+    r"\>\s$",  # for user case like echo multiple line string
+]
+DEFAULT_EXPECTED_OUTPUT = "|".join(PATTERNS)
 
 
 class Computer(Device):
@@ -61,12 +63,9 @@ class Computer(Device):
                     self.dev_name,
                     self._compose_conn(),
                 ).connect()
-                matched, _ = self.send_command("\r")
-                if matched and matched.group("windows_prompt"):
-                    self.need_carriage = True
                 return
             except Exception:
-                logger.exception("Failed to connect to device %s.", self.dev_name)
+                logger.exception("Failed to connect to device %s!", self.dev_name)
                 sleep_with_progress(backoff_timer)
                 backoff_timer *= 3
         raise ResourceNotAvailable("Max reconnect attempts reached")
@@ -77,8 +76,11 @@ class Computer(Device):
         if re.search(self.password_pattern, output):
             self.conn.send_line(self.dev_cfg["PASSWORD"])
             _, output = self.conn.expect(self.prompts, timeout=30)
-        if re.search(self.prompts, output):
+        matched_login_pattern = re.search(self.prompts, output)
+        if matched_login_pattern:
             logger.info("Successfully logged in %s.", self.dev_name)
+            if not self.need_carriage:
+                self.need_carriage = matched_login_pattern.group("windows_prompt")
         else:
             logger.error(
                 "\nFailed to get password prompt for %s!\noutput: '%s'",
