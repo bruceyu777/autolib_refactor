@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     openssh-server \
     sudo \
-    telnet && \
+    telnet \
+    subversion \
+    git && \
     ln -fs /usr/share/zoneinfo/America/Vancouver /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata && \
     rm -rf /var/lib/apt/lists/*
