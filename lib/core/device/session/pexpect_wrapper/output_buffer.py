@@ -103,8 +103,14 @@ class OutputBuffer:
 
     def search(self, pattern, pos=0):
         pattern = _convert_tcl_to_python_pattern(pattern)
-        result = regex.search(pattern, self.output[pos:])
-        return result
+        try:
+            return regex.search(pattern, self.output[pos:], timeout=1)
+        except TimeoutError as e:
+            width = 70
+            logger.warning(" Expect Timeout - Pattern is INVALID ".center(width, "*"))
+            logger.warning("Expect pattern: %s", pattern)
+            logger.warning("*" * width)
+            raise ValueError(f"Invalid Expect Pattern '{pattern}'") from e
 
     def expect(self, pattern):
         m = self.search(pattern)
