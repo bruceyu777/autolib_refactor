@@ -3,13 +3,46 @@ import os
 import sys
 
 
+def get_ubuntu_version_number():
+    version = "1804"
+    try:
+        with open("/etc/os-release", "r") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("VERSION_ID="):
+                    print("Your OS is ", line)
+                    version = (
+                        line.split("=", 1)[1]
+                        .strip()
+                        .strip('"')
+                        .strip("'")
+                        .replace(".", "")
+                    )
+    except (OSError, ValueError):
+        print("Unable to read Ubuntu version from /etc/os-release file.")
+    print("Ubuntu version will be used: ", version)
+    return version
+
+
 class Upgrade(argparse.Action):
+    default_binary_filename = "autotest"
+
     def __init__(self, option_strings, dest, nargs=0, **kwargs):
         super().__init__(option_strings, dest, nargs=nargs, **kwargs)
-        self.binary_filename = kwargs.get("binary_filename", "autotest")
+        self.binary_filename = self.get_binary_filename()
         self.release_on_server = kwargs.get(
             "release_on_server", f"http://172.18.52.254/AutoLib/{self.binary_filename}"
         )
+
+    def get_binary_filename(self):
+        version = int(get_ubuntu_version_number())
+        if version < 1804:
+            raise RuntimeError(
+                "Autolib and Upgrade is only available for Ubuntu 18.04 and above."
+            )
+        selected = f"autotest_1804" if version == 1804 else f"autotest_2004"
+        print("Selected binary is: ", selected)
+        return selected
 
     def __call__(self, parser, namespace, values, option_string=None):
         self._upgrade()
@@ -55,6 +88,8 @@ class Upgrade(argparse.Action):
                 pass
 
     def _upgrade_logic(self):
-        os.system(f"rm -rf {self.binary_filename}")
+        os.system(f"rm -rf {self.default_binary_filename}")
         exit_status = os.system(f"curl -O {self.release_on_server}")
+        os.system(f"mv {self.binary_filename} {self.default_binary_filename}")
+        os.system(f"chmod +x {self.default_binary_filename}")
         return exit_status == 0

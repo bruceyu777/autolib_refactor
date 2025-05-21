@@ -40,6 +40,7 @@ class ExpecterCleaned(Expecter):
 
 def init_expecter(spawn, *args, **kwargs):
     clean_patterns = getattr(spawn, "clean_patterns")
+    logger.debug("*** clean_patterns ***:\n'%s'", clean_patterns)
     if clean_patterns:
         return ExpecterCleaned(spawn, *args, **kwargs, clean_patterns=clean_patterns)
     return Expecter(spawn, *args, **kwargs)

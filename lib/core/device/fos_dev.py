@@ -29,9 +29,10 @@ class FosDev(Device):
     DEFAULT_ADMIN = "admin"
     TEMP_PASSWORD = "552103"
     DEFAULT_PASSWORD = ""
-    asking_for_username = "login: "
-    asking_for_password = "assword: "
+    asking_for_username = "login: $"
+    asking_for_password = "assword: $"
     image_file_ext = ".out"
+    general_view = r"[ )~][#$] $"
 
     def __init__(self, dev_name):
         self.model = self.is_vdom_enabled = ""
@@ -144,14 +145,14 @@ class FosDev(Device):
 
     def set_admin_password(self, admin, password, old_password):
         self.send_line("config system admin")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line(f"edit {admin}")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line(f"set password {password}")
         matched, _ = self.search(self.asking_for_password, 30, -1)
         if matched:
             self.send_line(old_password)
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line("end")
 
     def _get_login_error(self, output):
@@ -163,7 +164,7 @@ class FosDev(Device):
         password = self.dev_cfg["PASSWORD"]
         self.search(self.asking_for_password, 30, -1)
         self.send_line(password)
-        _, cli_output = self.search("#", 30, -1)
+        _, cli_output = self.search(self.general_view, 30, -1)
         user = self.dev_cfg["CONNECTION"].split("@")[0].split()[-1]
         self._post_login_handling(cli_output, user, password)
 
@@ -212,47 +213,53 @@ class FosDev(Device):
         return any(keyword in lowercase_data for keyword in rebooting_patterns)
 
     def _pre_login_handling(self):
+        self.clear_buffer()
         self.send_line("\n")
         # some VM are very slow, may don't have any output in 5 seconds
-        pattern = f"{self.asking_for_username}|# "
+        pattern = f"{self.asking_for_username}|{self.general_view}"
         matched, cli_output = self.search(pattern, 60, -1)
-        if matched and cli_output.endswith(self.asking_for_username):
+        if matched and re.search(self.asking_for_username, cli_output):
             return
-        if not cli_output.endswith("# ") and self._is_in_rebooting_status(cli_output):
+        if not re.search(
+            self.general_view, cli_output
+        ) and self._is_in_rebooting_status(cli_output):
             matched, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
             return
         logger.debug("Sending ctrl + c and d to force logout...")
         self._send_ctrl_c_and_d()
         matched, cli_output = self.search(self.asking_for_username, 60, -1)
+        self.clear_buffer()
         return
 
     def _login(self, username, password):
         self._pre_login_handling()
         self._login_without_check_prompt(username, password)
         _, cli_output = self.search(
-            "(# |forced to change your.*?Password: |login: $)", 10, -1
+            f"({self.general_view}|forced to change your.*?Password: $|{self.asking_for_username})",
+            10,
+            -1,
         )
         return cli_output
 
     def unset_admin_password(self, admin, password):
         self.clear_buffer()
         self.send_line("config system admin")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line(f"edit {admin}")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send("unset password ?")
         require_old_password, _ = self.search(r"\<old passwd\>", 2, -1)
         self.clear_buffer()
         if require_old_password:
             self.send_line(password)
-            self.search("#", 30, -1)
+            self.search(self.general_view, 30, -1)
         else:
             self.send("\n")
             matched, _ = self.search(self.asking_for_password, 2, -1)
             if matched:
                 self.send_line(password)
                 logger.debug("###### password send:  '%s'", password)
-                self.search("#", 10, -1)
+                self.search(self.general_view, 10, -1)
         self.send_line("end")
         matched, _ = self.search(self.asking_for_password, 2, -1)
         if matched:
@@ -262,7 +269,15 @@ class FosDev(Device):
     def login_firewall_after_reset(self):
         _, cli_output = self.search(self.asking_for_username, 600, -1)
         self.check_kernel_panic(cli_output)
-        cli_output += self._login(self.DEFAULT_ADMIN, self.DEFAULT_PASSWORD)
+        retry = 3
+        while retry > 0:
+            cli_output += self._login(self.DEFAULT_ADMIN, self.DEFAULT_PASSWORD)
+            if not re.search(self.asking_for_username, cli_output):
+                break
+            retry -= 1
+            logger.debug("Try to login again...")
+        else:
+            raise ResourceNotAvailable("Failed to login device")
         if "forced to change your" in cli_output:
             self._handle_password_enforcement()
 
@@ -275,7 +290,7 @@ class FosDev(Device):
         self.send_line(temp_password)
         self.search(self.asking_for_password, 30, -1)
         self.send_line(temp_password)
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         if self.dev_cfg["PASSWORD"] and self.dev_cfg["PASSWORD"] != temp_password:
             self.set_admin_password(
                 self.DEFAULT_ADMIN, self.dev_cfg["PASSWORD"], temp_password
@@ -334,11 +349,11 @@ class FosDev(Device):
             command, self.asking_for_username
         )
         if "Command fail" not in output:
-            if not output.endswith(self.asking_for_username):
+            if not re.search(self.asking_for_username, output):
                 _, data = self.expect(self.asking_for_username, 6 * 60)
                 output += data
         self.check_kernel_panic(output)
-        return output.endswith(self.asking_for_username)
+        return re.search(self.asking_for_username, output)
 
     def restore_image(self, release, build, need_reset=True, need_burn=False):
         if not need_burn and need_reset:
@@ -426,5 +441,5 @@ class FosDev(Device):
 
     def retr_crash_log(self, cmd="diag debug crashlog read"):
         self.send_command(cmd)
-        _, crashlog_output = self.expect("# ", timeout=20 * 60)
+        _, crashlog_output = self.expect(self.general_view, timeout=20 * 60)
         return CrashLog(crashlog_output).dump_parsed_log(self.dev_name)

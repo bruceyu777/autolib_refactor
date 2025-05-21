@@ -8,6 +8,24 @@ import re
 import subprocess
 import time
 
+
+def tree_datas(source, dest_prefix):
+    """
+    Recursively collects all files from the source directory,
+    preserving their relative paths under dest_prefix.
+    Returns a list of tuples in the format (source_file, destination_folder).
+    """
+    data_files = []
+    for root, dirs, files in os.walk(source):
+        for file in files:
+            file_src = os.path.join(root, file)
+            # Calculate the destination folder: remove the source prefix and join with dest_prefix
+            relative_path = os.path.relpath(root, source)
+            dest_folder = os.path.join(dest_prefix, relative_path)
+            data_files.append((file_src, dest_folder))
+    return data_files
+
+
 def get_linux_version():
     try:
         result = subprocess.run(
@@ -35,11 +53,9 @@ a = Analysis(
     binaries=[],
     datas=[
         ("version", "."),
-        ("lib/services/fos/static/pltrev.csv", "./lib/services/fos/static/"),
-        ("lib/core/compiler/static/cli_syntax.json", "./lib/core/compiler/static/"),
-        ("lib/services/static/", "./lib/services/static/"),
-        ("lib/core/device/ems/metadata", "./lib/core/device/ems/metadata"),
-    ],
+        ("lib/services/fos/static/pltrev.csv", "lib/services/fos/static/"),
+        ("lib/core/compiler/static/cli_syntax.json", "lib/core/compiler/static/"),
+    ] + tree_datas("lib/services/static", "lib/services/static") + tree_datas("lib/core/device/ems/metadata/", "lib/core/device/ems/metadata"),
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
