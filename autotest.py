@@ -121,6 +121,28 @@ def create_imageservice_parser(parent):
     return parser
 
 
+def create_upgrade_parser(parent):
+    """Create the parser for the upgrade subcommand"""
+    upgrade_parser = parent.add_parser(
+        "upgrade",
+        help="Upgrade current autotest binary",
+        description="Upgrade current autotest binary",
+    )
+    upgrade_parser.add_argument(
+        "-b",
+        "--build",
+        dest="build",
+        help="Specific build number, by default upgrade to the latest version if branch is not specified",
+    )
+    upgrade_parser.add_argument(
+        "--branch",
+        dest="branch",
+        default="V3R10",
+        help="Specify the branch to upgrade, default is V3R10",
+    )
+    return upgrade_parser
+
+
 def create_main_parser():
     parser = argparse.ArgumentParser(
         prog="autotest",
@@ -128,12 +150,6 @@ def create_main_parser():
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
-    parser.add_argument(
-        "-u",
-        "--upgrade",
-        action=Upgrade,
-        help="Upgrade current autotest binary to the latest version",
-    )
     parser.add_argument(
         "-e",
         "--environment",
@@ -236,6 +252,7 @@ def create_main_parser():
 def parse_cli_args():
     parser = create_main_parser()
     subprasers = parser.add_subparsers(dest="command", help="Sub commands")
+    create_upgrade_parser(subprasers)
     create_webserver_parser(subprasers)
     create_imageservice_parser(subprasers)
     args = parser.parse_args()
@@ -261,7 +278,9 @@ def run_autotest_main(args):
 
 
 def run_sub_command_main(args):
-    if args.command == "webserver":
+    if args.command == "upgrade":
+        Upgrade(args.build, branch=args.branch).run()
+    elif args.command == "webserver":
         launch_webserver_on(args.ip_address, args.port)
     elif args.command == "imageservice":
         imageservice_operations(

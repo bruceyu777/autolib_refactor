@@ -44,19 +44,21 @@ class OrioleClient:
         self.specified_fields = {k.lower(): v for k, v in selected_fields.items()}
         self.specified_fields.setdefault("mark", "AutoLib_v3")
 
-    def send_oriole(self, user, password, report, release_tag):
+    def send_oriole(self):
         response = None
         try:
             payload = {
-                "user": user,
-                "password": password,
-                "report": report,
-                "release_tag": release_tag,
+                "user": self.user,
+                "password": self.password,
+                "report": json.dumps(self.reports),
+                "release_tag": self.release_tag,
                 "project": "FAP" if env.is_fap_dut() else "FOS",
             }
             taskpath_template = env.get_section_var("ORIOLE", "TASK_PATH")
             if taskpath_template:
-                payload["task_path"] = taskpath_template.format(RELEASE=release_tag)
+                payload["task_path"] = taskpath_template.format(
+                    RELEASE=self.release_tag
+                )
             response = requests.request(
                 "POST", ORIOLE_SUBMIT_API_URL, data=payload, timeout=60, verify=False
             )
@@ -76,9 +78,7 @@ class OrioleClient:
         t1 = time.perf_counter()
         succeeded = False
         if self.reports:
-            succeeded = self.send_oriole(
-                self.user, self.password, json.dumps(self.reports), self.release_tag
-            )
+            succeeded = self.send_oriole()
             if succeeded:
                 logger.info("Succeeded to report to oriole.")
                 for report in self.reports:
@@ -169,31 +169,3 @@ class OrioleClient:
 
 
 oriole = OrioleClient()
-
-
-if __name__ == "__main__":
-    oriole.send_oriole(
-        "rainxiao",
-        "UW14SlI****",
-        {
-            "time": "2024-05-06 11:55:58",
-            "project": "FOS",
-            "task_path": "/FOS/7.6.0/Regression",
-            "platform_id": "FGT_60F",
-            "release": "7.6.0",
-            "build": "3361",
-            "SN": "FG4H1FT922900514",
-            "bios": "06000006",
-            "aveng": "7.00025",
-            "avdef": "92.04027",
-            "ipseng": "7.01002",
-            "ipsdef": "6.00741",
-            "pltgen": "Gen1",
-            "snmp_mib": "3359",
-            "total": 39,
-            "results": [
-                {"testcase_id": "964292", "result": "1"},
-            ],
-        },
-        "7.6.0",
-    )

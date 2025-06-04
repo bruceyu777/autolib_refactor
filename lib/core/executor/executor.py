@@ -532,7 +532,7 @@ class Executor:
         try:
             return eval(new_expression)  # pylint:disable=eval-used
         except Exception:  # pylint:disable=broad-except
-            logger.exception("Evaludation Failed!!")
+            logger.exception("Evaluation Failed!!")
             logger.info(
                 "%s <=== %s",
                 expression,
