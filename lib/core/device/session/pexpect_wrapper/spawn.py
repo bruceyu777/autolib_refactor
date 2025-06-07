@@ -1,4 +1,3 @@
-import re
 from functools import lru_cache
 
 import pexpect
@@ -7,12 +6,15 @@ from pexpect.spawnbase import EOF, TIMEOUT, Expecter, searcher_re, searcher_stri
 
 from lib.services import logger
 
+from .common import clean_by_pattern
+
 
 class ExpecterCleaned(Expecter):
 
     def __init__(self, spawn, searcher, searchwindowsize=-1, clean_patterns=None):
         super().__init__(spawn, searcher, searchwindowsize)
         self.clean_patterns = clean_patterns or {}
+        logger.debug("*** clean_patterns ***:\n'%s'", self.clean_patterns)
 
     def do_search(self, window, freshlen):
         if window:
@@ -21,26 +23,11 @@ class ExpecterCleaned(Expecter):
 
     @lru_cache(maxsize=128, typed=True)
     def _clean_by_pattern(self, original_output):
-        cleaned_output = original_output.encode("utf-8")
-        for p_description, pattern in self.clean_patterns.items():
-            cleaned_output = re.sub(pattern, "", original_output)
-            if original_output != cleaned_output:
-                title = f"*** Clean Pattern '{p_description}' Matched ***"
-                delimiter = "*" * len(title)
-                logger.debug(
-                    "\n%s\n%s\nCleaned Content:\n'%s'\n%s",
-                    delimiter,
-                    title,
-                    cleaned_output,
-                    delimiter,
-                )
-                original_output = cleaned_output
-        return cleaned_output
+        return clean_by_pattern(original_output, self.clean_patterns)
 
 
 def init_expecter(spawn, *args, **kwargs):
     clean_patterns = getattr(spawn, "clean_patterns")
-    logger.debug("*** clean_patterns ***:\n'%s'", clean_patterns)
     if clean_patterns:
         return ExpecterCleaned(spawn, *args, **kwargs, clean_patterns=clean_patterns)
     return Expecter(spawn, *args, **kwargs)

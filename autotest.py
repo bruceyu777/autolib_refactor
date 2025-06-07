@@ -251,10 +251,10 @@ def create_main_parser():
 
 def parse_cli_args():
     parser = create_main_parser()
-    subprasers = parser.add_subparsers(dest="command", help="Sub commands")
-    create_upgrade_parser(subprasers)
-    create_webserver_parser(subprasers)
-    create_imageservice_parser(subprasers)
+    subparsers = parser.add_subparsers(dest="command", help="Sub commands")
+    create_upgrade_parser(subparsers)
+    create_webserver_parser(subparsers)
+    create_imageservice_parser(subparsers)
     args = parser.parse_args()
     return args
 

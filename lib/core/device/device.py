@@ -145,8 +145,8 @@ class Device:
     def send(self, s):
         return self._execute_with_reconnect(self.conn.send, s)
 
-    def clear_buffer(self):
-        self._execute_with_reconnect(self.conn.clear_buffer)
+    def clear_buffer(self, *args, **kwargs):
+        self._execute_with_reconnect(self.conn.clear_buffer, *args, **kwargs)
 
     def require_confirm(self, s):
         for key, val in AUTO_PROCEED_RULE_MAP.items():

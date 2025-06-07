@@ -2,6 +2,7 @@ import re
 import time
 
 from lib.services import Image, image_server, logger, platform_manager
+from lib.settings import BASE_TIME_UNIT, SEND_COMMAND_TIMEOUT
 from lib.utilities import (
     KernelPanicErr,
     ResourceNotAvailable,
@@ -21,7 +22,6 @@ ERROR_INFO = (
     "command parse error",
     "failed command",
 )
-TEN_SECONDS = 10
 
 
 class FosDev(Device):
@@ -320,25 +320,28 @@ class FosDev(Device):
             logger.error("Kernel panic pattern was detected(%s)!!", panic_patterns)
             raise KernelPanicErr(self.dev_name)
 
-    def _handle_yes_no_util_pattern_matched(self, command, pattern_to_break):
+    def _handle_yes_no_util_pattern_matched(
+        self, command, pattern_to_break, wait_for_y_timer=5
+    ):
         self.send_line(command)
-        remain_y_times, output = 10, ""
+        remaining_attempts, output = 10, ""
         confirmation_patterns = [
             r"\(y/n\)",
             r"\(yes/no\)",
             r"\[Y/N\]",
         ]
         patterns = "|".join(confirmation_patterns)
-        while remain_y_times > 0:
-            matched, data = self.expect(patterns, 5)
+        while remaining_attempts > 0:
+            matched, data = self.expect(patterns, wait_for_y_timer)
             output += data
             if "Command fail" in output:
                 logger.error("Command failure!!!")
                 break
-            if re.search(pattern_to_break, output) or not matched:
+            break_flag, _ = self.search(pattern_to_break, timeout=BASE_TIME_UNIT)
+            if break_flag or not matched:
                 break
             self.send("y")
-            remain_y_times -= 1
+            remaining_attempts -= 1
             time.sleep(1)
         return output
 
@@ -346,14 +349,21 @@ class FosDev(Device):
         image_url = image_server.get_image_http_url(image)
         command = f"exe restore image url {image_url}"
         output = self._handle_yes_no_util_pattern_matched(
-            command, self.asking_for_username
+            command, "system is going down NOW", wait_for_y_timer=60
         )
+        is_login_view = False
         if "Command fail" not in output:
-            if not re.search(self.asking_for_username, output):
-                _, data = self.expect(self.asking_for_username, 6 * 60)
+            is_login_view, _ = self.search(self.asking_for_username, timeout=60)
+            if not is_login_view:
+                self.clear_buffer(read_before_clean=False)
+                _is_login_view, data = self.expect(self.asking_for_username, 6 * 60)
+                is_login_view = is_login_view or _is_login_view
                 output += data
         self.check_kernel_panic(output)
-        return re.search(self.asking_for_username, output)
+        return (
+            is_login_view
+            or self.search(self.asking_for_username, timeout=BASE_TIME_UNIT)[0]
+        )
 
     def restore_image(self, release, build, need_reset=True, need_burn=False):
         if not need_burn and need_reset:
@@ -424,7 +434,9 @@ class FosDev(Device):
                 "*** MGMT_IP/MGMT_MASK/MGMT_GW *** in device config file is not configured."
             )
 
-    def send_command(self, command, pattern=DEFAULT_PROMPTS, timeout=TEN_SECONDS):
+    def send_command(
+        self, command, pattern=DEFAULT_PROMPTS, timeout=SEND_COMMAND_TIMEOUT
+    ):
         match, output = super().send_command(command, pattern, timeout=timeout)
         is_succeeded = self._if_succeeded_to_execute_command(output, command)
         return is_succeeded, match, output

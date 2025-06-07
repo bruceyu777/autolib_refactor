@@ -45,3 +45,4 @@
   - Cisco terminal server `enable` command bug,
   - Digi terminal server debugging fixes,
   - PC login issues. [cf94d32] [c0bcdd4]
+- Fix restore image issue; fix issue with clean pattern for OutputBuffer. [2f4d745]
