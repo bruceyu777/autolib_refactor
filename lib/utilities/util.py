@@ -15,14 +15,18 @@ def wrap_as_title(to_wrap="", width=70, fill="-"):
 
 
 def new_progress_bar(total_time, interval):
+    int_total_time = int(total_time)
+    float_portion = total_time - int_total_time
+    if float_portion > 0:
+        time.sleep(float_portion)
     with tqdm(
-        total=total_time,
+        total=int_total_time,
         bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt}",
         ascii=" =->",
         ncols=80,
     ) as pbar:
-        for i in range(0, total_time, interval):
-            pbar.set_description(f"Remaining {total_time - i}s: ")
+        for i in range(0, int_total_time, interval):
+            pbar.set_description(f"Remaining {int_total_time - i}s: ")
             pbar.update(interval)
             time.sleep(interval)
 

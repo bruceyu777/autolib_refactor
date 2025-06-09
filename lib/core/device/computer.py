@@ -1,3 +1,5 @@
+import re
+
 from lib.services.log import logger
 from lib.utilities import ResourceNotAvailable, sleep_with_progress
 
@@ -6,15 +8,22 @@ from .session import ComputerConn
 
 FIVE_MINUTES = 5 * 60
 DEFAULT_TIMEOUT = FIVE_MINUTES
-DEFAULT_EXPECTED_OUTPUT = r"[#$:]\s?$"
+PATTERNS = [
+    r"(?P<windows_prompt>[A-Za-z]:\\[\w\s.-\\]+\>)",  # for windows
+    r"[\w.-]+@[\w.-]+:[~/\w.-]+[#\$]\s?$",  # for general linux
+    r"\>\s$",  # for user case like echo multiple line string
+]
+DEFAULT_EXPECTED_OUTPUT = "|".join(PATTERNS)
 
 
 class Computer(Device):
+    password_pattern = r"[Pp]assword:\s*$"
+
     def __init__(self, device_name):
-        super().__init__(device_name)
         self.prompts = DEFAULT_EXPECTED_OUTPUT
         self.timeout = DEFAULT_TIMEOUT
         self.need_carriage = False
+        super().__init__(device_name)
 
     def initialize(self):
         super().initialize()
@@ -54,23 +63,31 @@ class Computer(Device):
                     self.dev_name,
                     self._compose_conn(),
                 ).connect()
-                matched, _ = self.send_command("\r")
-                if matched and matched.group("windows_prompt"):
-                    self.need_carriage = True
                 return
             except Exception:
-                logger.exception("Failed to connect to device %s.", self.dev_name)
+                logger.exception("Failed to connect to device %s!", self.dev_name)
                 sleep_with_progress(backoff_timer)
                 backoff_timer *= 3
         raise ResourceNotAvailable("Max reconnect attempts reached")
 
     def login(self):
-        matched, _ = self.conn.expect(r"[Pp]assword: $", timeout=60)
-        if not matched:
-            logger.error("\nFailed to login %s as connection is closed.", self.dev_name)
+        patterns = "|".join([self.password_pattern, self.prompts])
+        _, output = self.conn.expect(patterns, timeout=20)
+        if re.search(self.password_pattern, output):
+            self.conn.send_line(self.dev_cfg["PASSWORD"])
+            _, output = self.conn.expect(self.prompts, timeout=30)
+        matched_login_pattern = re.search(self.prompts, output)
+        if matched_login_pattern:
+            logger.info("Successfully logged in %s.", self.dev_name)
+            if not self.need_carriage:
+                self.need_carriage = matched_login_pattern.group("windows_prompt")
+        else:
+            logger.error(
+                "\nFailed to get password prompt for %s!\noutput: '%s'",
+                self.dev_name,
+                output,
+            )
             raise ResourceNotAvailable(f"Unable to login {self.dev_name}")
-        self.conn.send_line(self.dev_cfg["PASSWORD"])
-        self.conn.expect(r"[$#\>]\s*?$", timeout=30)
 
     def force_login(self):
         self.conn.close()

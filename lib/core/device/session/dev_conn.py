@@ -7,12 +7,9 @@ import ptyprocess
 
 from lib.services import env, logger
 from lib.services import output as OUTPUT
+from lib.settings import BASE_TIME_UNIT
 
 from .pexpect_wrapper import LogFile, OutputBuffer, Spawn
-
-READ_WAIT_TIME = 120
-WAIT_TIME = 60
-MAX_SEARCH_CNT = 3
 
 ERROR_INFO = (
     "command parse error",
@@ -21,7 +18,16 @@ ERROR_INFO = (
     "command parse error",
     "failed command",
 )
-ONE_SECOND = 1
+
+
+def get_read_buffer_timer(timeout_timer):
+    rate = timeout_timer // 100
+
+    if rate <= 2:
+        return BASE_TIME_UNIT
+    if rate <= 10:
+        return BASE_TIME_UNIT * rate * 10
+    return BASE_TIME_UNIT * 100
 
 
 class DevConn:
@@ -30,7 +36,10 @@ class DevConn:
         self.dev_name = dev_name
         self.conn = connection
         self.client = None
-        self.output_buffer = OutputBuffer()
+        clean_patterns = env.get_buffer_clean_pattern_by_dev_type(
+            self.dev_name.split("_")[0]
+        )
+        self.output_buffer = OutputBuffer(clean_patterns=clean_patterns)
         self.log_file = None
         self.cur_pos = 0
 
@@ -42,7 +51,10 @@ class DevConn:
     def _normalize_conn_parameters(self):
         # disable SSH strict host key checking
         if "ssh" in self.conn:
-            self.conn += " -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+            self.conn = self.conn.replace(
+                "ssh ",
+                "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ",
+            )
             logger.info("Disable SSH strict host key checking.")
 
     def create_session_log_file(self):
@@ -119,10 +131,10 @@ class DevConn:
             self.send_line(command)
         # make sure to match the output after command is send
         try:
-            m, output = self.search(re.escape(command), ONE_SECOND, cur_pos)
+            m, output = self.search(re.escape(command), BASE_TIME_UNIT, cur_pos)
             match_pos = cur_pos + m.start()
         except (pexpect.TIMEOUT, Exception):
-            logger.warning("Failed to match %s in %s s.", command, ONE_SECOND)
+            logger.debug("Failed to match %s in %s s.", command, BASE_TIME_UNIT)
             match_pos = cur_pos
             logger.debug(
                 "current output in send_command is %s", self.output_buffer[match_pos:]
@@ -149,7 +161,7 @@ class DevConn:
                 self.output_buffer[: m.end()],
             )
             if need_clear:
-                self.clear_buffer(m.end())
+                self.clear_buffer(pos=m.end())
 
         return m, output
 
@@ -157,7 +169,7 @@ class DevConn:
         if pos == -1:
             pos = len(self.output_buffer)
 
-        read_buffer_timeout = ONE_SECOND * 10 if timeout > 100 else ONE_SECOND
+        read_buffer_timeout = get_read_buffer_timer(timeout)
         matched = None
         start_time = time.time()
         end_time = start_time + timeout
@@ -176,7 +188,9 @@ class DevConn:
         )
         return matched, self.output_buffer[pos:]
 
-    def clear_buffer(self, pos=None):
+    def clear_buffer(self, pos=None, read_before_clean=True):
+        if read_before_clean:
+            self._read_output(timeout=0.1)
         self.output_buffer.clear(pos)
 
     def send(self, s):
@@ -197,7 +211,7 @@ class DevConn:
         self._log_output(output)
         return output
 
-    def _read_output(self, timeout=ONE_SECOND):
+    def _read_output(self, timeout=BASE_TIME_UNIT):
         try:
             self.client.expect(".+", timeout=timeout)
             self._dump_to_buffer()

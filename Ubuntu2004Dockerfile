@@ -1,0 +1,44 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install necessary dependencies for PyInstaller and compiling Python code
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    python3-dev \
+    tzdata \
+    gcc \
+    g++ \
+    libgcc1 \
+    libstdc++6 \
+    libssl-dev \
+    libffi-dev \
+    libz1 \
+    libc6 \
+    # libdl2 \
+    build-essential && \
+    ln -fs /usr/share/zoneinfo/America/Vancouver /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Optional: Upgrade pip if necessary
+RUN pip install --upgrade pip
+RUN pip3 install --upgrade setuptools
+RUN pip3 install pyinstaller
+
+WORKDIR /app
+
+COPY . /app
+
+# Install dependencies if required
+RUN pip3 install --no-cache-dir -r requirements.txt || echo "No requirements.txt found"
+
+# Run PyInstaller to build
+RUN pyinstaller --clean autotest.spec
+
+# Output executable location
+CMD ["ls", "-lh", "dist"]
+
+# docker build -t pyinstaller_b2004 -f Ubuntu2004Dockerfile .
+# docker run --rm -v ./:/app -it pyinstaller_b2004 pyinstaller --clean autotest.spec --log-level=DEBUG

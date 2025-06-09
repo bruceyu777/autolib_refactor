@@ -2,6 +2,7 @@ import re
 import time
 
 from lib.services import Image, image_server, logger, platform_manager
+from lib.settings import BASE_TIME_UNIT, SEND_COMMAND_TIMEOUT
 from lib.utilities import (
     KernelPanicErr,
     ResourceNotAvailable,
@@ -21,7 +22,6 @@ ERROR_INFO = (
     "command parse error",
     "failed command",
 )
-TEN_SECONDS = 10
 
 
 class FosDev(Device):
@@ -29,13 +29,14 @@ class FosDev(Device):
     DEFAULT_ADMIN = "admin"
     TEMP_PASSWORD = "552103"
     DEFAULT_PASSWORD = ""
-    asking_for_username = "login: "
-    asking_for_password = "assword: "
+    asking_for_username = "login: $"
+    asking_for_password = "assword: $"
     image_file_ext = ".out"
+    general_view = r"[ )~][#$] $"
 
     def __init__(self, dev_name):
         self.model = self.is_vdom_enabled = ""
-        logger.info("Start calling the device intialization.")
+        logger.info("Start calling the device initialization.")
         super().__init__(dev_name)
 
     def get_parsed_system_status(self):
@@ -47,10 +48,10 @@ class FosDev(Device):
         return system_status
 
     def is_serial_connection_used(self):
-        if not "telnet" in self.dev_cfg["CONNECTION"]:
+        if "telnet" not in self.dev_cfg["CONNECTION"]:
             return False
         return any(
-            k not in self.dev_cfg for k in ("CISCOPASSWORD", "TERMINAL_SERVER_PASSWORD")
+            k in self.dev_cfg for k in ("CISCOPASSWORD", "TERMINAL_SERVER_PASSWORD")
         )
 
     def initialize(self):
@@ -144,14 +145,14 @@ class FosDev(Device):
 
     def set_admin_password(self, admin, password, old_password):
         self.send_line("config system admin")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line(f"edit {admin}")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line(f"set password {password}")
         matched, _ = self.search(self.asking_for_password, 30, -1)
         if matched:
             self.send_line(old_password)
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line("end")
 
     def _get_login_error(self, output):
@@ -163,7 +164,7 @@ class FosDev(Device):
         password = self.dev_cfg["PASSWORD"]
         self.search(self.asking_for_password, 30, -1)
         self.send_line(password)
-        _, cli_output = self.search("#", 30, -1)
+        _, cli_output = self.search(self.general_view, 30, -1)
         user = self.dev_cfg["CONNECTION"].split("@")[0].split()[-1]
         self._post_login_handling(cli_output, user, password)
 
@@ -207,47 +208,58 @@ class FosDev(Device):
             "formatting",
             "unmounting",
             "system is going down",
+            "serial number is",
         }
         return any(keyword in lowercase_data for keyword in rebooting_patterns)
 
     def _pre_login_handling(self):
+        self.clear_buffer()
         self.send_line("\n")
-        matched, cli_output = self.search(self.asking_for_username, 5, -1)
-        if not matched:
-            if self._is_in_rebooting_status(cli_output):
-                matched, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
-            else:
-                logger.debug("Sending ctrl + c and d to force logout...")
-                self._send_ctrl_c_and_d()
-                matched, cli_output = self.search(self.asking_for_username, 5, -1)
+        # some VM are very slow, may don't have any output in 5 seconds
+        pattern = f"{self.asking_for_username}|{self.general_view}"
+        matched, cli_output = self.search(pattern, 60, -1)
+        if matched and re.search(self.asking_for_username, cli_output):
+            return
+        if not re.search(
+            self.general_view, cli_output
+        ) and self._is_in_rebooting_status(cli_output):
+            matched, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
+            return
+        logger.debug("Sending ctrl + c and d to force logout...")
+        self._send_ctrl_c_and_d()
+        matched, cli_output = self.search(self.asking_for_username, 60, -1)
+        self.clear_buffer()
+        return
 
     def _login(self, username, password):
         self._pre_login_handling()
         self._login_without_check_prompt(username, password)
         _, cli_output = self.search(
-            "(# |forced to change your.*?Password: |login: $)", 10, -1
+            f"({self.general_view}|forced to change your.*?Password: $|{self.asking_for_username})",
+            10,
+            -1,
         )
         return cli_output
 
     def unset_admin_password(self, admin, password):
         self.clear_buffer()
         self.send_line("config system admin")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send_line(f"edit {admin}")
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         self.send("unset password ?")
         require_old_password, _ = self.search(r"\<old passwd\>", 2, -1)
         self.clear_buffer()
         if require_old_password:
             self.send_line(password)
-            self.search("#", 30, -1)
+            self.search(self.general_view, 30, -1)
         else:
             self.send("\n")
             matched, _ = self.search(self.asking_for_password, 2, -1)
             if matched:
                 self.send_line(password)
                 logger.debug("###### password send:  '%s'", password)
-                self.search("#", 10, -1)
+                self.search(self.general_view, 10, -1)
         self.send_line("end")
         matched, _ = self.search(self.asking_for_password, 2, -1)
         if matched:
@@ -257,7 +269,15 @@ class FosDev(Device):
     def login_firewall_after_reset(self):
         _, cli_output = self.search(self.asking_for_username, 600, -1)
         self.check_kernel_panic(cli_output)
-        cli_output += self._login(self.DEFAULT_ADMIN, self.DEFAULT_PASSWORD)
+        retry = 3
+        while retry > 0:
+            cli_output += self._login(self.DEFAULT_ADMIN, self.DEFAULT_PASSWORD)
+            if not re.search(self.asking_for_username, cli_output):
+                break
+            retry -= 1
+            logger.debug("Try to login again...")
+        else:
+            raise ResourceNotAvailable("Failed to login device")
         if "forced to change your" in cli_output:
             self._handle_password_enforcement()
 
@@ -270,7 +290,7 @@ class FosDev(Device):
         self.send_line(temp_password)
         self.search(self.asking_for_password, 30, -1)
         self.send_line(temp_password)
-        self.search("#", 30, -1)
+        self.search(self.general_view, 30, -1)
         if self.dev_cfg["PASSWORD"] and self.dev_cfg["PASSWORD"] != temp_password:
             self.set_admin_password(
                 self.DEFAULT_ADMIN, self.dev_cfg["PASSWORD"], temp_password
@@ -300,25 +320,28 @@ class FosDev(Device):
             logger.error("Kernel panic pattern was detected(%s)!!", panic_patterns)
             raise KernelPanicErr(self.dev_name)
 
-    def _handle_yes_no_util_pattern_matched(self, command, pattern_to_break):
+    def _handle_yes_no_util_pattern_matched(
+        self, command, pattern_to_break, wait_for_y_timer=5
+    ):
         self.send_line(command)
-        remain_y_times, output = 10, ""
+        remaining_attempts, output = 10, ""
         confirmation_patterns = [
             r"\(y/n\)",
             r"\(yes/no\)",
             r"\[Y/N\]",
         ]
         patterns = "|".join(confirmation_patterns)
-        while remain_y_times > 0:
-            matched, data = self.expect(patterns, 5)
+        while remaining_attempts > 0:
+            matched, data = self.expect(patterns, wait_for_y_timer)
             output += data
             if "Command fail" in output:
                 logger.error("Command failure!!!")
                 break
-            if re.search(pattern_to_break, output) or not matched:
+            break_flag, _ = self.search(pattern_to_break, timeout=BASE_TIME_UNIT)
+            if break_flag or not matched:
                 break
             self.send("y")
-            remain_y_times -= 1
+            remaining_attempts -= 1
             time.sleep(1)
         return output
 
@@ -326,14 +349,21 @@ class FosDev(Device):
         image_url = image_server.get_image_http_url(image)
         command = f"exe restore image url {image_url}"
         output = self._handle_yes_no_util_pattern_matched(
-            command, self.asking_for_username
+            command, "system is going down NOW", wait_for_y_timer=60
         )
+        is_login_view = False
         if "Command fail" not in output:
-            if not output.endswith(self.asking_for_username):
-                _, data = self.expect(self.asking_for_username, 6 * 60)
+            is_login_view, _ = self.search(self.asking_for_username, timeout=60)
+            if not is_login_view:
+                self.clear_buffer(read_before_clean=False)
+                _is_login_view, data = self.expect(self.asking_for_username, 6 * 60)
+                is_login_view = is_login_view or _is_login_view
                 output += data
         self.check_kernel_panic(output)
-        return output.endswith(self.asking_for_username)
+        return (
+            is_login_view
+            or self.search(self.asking_for_username, timeout=BASE_TIME_UNIT)[0]
+        )
 
     def restore_image(self, release, build, need_reset=True, need_burn=False):
         if not need_burn and need_reset:
@@ -371,7 +401,8 @@ class FosDev(Device):
         for cmd in cmdlst:
             self.send_command(cmd)
 
-    def add_staic_route(self, gtw, subnet="0.0.0.0", mask="0.0.0.0", dev="", eid="0"):
+    # pylint: disable=too-many-positional-arguments
+    def add_static_route(self, gtw, subnet="0.0.0.0", mask="0.0.0.0", dev="", eid="0"):
         cmdlst = [
             "config router static",
             f"edit {eid}",
@@ -392,7 +423,7 @@ class FosDev(Device):
                 self.dev_cfg["MGMT_IP"],
                 self.dev_cfg.get("MGMT_MASK", "255.255.255.0"),
             )
-            self.add_staic_route(
+            self.add_static_route(
                 gtw=self.dev_cfg["MGMT_GW"],
                 dev=mgmt_port,
                 eid="1",
@@ -403,7 +434,9 @@ class FosDev(Device):
                 "*** MGMT_IP/MGMT_MASK/MGMT_GW *** in device config file is not configured."
             )
 
-    def send_command(self, command, pattern=DEFAULT_PROMPTS, timeout=TEN_SECONDS):
+    def send_command(
+        self, command, pattern=DEFAULT_PROMPTS, timeout=SEND_COMMAND_TIMEOUT
+    ):
         match, output = super().send_command(command, pattern, timeout=timeout)
         is_succeeded = self._if_succeeded_to_execute_command(output, command)
         return is_succeeded, match, output
@@ -420,5 +453,5 @@ class FosDev(Device):
 
     def retr_crash_log(self, cmd="diag debug crashlog read"):
         self.send_command(cmd)
-        _, crashlog_output = self.expect("# ", timeout=20 * 60)
+        _, crashlog_output = self.expect(self.general_view, timeout=20 * 60)
         return CrashLog(crashlog_output).dump_parsed_log(self.dev_name)

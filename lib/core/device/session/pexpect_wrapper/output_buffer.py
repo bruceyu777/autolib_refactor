@@ -4,6 +4,8 @@ import regex
 
 from lib.services import logger
 
+from .common import clean_by_pattern
+
 NOFLAG = 0
 
 
@@ -35,11 +37,15 @@ def _to_regex_flags(flags):
 
 def _to_line_buffer_pattern(pattern):
     patterns_to_update = {
+        # Replace greedy wildcards with line-safe equivalents
         r"\.\*": r"[^\n\r]*",
+        r"\.\+": r"[^\n\r]+",
+        # Normalize start-of-line anchors
         r"^\(\^": r"^(",
-        r"\$*\)\$*": r")",
-        r"[\r\n\\r\\n$]*$": r"[^\r\n]",
         r"^\^": r"(?:[\n\r]|^)",
+        # Normalize end-of-line handling
+        r"\$*\)\$*": r")",  # Remove surrounding $ around closing parens
+        r"[\r\n\\r\\n$]*\$": r"[\r\n]*$",  # Normalize $ to allow EOL variations
     }
     for original, target in patterns_to_update.items():
         pattern = regex.sub(original, target, pattern)
@@ -75,8 +81,9 @@ def _split_flag_and_pattern(pattern):
 
 
 class OutputBuffer:
-    def __init__(self):
+    def __init__(self, clean_patterns=None):
         self.output = ""
+        self.clean_patterns = clean_patterns or {}
 
     def __str__(self):
         return self.output
@@ -92,15 +99,22 @@ class OutputBuffer:
         return len(self.output)
 
     def append(self, output):
-        self.output += output
+        original_output = self.output + output
+        self.output = clean_by_pattern(original_output, self.clean_patterns)
 
     def clear(self, pos=None):
         self.output = "" if pos is None else self.output[pos:]
 
     def search(self, pattern, pos=0):
         pattern = _convert_tcl_to_python_pattern(pattern)
-        result = regex.search(pattern, self.output[pos:])
-        return result
+        try:
+            return regex.search(pattern, self.output[pos:], timeout=1)
+        except TimeoutError as e:
+            width = 70
+            logger.warning(" Expect Timeout - Pattern is INVALID ".center(width, "*"))
+            logger.warning("Expect pattern: %s", pattern)
+            logger.warning("*" * width)
+            raise ValueError(f"Invalid Expect Pattern '{pattern}'") from e
 
     def expect(self, pattern):
         m = self.search(pattern)

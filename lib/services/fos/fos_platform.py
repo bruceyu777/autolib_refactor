@@ -13,10 +13,12 @@ class FosPlatformManager:
         "FortiGateRugged": "FGR",
         "FortiGate": "FGT",
         "FortiCarrier": "FGT",
+        "FortiGateCarrier": "FGT",
         "FortiWiFi": "FWF",
         "FortiAP": "FAP",
         "FortiSwitch": "FSW",
         "FortiFirewall": "FFW",
+        "FortiFirewallCarrier": "FFW",
     }
 
     def __init__(self, platform_revision_filepath=PLATFORM_GEN_CSV_FILEPAHT):
@@ -43,7 +45,7 @@ class FosPlatformManager:
         if normalized:
             return model.replace(platform_prefix, normalized)
         if platform_prefix not in FosPlatformManager.oriole_abbr_mapping.values():
-            msg = "Model is %s, not in konwn model list:\n%s\n"
+            msg = "Model is %s, not in known model list:\n%s\n"
             logger.error(msg, model, json.dumps(FosPlatformManager.platforms()))
         return org_platform
 

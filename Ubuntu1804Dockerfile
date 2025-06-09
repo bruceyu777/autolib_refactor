@@ -1,0 +1,53 @@
+FROM ubuntu:18.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Update the package list
+RUN apt-get update
+
+# Install essential dependencies
+RUN apt-get install -y \
+    python3 \
+    python3-dev \
+    python3-pip \
+    tzdata \
+    gcc \
+    g++ \
+    libgcc1 \
+    libstdc++6 \
+    libssl-dev \
+    libffi-dev \
+    libz1 \
+    libc6 \
+    build-essential \
+    zlib1g-dev && \
+    ln -fs /usr/share/zoneinfo/America/Vancouver /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set your working directory
+WORKDIR /app
+
+# Copy your application code and .spec file into the container
+COPY . /app
+
+# Verify what pip is installing into
+RUN pip3 --version
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r requirements.txt || echo "No requirements.txt found"
+
+RUN pip3 install --upgrade setuptools
+RUN pip3 install --force chardet==4.0.0
+
+# Install pyinstaller
+RUN pip3 install --force --no-cache-dir pyinstaller
+
+# Build the PyInstaller package
+RUN pyinstaller --clean autotest.spec
+
+# Output executable location
+CMD ["ls", "-lh", "dist"]
+
+# docker build -t pyinstaller_b1804 -f Ubuntu1804Dockerfile .
+# docker run --rm -v ./:/app -it pyinstaller_b1804 pyinstaller --clean autotest.spec --log-level=DEBUG

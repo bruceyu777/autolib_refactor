@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import os
 import sys
 
 from lib import (
@@ -19,15 +20,29 @@ SUBMIT_HELP = """all: submit all testcases' result to Oriole.
 none: do not submit any testcase result to Oriole.
 succeeded: only submit succeeded testcases' result to Oriole."""
 
+# pylint: disable=protected-access
+if hasattr(sys, "_MEIPASS"):
+    # Get the path to the temporary directory where PyInstaller extracts files
+    # This attribute is only available when the application is running
+    # from a PyInstaller bundle.
+    version_file_path = os.path.join(sys._MEIPASS, "version")
+else:
+    # If running from source code, use the current working directory
+    version_file_path = "./version"
 
-__version__ = "V3R10B0005"
+try:
+    with open(version_file_path, "r", encoding="utf-8") as f:
+        __version__ = f.read().strip()
+except FileNotFoundError:
+    print("Error: version file not found.")
+    __version__ = "unknown"
 
 
 def create_webserver_parser(parent):
     parser = parent.add_parser(
         "webserver",
-        help="Launch AutoLib HTTP Web Server",
-        description="To launch AutoLib HTTP Web Server as Working Portal",
+        help="Launch Autotest HTTP Web Server",
+        description="To launch Autotest HTTP Web Server as Working Portal",
     )
     parser.add_argument(
         "-p", "--port", dest="port", help="Specify port number to listen", default=8080
@@ -106,19 +121,35 @@ def create_imageservice_parser(parent):
     return parser
 
 
+def create_upgrade_parser(parent):
+    """Create the parser for the upgrade subcommand"""
+    upgrade_parser = parent.add_parser(
+        "upgrade",
+        help="Upgrade current autotest binary",
+        description="Upgrade current autotest binary",
+    )
+    upgrade_parser.add_argument(
+        "-b",
+        "--build",
+        dest="build",
+        help="Specific build number, by default upgrade to the latest version if branch is not specified",
+    )
+    upgrade_parser.add_argument(
+        "--branch",
+        dest="branch",
+        default="V3R10",
+        help="Specify the branch to upgrade, default is V3R10",
+    )
+    return upgrade_parser
+
+
 def create_main_parser():
     parser = argparse.ArgumentParser(
-        prog="AutoLib_v3",
+        prog="autotest",
         description=PROG_DESCRIPTION,
         formatter_class=argparse.RawTextHelpFormatter,
     )
     parser.add_argument("-v", "--version", action="version", version=__version__)
-    parser.add_argument(
-        "-u",
-        "--upgrade",
-        action=Upgrade,
-        help="Upgrade current AutoLib",
-    )
     parser.add_argument(
         "-e",
         "--environment",
@@ -148,7 +179,7 @@ def create_main_parser():
         dest="debug",
         action="store_true",
         default=False,
-        help="enanble debug",
+        help="enable debug",
         required=False,
     )
     parser.add_argument(
@@ -199,7 +230,7 @@ def create_main_parser():
         type=int,
         default=0,
         dest="wait_image_ready_timer",
-        help="Specify a tiemout timer for waiting image ready.(Unit: Hour)",
+        help="Specify a timeout timer for waiting image ready.(Unit: Hour)",
     )
     parser.add_argument(
         "--portal",
@@ -208,21 +239,29 @@ def create_main_parser():
         default=False,
         help="Bring up web portal while run autotest",
     )
+    parser.add_argument(
+        "--non_strict",
+        dest="non_strict",
+        action="store_true",
+        default=False,
+        help="Disable strict mode to allow the script to run even if it contains syntax errors",
+    )
     return parser
 
 
 def parse_cli_args():
     parser = create_main_parser()
-    subprasers = parser.add_subparsers(dest="command", help="Sub commands")
-    create_webserver_parser(subprasers)
-    create_imageservice_parser(subprasers)
+    subparsers = parser.add_subparsers(dest="command", help="Sub commands")
+    create_upgrade_parser(subparsers)
+    create_webserver_parser(subparsers)
+    create_imageservice_parser(subparsers)
     args = parser.parse_args()
     return args
 
 
 def run_autotest_main(args):
     if not (args.script or args.group):
-        logger.error("Please speicify the testcase script or testcase group.")
+        logger.error("Please specify the testcase script or testcase group.")
         sys.exit(-1)
 
     logger.notice("\n**** Start test job with AUTOLIB - %s. ****", __version__)
@@ -239,7 +278,9 @@ def run_autotest_main(args):
 
 
 def run_sub_command_main(args):
-    if args.command == "webserver":
+    if args.command == "upgrade":
+        Upgrade(args.build, branch=args.branch).run()
+    elif args.command == "webserver":
         launch_webserver_on(args.ip_address, args.port)
     elif args.command == "imageservice":
         imageservice_operations(

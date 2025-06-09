@@ -11,10 +11,18 @@ MAX_WAIT_TIME_FOR_LIC_UPDATE = 5 * 60
 
 
 class FortiVM(FosDev):
+    FORTISTACK_CLOUD_INIT_PASSWORD = "admin"
+
     def __init__(self, dev_name):
         super().__init__(dev_name)
         self.license = None
         self.license_server = None
+
+    @property
+    def DEFAULT_PASSWORD(self):
+        if env.is_running_on_vm():
+            return self.FORTISTACK_CLOUD_INIT_PASSWORD
+        return super().DEFAULT_PASSWORD
 
     def get_session_init_class(self):
         return get_session_init_class(self.is_serial_connection_used(), True)
@@ -47,7 +55,7 @@ class FortiVM(FosDev):
                 )
             )
             sleep_with_progress(sleep_time)
-        _, cli_output = self.search(f"{self.asking_for_username}$", 10 * 60, -1)
+        _, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
         self.check_kernel_panic(cli_output)
         cli_output += self._login(self.DEFAULT_ADMIN, self.DEFAULT_PASSWORD)
         if "forced to change your" in cli_output:
@@ -98,7 +106,7 @@ class FortiVM(FosDev):
         if self.use_evaluation_license():
             logger.warning("Use evaluation license!")
             return
-        # need all the hosted entity have those atttribute
+        # need all the hosted entity have those attribute
         self.setup_management_access()
         self.request_license()
         self.load_license()
@@ -133,7 +141,7 @@ class FortiVM(FosDev):
         """
         command = "diagnose hardware sysinfo vm full"
         self.send_line(f"{command}")
-        _, ret = self.search("#|login:", 30, -1)
+        _, ret = self.search(f"{self.general_view}|{self.asking_for_username}", 30, -1)
         required = {"valid": [1], "status": [1], "code": range(200, 400)}
         selected = (
             line.split(":") for line in ret.splitlines() if line.find(": ") != -1
@@ -143,7 +151,7 @@ class FortiVM(FosDev):
         valid = all(
             status.get(key, 0) in allow_values for key, allow_values in required.items()
         )
-        if ret.endswith("login: "):
+        if re.search(self.asking_for_username, ret):
             self._login(self.DEFAULT_ADMIN, self.TEMP_PASSWORD)
         return valid
 
@@ -152,8 +160,10 @@ class FortiVM(FosDev):
         interval = 10
         while wait_time < timeout:
             self.send_line("")
-            _, ret = self.search("#|login:", interval, -1)
-            if ret and ret.find("login: ") != -1:
+            _, ret = self.search(
+                f"{self.general_view}|{self.asking_for_username}", interval, -1
+            )
+            if ret and re.search(self.asking_for_username, ret):
                 self._login(self.DEFAULT_ADMIN, self.TEMP_PASSWORD)
             if self.validate_license():
                 break

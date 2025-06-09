@@ -19,7 +19,6 @@ class ComputerConn(DevConn):
         # 2 #
         # 3 need confirmStart configuring output mode to be standard.
 
-        # pdb.set_trace()
         cur_pos = len(self.output_buffer)
         logger.debug("current command is '%s'", command)
         logger.debug("current pos in send_command is %s", cur_pos)

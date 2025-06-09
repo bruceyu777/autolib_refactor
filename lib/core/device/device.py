@@ -101,11 +101,8 @@ class Device:
             logger.debug("Device:%s is reconnected.", self.dev_name)
 
     def switch(self, retry=0):
-        # TODO: this one needs more refatoring
-        if retry > 3:
-            logger.debug("Failed to switch device: %s", self.dev_name)
         try:
-            if not self.conn.isalive():
+            if not self.conn or not self.conn.isalive():
                 logger.warning("Previous connection was disconnected!")
                 self.reconnect()
             if self.keep_running:
@@ -116,8 +113,13 @@ class Device:
             self.force_login()
             self.clear_buffer()
         except Exception as e:
-            print(e)
-            self.switch(retry + 1)
+            logger.exception("Failed to switch device: %s", self.dev_name)
+            if retry <= 3:
+                logger.info("Retrying to switch device: %s", self.dev_name)
+                self.switch(retry + 1)
+            else:
+                raise e
+        return
 
     def force_login(self):
         raise NotImplementedError
@@ -143,8 +145,8 @@ class Device:
     def send(self, s):
         return self._execute_with_reconnect(self.conn.send, s)
 
-    def clear_buffer(self):
-        self._execute_with_reconnect(self.conn.clear_buffer)
+    def clear_buffer(self, *args, **kwargs):
+        self._execute_with_reconnect(self.conn.clear_buffer, *args, **kwargs)
 
     def require_confirm(self, s):
         for key, val in AUTO_PROCEED_RULE_MAP.items():
