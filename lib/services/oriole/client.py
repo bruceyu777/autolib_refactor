@@ -1,7 +1,7 @@
 import copy
 import datetime
 import json
-import re
+import os
 import time
 
 import requests
@@ -33,6 +33,14 @@ class OrioleClient:
         self.reports = []
         self.release_tag = None
 
+    def report_to_submit(self):
+        if self.submit_flag == "None":
+            return ""
+        filename, ext = os.path.splitext(REPORT_FILE)
+        filename = f"{filename}_{self.submit_flag.lower()}"
+        report_filename = output.compose_summary_file(f"{filename}{ext}")
+        return report_filename
+
     def set_user_cfg(self, args):
         self.submit_flag = (
             args.submit_flag if hasattr(args, "submit_flag") else self.submit_flag
@@ -45,34 +53,45 @@ class OrioleClient:
         self.specified_fields.setdefault("mark", "AutoLib_v3")
 
     def send_oriole(self):
-        response = None
-        try:
-            payload = {
-                "user": self.user,
-                "password": self.password,
-                "report": json.dumps(self.reports),
-                "release_tag": self.release_tag,
-                "project": "FAP" if env.is_fap_dut() else "FOS",
-            }
-            taskpath_template = env.get_section_var("ORIOLE", "TASK_PATH")
-            if taskpath_template:
-                payload["task_path"] = taskpath_template.format(
-                    RELEASE=self.release_tag
-                )
-            response = requests.request(
-                "POST", ORIOLE_SUBMIT_API_URL, data=payload, timeout=60, verify=False
-            )
-            succeeded = response.status_code == 200
-        except Exception:
-            logger.exception("Failed to report to oriole!")
-            succeeded = False
+        report_file = self.report_to_submit()
+        if report_file and os.path.exists(report_file):
+            try:
+                with open(report_file, "r", encoding="utf-8") as f:
+                    report = f.read()
 
-        if not succeeded:
-            if response is not None:
-                logger.error("Error details from Oriole: %s", response.text)
-            else:
-                logger.error("Unable to access to %s", ORIOLE_SUBMIT_API_URL)
-        return succeeded
+                payload = {
+                    "user": self.user,
+                    "password": self.password,
+                    "report": report,
+                    "release_tag": self.release_tag,
+                    "project": "FAP" if env.is_fap_dut() else "FOS",
+                }
+
+                task_path_template = env.get_section_var("ORIOLE", "TASK_PATH")
+                if task_path_template:
+                    payload["task_path"] = task_path_template.format(
+                        RELEASE=self.release_tag
+                    )
+
+                response = requests.request(
+                    "POST",
+                    ORIOLE_SUBMIT_API_URL,
+                    data=payload,
+                    timeout=60,
+                    verify=False,
+                )
+                if response.status_code == 200:
+                    return True
+                logger.error(
+                    "Failed to report to oriole for %s! Response: %s",
+                    report_file,
+                    response.text,
+                )
+            except Exception:
+                logger.exception("Failed to report to oriole for %s!", report_file)
+                return False
+        logger.warning("No report to report to oriole for %s!", report_file)
+        return False
 
     def submit(self):
         t1 = time.perf_counter()
@@ -132,40 +151,29 @@ class OrioleClient:
         product_report = self.generate_product_report(
             testcase_id, is_passed, device_info
         )
-        result = False
         if product_report and testcase_id.isdigit():
-            if self.submit_flag == "all" or (
-                self.submit_flag == "succeeded" and is_passed
-            ):
-                self.release_tag = (
-                    env.get_section_var("ORIOLE", "RELEASE") or device_info["version"]
-                )
-                self.reports.append(product_report)
-                self.dump()
-        return result
+            self.release_tag = (
+                env.get_section_var("ORIOLE", "RELEASE") or device_info["version"]
+            )
+            self.reports.append(product_report)
+            self.dump()
+
+    @staticmethod
+    def _dump(reports, only_succeeded=False):
+        json_str = json.dumps(reports, indent=4)
+        filename, ext = os.path.splitext(REPORT_FILE)
+        filename = f"{filename}_succeeded" if only_succeeded else f"{filename}_all"
+        report_filename = output.compose_summary_file(f"{filename}{ext}")
+        with open(report_filename, "w") as f:
+            f.write(json_str)
 
     def dump(self):
-        json_str = json.dumps(self.reports, indent=4)
-        new_lines = []
-        results_begin = False
-        results_lines = []
-        for line in json_str.splitlines():
-            if re.match(r'\s+"results": \[', line):
-                results_begin = True
-                results_lines.append(line)
-            else:
-                if results_begin:
-                    results_lines.append(line.strip())
-                    if re.match(r"\s+\]", line):
-                        results_begin = False
-                        new_lines.append("".join(results_lines))
-                        results_lines = []
-                else:
-                    new_lines.append(line)
-        report_str = "\n".join(new_lines)
-        report_filename = output.compose_summary_file(REPORT_FILE)
-        with open(report_filename, "w") as f:
-            f.write(report_str)
+        succeeded_reports = [
+            r for r in self.reports if r["results"] and r["results"][0]["result"] == "1"
+        ]
+        if succeeded_reports:
+            self._dump(succeeded_reports, only_succeeded=True)
+        self._dump(self.reports)
 
 
 oriole = OrioleClient()
