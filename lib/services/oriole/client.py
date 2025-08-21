@@ -17,6 +17,7 @@ from .meta import (
     ORIOLE_FIELD_SOURCE,
     ORIOLE_REPORT_FIXED_FIELDS,
     ORIOLE_SUBMIT_API_URL,
+    ORIOLE_SUBMIT_TIMEOUT,
     REPORT_FILE,
 )
 
@@ -77,7 +78,7 @@ class OrioleClient:
                     "POST",
                     ORIOLE_SUBMIT_API_URL,
                     data=payload,
-                    timeout=60,
+                    timeout=ORIOLE_SUBMIT_TIMEOUT,
                     verify=False,
                 )
                 if response.status_code == 200:

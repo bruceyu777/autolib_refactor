@@ -6,6 +6,7 @@ FILE_EXT = ".json"
 REPORT_FILE = "Oriole_report.json"
 
 ORIOLE_SUBMIT_API_URL = f"https://{IMAGE_SERVER_FQDN}/api/oriole"
+ORIOLE_SUBMIT_TIMEOUT = 60 * 10
 
 ORIOLE_REPORT_FIXED_FIELDS = {
     "cidb": "0.00000",

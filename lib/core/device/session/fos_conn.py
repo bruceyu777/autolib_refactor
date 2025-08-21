@@ -26,7 +26,8 @@ class VmSerialConn(FosConn):
         try:
             result = subprocess.run(
                 ["pkill", "-f", f"telnet.*{port}"],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 check=True,
             )
