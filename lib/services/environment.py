@@ -190,16 +190,19 @@ class Environment:
         self.env_file = self.args.env
         self.test_file = self.args.script or self.args.group
         if self.args.wait_image_ready_timer:
+            if not self.args.release or not self.args.build:
+                raise OperationFailure(
+                    "Please specify the release and build number when waiting for image ready."
+                )
             self.wait_for_image_ready()
 
     def wait_for_image_ready(self):
         start_time = time.time()
         timeout_timer = self.args.wait_image_ready_timer * 60 * 60
+        major = self.args.release.split(".")[0]
         while time.time() - start_time <= timeout_timer:
             try:
-                ImageServer().get_build_files(
-                    self.args.project, self.args.release, self.args.build
-                )
+                ImageServer().get_build_files(self.args.project, major, self.args.build)
                 return True
             except OperationFailure:
                 logger.warning(
