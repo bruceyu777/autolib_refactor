@@ -9,17 +9,16 @@ ctrl_b = "\x02"
 
 class BIOS:
     switch_menu_delay_in_sec = 5
-
     pattern = {
         "entry_point": r"to display configuration menu",
-        "main_menu": r"Enter [CG].*?[HQ]:$",
-        "wildcard_menu": r"Enter .*?[HQ]:$",
-        "set_option": r"(?:Enter|Input).*?\[.*?\]:",
-        "dhcp_option": r"Enter DHCP setting.*?:",
+        "main_menu": r"Enter [CG].*?H:$",
+        "wildcard_menu": r"Enter .*?H:$",
+        "set_option": r"Enter.*?\[.*?\]:",
         "general_choice": r"\]\?",
         "firmware_choice": (r"Save as Default firmware.*?saving:\[D/B/R\]\?"),
         "format_boot_device": r"It will erase.*?Continue\? \[yes/no\]",
         "yes_or_no": r"\[Y/N\]\?$",
+        "format_option": r"\w+ format\s+Enter \d+ or \d+:",
     }
     command = {
         "dummy": "",
@@ -29,8 +28,6 @@ class BIOS:
         "help": "H",
         "start_tftp": "T",
         "set_vlan_id": "V",
-        "set_dhcp_status": "D",
-        "disable_dhcp": "2",
         "set_default_firmware": "D",
         "set_backup_firmware": "B",
         "set_local_gateway": "G",
@@ -47,6 +44,7 @@ class BIOS:
         "set_local_ip": "I",
         "review_tftp_settings": "R",
         "format_boot_device": "F",
+        "default_format_method": "0",
         "set_tftp_server_ip": "T",
     }
 
@@ -99,9 +97,17 @@ class BiosImageLoader:
         [7]:  DMZ
         [8]:  WAN1
         [9]:  WAN2"""
-        pattern = re.compile(r"\s*\[*(?P<index>\d+)\]*:\s*(?P<port_name>\w+)")
-        mapping = {v.lower(): k for k, v in pattern.findall(options.replace(" ", ""))}
-        return mapping[download_port.lower()] if mapping else download_port
+        if "[" not in options and "]:" not in options:
+            return download_port
+        selected = dict(
+            line.strip().split(":")
+            for line in options.splitlines()
+            if "[" in line and "]:" in line
+        )
+        mapping = {
+            v.replace(" ", "").strip().lower(): k[1:-1] for k, v in selected.items()
+        }
+        return mapping[download_port.lower()]
 
     def goto_bios_main_menu(self, max_menu_depth=5):
         output = self._exec_cmd_until("dummy", addenter=True)
@@ -123,9 +129,12 @@ class BiosImageLoader:
         return output
 
     def format_boot_device(self):
-        output = self._exec_cmd_until(
-            "format_boot_device", pattern="format_boot_device"
+        pattern = (
+            f"{BIOS.pattern['format_boot_device']}|{BIOS.pattern['format_option']}"
         )
+        output = self._exec_cmd_until("format_boot_device", pattern=pattern)
+        if re.findall(BIOS.pattern["format_option"], output):
+            self._exec_cmd_until("default_format_method", addenter=False)
         output += self._exec_cmd_until("yes", addenter=True)
         return output
 
@@ -141,7 +150,7 @@ class BiosImageLoader:
     def set_vlan_id(self, burn_vlan_id="-1"):
         return self._set_option_value("set_vlan_id", burn_vlan_id)
 
-    def set_tftp_server_ip(self, tftp_server="172.18.70.52.254"):
+    def set_tftp_server_ip(self, tftp_server="172.18.52.254"):
         return self._set_option_value("set_tftp_server_ip", tftp_server)
 
     def set_download_port(self, burn_port):
@@ -156,17 +165,33 @@ class BiosImageLoader:
     def goto_tftp_configure_menu(self):
         return self._exec_cmd_until("goto_tftp_menu")
 
+    def _image_load_error_check(self, output, only_warning=False):
+        output = output.lower()
+        # Warning: Image decode failed. Try to continue under security level Low...
+        # will fail this case:
+        if "failed" in output or "timeout" in output:
+            if not only_warning:
+                raise RuntimeError("Image uploading error happened!!!")
+
     def load_firmware(self):
         output = self._exec_cmd_until(
             "start_tftp",
             pattern="firmware_choice",
             timeout=BIOS_WAIT_TIMER,
         )
+        is_firmware_choice = re.findall(BIOS.pattern["firmware_choice"], output)
+        # if we got firmware_choice, it means firmware was uploaded successfully
+        self._image_load_error_check(output, only_warning=bool(is_firmware_choice))
         output += self._exec_cmd_until("set_default_firmware", pattern="general_choice")
         while re.findall(BIOS.pattern["yes_or_no"], output):
             output += self._exec_cmd_until("Y", pattern="general_choice", addenter=True)
+        login_view = "login: "
+        output += self._exec_cmd_until(login_view, timeout=BIOS_WAIT_TIMER)
+        is_login_view = re.search(login_view, output)
+        self._image_load_error_check(output, only_warning=bool(is_login_view))
         return output
 
+    # pylint: disable=too-many-positional-arguments
     def load_firmware_from_bios(
         self,
         tftp_server,
@@ -190,4 +215,5 @@ class BiosImageLoader:
         self.set_vlan_id(burn_vlan_id)
         self.review_tftp_settings()
         self.goto_bios_main_menu()
+        time.sleep(1)
         return self.load_firmware()
