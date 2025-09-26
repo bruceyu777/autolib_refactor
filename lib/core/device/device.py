@@ -286,6 +286,13 @@ class Device:
         matched, output = self.conn.send_command(command, pattern, timeout)
         logger.info(output)
         while time.time() - start_time < timeout:
+            # If nothing matched (e.g., broke early due to infinite output safeguards),
+            # stop the auto-proceed handling gracefully.
+            if matched is None:
+                logger.warning(
+                    "No pattern matched after send_command; breaking auto-proceed loop."
+                )
+                break
             command = self.require_confirm(matched.group())
             if command is None:
                 break
