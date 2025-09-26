@@ -46,7 +46,7 @@ class KVM(Computer):
     def prepare_image(self, vm_name, release, build):
         image = Image(self.model(vm_name), release, build, ".kvm.zip")
         image_url = image_server.get_image_http_url(image)
-        image_name = image_url.split("/")[-1]
+        image_name = image_url.rsplit("/", maxsplit=1)[-1]
         command = f"curl -k {image_url} --output {image_name}"
         self.send_command(command, timeout=60)
         self.image_location = self.unzip_image(image_name)
@@ -94,15 +94,12 @@ class KVM(Computer):
         logger.debug("mgmt_nic set to be: %s", mgmt_nic)
         return mgmt_nic
 
-    def create_a_disk(self, saveas, block_size="1G", count=32, disk_size="32G"):
-        template = ">>> saveas: '%s', block_size: '%s', count: '%s', disk_size: '%s'"
-        logger.debug(template, saveas, block_size, count, disk_size)
+    def create_a_disk(self, saveas, disk_size="32G"):
         if not saveas.startswith(KVM_DEFAULT_IMAGE_FOLDER):
             saveas = os.path.join(KVM_DEFAULT_IMAGE_FOLDER, os.path.basename(saveas))
         command = "sudo qemu-img create -f raw {} {}".format(saveas, disk_size)
         match, _ = self.send_command(command, r"[$]$", timeout=10)
         logger.info("\nLog disk file is created: %s\n", saveas)
-        logger.debug("<<< return: '%s', saveas: '%s'", match, saveas)
         return match, saveas
 
     def wait_vm_to_status(self, vm_name, to_status, timeout=5 * 60):
@@ -147,7 +144,7 @@ class KVM(Computer):
 
     def power_on_vm(self, vm_domain):
         command = f"virsh --connect qemu:///system start {vm_domain}"
-        expected_str = rf"Domain '{vm_domain}'self started"
+        expected_str = rf"Domain '{vm_domain}' started"
         self.send_command(command, expected_str, timeout=VIRSH_DEFAULT_TIMEOUT)
         self.wait_vm_to_status(vm_domain, VmStatus.RUNNING)
 
