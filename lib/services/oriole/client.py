@@ -14,6 +14,7 @@ from lib.services.log import logger
 from lib.services.output import output
 
 from .meta import (
+    EMPTY_DB_VERSION,
     ORIOLE_FIELD_SOURCE,
     ORIOLE_REPORT_FIXED_FIELDS,
     ORIOLE_SUBMIT_API_URL,
@@ -115,8 +116,12 @@ class OrioleClient:
 
     def gen_plt_info_for_oriole(self, device_info, report):
         for k, fos_sources in OrioleClient.get_field_source().items():
-            value = " ".join([device_info.get(f, "") for f in fos_sources])
-            report[k] = value
+            for f in fos_sources:
+                if device_info.get(f):
+                    value = device_info.get(f)
+                    if value and value != EMPTY_DB_VERSION:
+                        report[k] = value
+                    break
         if env.get_vm_nic():
             report["vm_nic"] = env.get_vm_nic()
         if env.get_vm_os():

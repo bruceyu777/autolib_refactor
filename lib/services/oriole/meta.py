@@ -7,26 +7,13 @@ REPORT_FILE = "Oriole_report.json"
 
 ORIOLE_SUBMIT_API_URL = f"https://{IMAGE_SERVER_FQDN}/api/oriole"
 ORIOLE_SUBMIT_TIMEOUT = 60 * 10
+EMPTY_DB_VERSION = "0.00000"
 
+# Per request from Nan, remove default EMPTY_DB_VERSION
 ORIOLE_REPORT_FIXED_FIELDS = {
-    "cidb": "0.00000",
-    "avdb": "0.00000",
-    "dbdb": "0.00000",
-    "nids": "0.00000",
-    "mmdb": "0.00000",
-    "isdb": "0.00000",
-    "flen": "0.00000",
     "total": "1",
-    "aven": "0.00000",
-    "apdb": "0.00000",
-    "nids_ext": "0.00000",
-    "ffdb": "0.00000",
-    "mudb": "0.00000",
     "bios": "00000000",
-    "ipge": "0.00000",
     "SN": "FG39E6T018900077",
-    "crdb": "0.00000",
-    "mcdb": "0.00000",
 }
 
 
@@ -38,7 +25,6 @@ ORIOLE_FIELD_FOS_SOURCE = {
     "bios": ["BIOS version"],
     "build": ["build"],
     "eavdf": ["Extended set"],
-    "favdf": ["Flow-based Virus Definitions"],
     "flen": ["IPS Attack Engine"],
     "ipsdef": ["Attack Definitions", "Attack Extended Definitions"],
     "nids": ["Attack Definitions"],
@@ -46,6 +32,24 @@ ORIOLE_FIELD_FOS_SOURCE = {
     "platform": ["platform"],
     "SN": ["Serial-Number"],
     "snmp_mib": ["build"],
+    "etdb": ["Extended DB"],
+    "exdb": ["Extreme DB"],
+    "avai": ["AV AI/ML Model"],
+    "wips": ["Proxy-IPS-DB"],
+    "wiet": ["Proxy-IPS-ETDB"],
+    "wapp": ["Proxy-APP-DB"],
+    "mldb": ["IPS-MLDB", "AI/Machine Learning IPS Definitions"],
+    "ftlm": ["Telemetry-DB"],
+    "apai": ["AIAP-DB"],
+    "fmwp": ["FMWP-DB", "FMWP Definitions"],
+    "iold": ["IoT-Detect-DB", "IoT Detect Definitions"],
+    "otdb_detect": ["OT-Detect-DB", "OT Detect Definitions"],
+    "otdb_patch": ["OT-Patch-DB", "OT Patch Definitions"],
+    "icdb": ["ICDB Database"],
+    "casb": ["Inline CASB Database"],
+    "fldb": ["Flow-based Virus Definitions"],
+    "dldb": ["DLP Signatures"],
+    "afdb": ["AntiPhish Pattern DB"],
 }
 
 
@@ -136,4 +140,22 @@ ORIOLE_FIELD_MAPPING = {
     "VCM Plugin": "vcm_plugin",
     "VM DB Version": "vmver",
     "VM Engine": "vmeng",
+    "AV Extended DB": "etdb",
+    "AV Extreme DB": "exdb",
+    "AV AI/ML Model": "avai",
+    "Proxy IPS DB": "wips",
+    "Proxy IPS ETDB": "wiet",
+    "Proxy APP DB": "wapp",
+    "IPS ML DB": "mldb",
+    "Telemetry DB": "ftlm",
+    "GenAI APP DB": "apai",
+    "FMWP DB": "fmwp",
+    "IoT Detect DB": "iotd",
+    "OT Detect DB": "otdb_detect",
+    "OT Patch DB": "otdb_patch",
+    "ICDB": "icdb",
+    "Inline CASB DB": "casb",
+    "Flow-based Virus Definitions": "fldb",
+    "DLP Signatures": "dldb",
+    "AntiPhish Pattern DB": "afdb",
 }
