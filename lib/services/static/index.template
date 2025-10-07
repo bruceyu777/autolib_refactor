@@ -1,7 +1,105 @@
 {% extends "base.template" %}
 
 {% block content %}
-<table>
+<style>
+    .file-browser-table {
+        background: var(--bg-primary);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: var(--shadow-md);
+    }
+
+    .file-browser-table th {
+        background: linear-gradient(180deg, #f8f9fa 0%, var(--bg-tertiary) 100%);
+        font-weight: 600;
+        font-size: 0.8125rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 16px;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .file-browser-table td {
+        padding: 14px 16px;
+        vertical-align: middle;
+    }
+
+    .file-name {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 500;
+    }
+
+    .file-name a {
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: color 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .file-name a:hover {
+        color: var(--primary-color);
+    }
+
+    .file-icon {
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .file-icon.folder::before {
+        content: "📁";
+        font-size: 20px;
+    }
+
+    .file-icon.file::before {
+        content: "📄";
+        font-size: 18px;
+    }
+
+    .file-size, .file-date {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        font-weight: 400;
+    }
+
+    .file-size {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .file-date {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+    }
+
+    tbody tr {
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    tbody tr:hover {
+        background: linear-gradient(90deg, var(--bg-secondary) 0%, var(--primary-light) 100%);
+    }
+
+    @media (max-width: 768px) {
+        .file-date {
+            display: none;
+        }
+    }
+</style>
+
+<table class="file-browser-table">
     <thead>
         <tr>
             <th>File Name</th>
@@ -13,8 +111,10 @@
         {% for item in directory_list %}
             <tr>
                 <td class="file-name">
-                    <span class="file-icon {{ item.icon }}"></span>
-                    <a href="{{ item.link }}">{{ item.display_name }}</a>
+                    <a href="{{ item.link }}">
+                        <span class="file-icon {{ item.icon }}"></span>
+                        {{ item.display_name }}
+                    </a>
                 </td>
                 <td class="file-size">{{ item.size or '-' }}</td>
                 <td class="file-date">{{ item.date or '-' }}</td>

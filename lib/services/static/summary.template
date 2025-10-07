@@ -5,49 +5,107 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Test Report</title>
         <style>
+            :root {
+                --primary-color: #4CAF50;
+                --primary-hover: #45a049;
+                --success-color: #10b981;
+                --success-bg: #d1fae5;
+                --success-border: #6ee7b7;
+                --error-color: #ef4444;
+                --error-bg: #fee2e2;
+                --error-border: #fca5a5;
+                --warning-color: #f59e0b;
+                --warning-bg: #fef3c7;
+                --neutral-color: #6b7280;
+                --neutral-bg: #f3f4f6;
+                --testing-color: #06b6d4;
+                --testing-bg: #cffafe;
+                --text-primary: #1f2937;
+                --text-secondary: #6b7280;
+                --border-color: #e5e7eb;
+                --bg-primary: #ffffff;
+                --bg-secondary: #f9fafb;
+                --bg-tertiary: #f3f4f6;
+                --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+                --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+                --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+                --radius-md: 0.5rem;
+                --radius-lg: 0.75rem;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+                background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+                color: var(--text-primary);
+                line-height: 1.6;
+                margin: 0;
+                padding: 0;
+            }
+
             h2 {
                 text-align: center;
                 font-size: 24px;
                 font-weight: 600;
-                color: #333;
-                margin: 20px 0 10px;
-                border-bottom: 2px solid #4CAF50;
-                padding-bottom: 5px;
+                color: var(--text-primary);
+                margin: 30px 0 20px;
+                padding-bottom: 12px;
+                border-bottom: 3px solid var(--primary-color);
+                letter-spacing: -0.025em;
             }
 
             table {
                 width: 100%;
-                border-collapse: collapse;
-                margin: 10px 0;
-                font-size: 16px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                border-collapse: separate;
+                border-spacing: 0;
+                margin: 16px 0;
+                background: var(--bg-primary);
+                border-radius: var(--radius-lg);
+                overflow: hidden;
+                box-shadow: var(--shadow-md);
+                font-size: 15px;
             }
 
             th, td {
                 text-align: center;
-                padding: 12px;
-                border: 1px solid #dddddd;
+                padding: 14px 16px;
+                border-bottom: 1px solid var(--border-color);
             }
 
             th {
-                background-color: #f8f8f8 !important; /* Changed header color to neutral */
-                font-weight: lighter !important;
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                background: linear-gradient(180deg, #f8f9fa 0%, var(--bg-tertiary) 100%);
+                font-weight: 600;
+                font-size: 0.8125rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--text-secondary);
+                border-bottom: 2px solid var(--border-color);
             }
 
-            tr:nth-child(even) {
-                background-color: #f2f2f2;
+            tr:last-child td {
+                border-bottom: none;
             }
 
-            tr:hover {
-                background-color: #e9f5e9;
+            tbody tr {
+                transition: background-color 0.15s ease;
+            }
+
+            tbody tr:hover {
+                background-color: var(--bg-secondary);
             }
 
             a {
                 text-decoration: none;
+                color: var(--primary-color);
+                font-weight: 500;
+                transition: color 0.2s ease;
             }
 
             a:hover {
+                color: var(--primary-hover);
                 text-decoration: underline;
             }
 
@@ -56,75 +114,75 @@
             }
 
             .success {
-                background-color: #c8e6c9;
-                color: #388e3c;
-                font-weight: bold;
+                background: linear-gradient(135deg, var(--success-bg) 0%, #a7f3d0 100%);
+                color: #065f46;
+                font-weight: 600;
+                border-left: 4px solid var(--success-border);
             }
 
             .failure {
-                background-color: #ffcdd2 !important;;
-                color: #d32f2f;
-                font-weight: bold;
+                background: linear-gradient(135deg, var(--error-bg) 0%, #fecaca 100%) !important;
+                color: #991b1b;
+                font-weight: 600;
+                border-left: 4px solid var(--error-border);
             }
 
             .not-tested {
-                background-color: #e0e0e0;
-                color: #757575;
-                font-weight: bold;
+                background: linear-gradient(135deg, var(--neutral-bg) 0%, #e5e7eb 100%);
+                color: #374151;
+                font-weight: 600;
+                border-left: 4px solid #9ca3af;
             }
 
             .container {
-                max-width: 1200px;
+                max-width: 1400px;
                 margin: 0 auto;
-                padding: 20px;
+                padding: 24px;
             }
 
             .file-info, .test-summary {
-                margin-bottom: 30px;
+                margin-bottom: 40px;
             }
 
             .status-testing {
                 color: #ffffff;
-                background-color: #00796b !important; /* Dark teal color for readability */
-                font-weight: bold;
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%) !important;
+                font-weight: 600;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
                 text-align: center;
                 animation: pulse 1.5s infinite;
+                border-left: 4px solid #22d3ee;
             }
 
             .status-testing a {
-                color: #ffffff; /* Set to white or any color you prefer */
-                text-decoration: none; /* Remove underline if desired */
+                color: #ffffff;
+                text-decoration: none;
             }
 
             .status-testing a:visited {
-                color: #ffffff; /* Ensure visited links maintain the same color */
+                color: #ffffff;
             }
 
-            /* Define the pulsing effect */
             @keyframes pulse {
-                0% {
+                0%, 100% {
                     opacity: 1;
                 }
                 50% {
-                    opacity: 0.8;
-                }
-                100% {
-                    opacity: 1;
+                    opacity: 0.85;
                 }
             }
 
             #failure_summary_table {
                 width: 100%;
-                table-layout: fixed; /* Keep this */
+                table-layout: fixed;
                 border-collapse: collapse;
             }
 
             #failure_summary_table > thead > tr > th,
             #failure_summary_table > tbody > tr > td {
-                box-sizing: border-box; /* Keep this */
+                box-sizing: border-box;
                 vertical-align: top;
-                padding: 5px;
+                padding: 14px;
                 word-wrap: break-word;
             }
 
@@ -136,31 +194,40 @@
             }
 
             #failure_summary_table > thead > tr > th:nth-child(2),
-            #failure_summary_table > thead > tr > td:nth-child(2) {
+            #failure_summary_table > tbody > tr > td:nth-child(2) {
                 width: 90%;
-                padding: 0; /* Inner table handles its own padding */
+                padding: 0;
             }
 
             .details-table {
-                width: 95%;
+                width: 98%;
                 text-align: center;
-                table-layout: fixed; /* Keep this */
+                table-layout: fixed;
                 border-collapse: collapse;
-                margin: auto;
+                margin: 8px auto;
+                box-shadow: var(--shadow-sm);
             }
 
             .details-table th,
             .details-table td {
-                box-sizing: border-box; /* Keep this */
+                box-sizing: border-box;
                 vertical-align: top;
-                padding: 8px; /* Add consistent padding */
+                padding: 10px;
+                overflow: hidden;
+                overflow-wrap: break-word;
+                word-break: break-word;
+                min-width: 0;
+                white-space: normal;
+            }
 
-                /* *** Apply aggressive breaking and overflow to ALL cells *** */
-                overflow: hidden;          /* Clip content that exceeds width */
-                overflow-wrap: break-word; /* Break normal words */
-                word-break: break-all;     /* More aggressive: break ANYWHERE to prevent overflow */
-                min-width: 0;              /* Allow shrinking below intrinsic content minimums */
-                white-space: normal;       /* Ensure no wrap isn't interfering */
+            .details-table th {
+                background: linear-gradient(180deg, #fef2f2 0%, #fee2e2 100%);
+                color: #991b1b;
+                font-size: 0.75rem;
+            }
+
+            .details-table tr:nth-child(even) {
+                background-color: #fef9f9;
             }
 
             .details-table tr th:nth-child(1),
@@ -174,29 +241,75 @@
             }
 
             .details-table tr td:nth-child(3) {
-                width: 57%;
+                width: 52%;
                 text-align: left;
+            }
+
+            /* Stat Cards */
+            .stat-card {
+                display: inline-block;
+                min-width: 80px;
+                padding: 8px 16px;
+                border-radius: var(--radius-md);
+                font-weight: 600;
+                text-align: center;
+            }
+
+            .stat-card.total {
+                background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+                color: #2e7d32;
+            }
+
+            .stat-card.passed {
+                background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+                color: #065f46;
+            }
+
+            .stat-card.failed {
+                background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                color: #991b1b;
+            }
+
+            .stat-card.not-tested {
+                background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+                color: #374151;
+            }
+
+            /* Scrollbar Styling */
+            ::-webkit-scrollbar {
+                width: 10px;
+                height: 10px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: var(--bg-secondary);
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: var(--border-color);
+                border-radius: 5px;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+                background: var(--text-secondary);
             }
         </style>
         <script>
-
             function saveScrollPosition() {
                 const currentScroll = document.body.scrollTop || document.documentElement.scrollTop;
                 sessionStorage.setItem('scrollPosition', currentScroll);
-                console.log("Saved scroll position:", currentScroll);
             }
 
             function restoreScrollPosition() {
                 const scrollPosition = sessionStorage.getItem('scrollPosition');
                 if (scrollPosition) {
-                    console.log("Restoring scroll position:", scrollPosition);
-                    document.body.scrollTop = parseInt(scrollPosition, 10); // For Safari
-                    document.documentElement.scrollTop = parseInt(scrollPosition, 10); // For Chrome, Firefox, IE, Opera
+                    document.body.scrollTop = parseInt(scrollPosition, 10);
+                    document.documentElement.scrollTop = parseInt(scrollPosition, 10);
                 }
             }
 
             function requireReload() {
-                const rows = document.querySelectorAll("table#summary_table tbody tr");
+                const rows = document.querySelectorAll("table#testcase_summary_table tbody tr");
                 return Array.from(rows).some(row => {
                     const statusCell = row.cells[1];
                     return statusCell && statusCell.textContent.trim().toLowerCase().includes('testing');
@@ -206,13 +319,13 @@
             function autoReload() {
                 setTimeout(() => {
                     location.reload();
-                }, 30000); // Adjust this timeout as needed
+                }, 30000);
             }
 
             function updateTestStatus() {
-                const rows = document.querySelectorAll("table#summary_table tbody tr");
+                const rows = document.querySelectorAll("table#testcase_summary_table tbody tr");
                 rows.forEach(row => {
-                    const statusCell = row.cells[1]; // Select the second cell, which holds the status
+                    const statusCell = row.cells[1];
                     if (statusCell && statusCell.textContent.trim().toLowerCase() === 'testing') {
                         row.classList.add("status-testing");
                     }
@@ -227,17 +340,15 @@
                 }
             };
 
-            // Attach the saveScrollPosition function to the window's scroll event
             document.body.addEventListener('scroll', saveScrollPosition);
             document.documentElement.addEventListener('scroll', saveScrollPosition);
-
         </script>
     </head>
     <body>
         <div class="container">
             <!-- AutoTest Running Info -->
             <div class="file-info">
-                <h2>AutoTest Running Info</h2>
+                <h2>🚀 AutoTest Running Info</h2>
                 <table id="run_info_table">
                     <thead>
                         <tr>
@@ -262,7 +373,7 @@
 
             <!-- Testcases Result Summary -->
             <div class="test-summary">
-                <h2>Test Case Result Summary</h2>
+                <h2>📊 Test Case Result Summary</h2>
                 <table class="result_summary-table">
                     <thead>
                         <tr>
@@ -275,10 +386,10 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{{total_number}}</td>
-                            <td>{{passed_number}}</td>
-                            <td>{{failed_number}}</td>
-                            <td>{{not_tested_number}}</td>
+                            <td><span class="stat-card total">{{total_number}}</span></td>
+                            <td><span class="stat-card passed">{{passed_number}}</span></td>
+                            <td><span class="stat-card failed">{{failed_number}}</span></td>
+                            <td><span class="stat-card not-tested">{{not_tested_number}}</span></td>
                             <td class="{{'success' if failed_number == 0 else 'failure'}}">{{passed_percentage}}</td>
                         </tr>
                     </tbody>
@@ -287,7 +398,7 @@
 
             <!-- Testcases Summary -->
             <div class="test-summary">
-                <h2>Test Case Summary</h2>
+                <h2>📝 Test Case Summary</h2>
                 <table id="testcase_summary_table">
                     <thead>
                         <tr>
@@ -322,7 +433,7 @@
             <!-- Failed Testcases Details -->
             {% if failed_number != 0 %}
             <div class="test-summary">
-                <h2>Test Case Failure Details</h2>
+                <h2>❌ Test Case Failure Details</h2>
                 <table id="failure_summary_table">
                     <thead>
                         <tr>
@@ -365,7 +476,7 @@
 
            <!-- Testscript Summary -->
             <div class="test-summary">
-                <h2>Test Script Summary</h2>
+                <h2>📜 Test Script Summary</h2>
                 <table id="script_summary_table">
                     <thead>
                         <tr>

@@ -30,6 +30,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         ".md",
         ".json",
         ".yaml",
+        ".sh",
     )
 
     @staticmethod
@@ -87,7 +88,6 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def _prepare_directory_meta(self, path):
         dir_list = os.listdir(path)
-        dir_list.sort(key=lambda a: a.lower())
         directory_meta = []
         for name in dir_list:
             if name.startswith("."):
@@ -99,11 +99,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 display_name += os.sep
                 icon_class = "folder"
                 size = None
-                date = None
+                mtime = os.path.getmtime(full_path)
             else:
                 icon_class = "file"
                 size = self.format_size(os.path.getsize(full_path))
-                date = self.format_date(os.path.getmtime(full_path))
+                mtime = os.path.getmtime(full_path)
+            date = self.format_date(mtime)
 
             directory_meta.append(
                 {
@@ -112,8 +113,11 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     "icon": icon_class,
                     "size": size,
                     "date": date,
+                    "mtime": mtime,
                 }
             )
+        # Sort by modification time, newest first
+        directory_meta.sort(key=lambda x: x["mtime"], reverse=True)
         return directory_meta
 
     def list_directory(self, path):

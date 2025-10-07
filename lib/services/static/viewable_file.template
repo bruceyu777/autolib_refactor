@@ -1,7 +1,113 @@
 {% extends "base.template" %}
 
 {% block content %}
-    <pre class="line-numbers"><code class="language-shell">{{file_content}}</code></pre>
+    <style>
+        .code-viewer-container {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            margin-top: 20px;
+        }
+
+        .code-viewer-header {
+            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+            padding: 12px 20px;
+            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .code-viewer-header h3 {
+            margin: 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        pre {
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5 !important;
+            overflow-x: auto;
+        }
+
+        pre code {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            display: block;
+            padding: 20px;
+            color: #333 !important;
+        }
+
+        .line-numbers {
+            position: relative;
+            padding-left: 3.8em;
+            counter-reset: linenumber;
+        }
+
+        .line-numbers > code {
+            position: relative;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .line-numbers .line-numbers-rows {
+            position: absolute;
+            pointer-events: none;
+            top: 0;
+            font-size: 100%;
+            left: -3.8em;
+            width: 3em;
+            letter-spacing: -1px;
+            border-right: 1px solid var(--border-color);
+            user-select: none;
+        }
+
+        .line-numbers .line-numbers-rows > span {
+            pointer-events: none;
+            display: block;
+            counter-increment: linenumber;
+        }
+
+        .line-numbers .line-numbers-rows > span:before {
+            content: counter(linenumber);
+            color: #999;
+            display: block;
+            padding-right: 0.8em;
+            text-align: right;
+        }
+
+        /* Scrollbar for code blocks */
+        pre::-webkit-scrollbar {
+            height: 10px;
+        }
+
+        pre::-webkit-scrollbar-track {
+            background: #e0e0e0;
+        }
+
+        pre::-webkit-scrollbar-thumb {
+            background: #999;
+            border-radius: 5px;
+        }
+
+        pre::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+    </style>
+
+    <div class="code-viewer-container">
+        <div class="code-viewer-header">
+            <h3>File Viewer</h3>
+        </div>
+        <pre class="line-numbers"><code class="language-shell">{{file_content}}</code></pre>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-bash.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
