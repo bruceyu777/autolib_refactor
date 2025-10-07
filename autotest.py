@@ -5,6 +5,8 @@ import os
 import sys
 
 from lib import (
+    PARAGRAPH_SEP,
+    ApiRegistry,
     Job,
     Upgrade,
     imageservice_operations,
@@ -143,6 +145,36 @@ def create_upgrade_parser(parent):
     return upgrade_parser
 
 
+def create_api_docs_parser(parent):
+    """Create the parser for the api_docs subcommand"""
+    api_docs_parser = parent.add_parser(
+        "api_docs",
+        help="Query available API documentation",
+        description="Query help information for API",
+    )
+    api_docs_parser.add_argument(
+        "-a",
+        "--api",
+        dest="api_endpoint",
+        help="Specific API name to query (shows all if not specified)",
+    )
+    api_docs_parser.add_argument(
+        "-c",
+        "--category",
+        dest="category",
+        help="Filter APIs by category",
+    )
+    api_docs_parser.add_argument(
+        "-l",
+        "--list-categories",
+        dest="list_categories",
+        action="store_true",
+        default=False,
+        help="List all available categories",
+    )
+    return api_docs_parser
+
+
 def create_main_parser():
     parser = argparse.ArgumentParser(
         prog="autotest",
@@ -260,6 +292,7 @@ def parse_cli_args():
     create_upgrade_parser(subparsers)
     create_webserver_parser(subparsers)
     create_imageservice_parser(subparsers)
+    create_api_docs_parser(subparsers)
     args = parser.parse_args()
     return args
 
@@ -282,6 +315,53 @@ def run_autotest_main(args):
             sys.exit(-1)
 
 
+def run_api_docs(args):
+    """Handle the api_docs subcommand"""
+
+    registry = ApiRegistry()
+
+    # List categories
+    if args.list_categories:
+        categories = registry.list_categories()
+        print(f"Available API Categories:\n{PARAGRAPH_SEP}")
+        for cat in categories:
+            ops_count = len(registry.list_apis(cat))
+            print(f"  • {cat:40s} ({ops_count} APIs)")
+        print(f"{PARAGRAPH_SEP}\n\nTotal: {len(categories)} categories")
+        return
+
+    # Show specific operation info
+    if args.api_endpoint:
+        if not registry.has_api(args.api_endpoint):
+            print(f"Error: API '{args.api_endpoint}' not found.")
+            print("\nUse 'autotest api_docs' to list all APIs.")
+            sys.exit(1)
+
+        info = registry.get_api_info(args.api_endpoint)
+        print(f"{PARAGRAPH_SEP}\nAPI: {info['name']}\n{PARAGRAPH_SEP}")
+        print(f"{info['full_doc']}\n{PARAGRAPH_SEP}")
+        return
+
+    # Filter by category
+    if args.category:
+        apis = registry.list_apis(args.category)
+        if not apis:
+            print("\nUse 'autotest api_docs --list-categories' to see all categories.")
+            sys.exit(1)
+
+        print(f"{PARAGRAPH_SEP}\nAPIs in '{args.category}' Category\n{PARAGRAPH_SEP}\n")
+        for api_endpoint in apis:
+            info = registry.get_api_info(api_endpoint)
+            print(f"\n{api_endpoint}")
+            print("-" * len(api_endpoint))
+            print(info["description"])
+        print(f"\n{PARAGRAPH_SEP}\nTotal: {len(apis)} apis in '{args.category}'")
+        return
+
+    # Show all apis grouped by category
+    registry.print_all_apis()
+
+
 def run_sub_command_main(args):
     if args.command == "upgrade":
         Upgrade(args.build, branch=args.branch).run()
@@ -297,6 +377,8 @@ def run_sub_command_main(args):
             args.only_query,
             home_directory=args.home_directory,
         )
+    elif args.command == "api_docs":
+        run_api_docs(args)
 
 
 def main():
