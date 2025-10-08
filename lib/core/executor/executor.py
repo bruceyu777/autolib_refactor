@@ -218,6 +218,12 @@ class Executor:
     def jump_backward(self, line_number):
         self.__jump(line_number, forward=False)
 
+    def get_internal_command(self, command):
+        func_name = f"_{command}"
+        if hasattr(self, func_name):
+            return getattr(self, func_name)
+        return None
+
     def execute(self):
         total_code_lines = self.script.get_program_counter_limit()
         while self.program_counter < total_code_lines:
@@ -241,8 +247,12 @@ class Executor:
             if code.operation not in ["switch_device", "setenv"]:
                 parameters = self.variable_replacement(parameters)
 
-            # Delegate operation execution to the operation handler
-            self.api_handler.execute_api(code.operation, parameters)
+            internal_command = self.get_internal_command(code.operation)
+            if internal_command:
+                internal_command(parameters)
+            else:
+                # Delegate operation execution to the operation handler
+                self.api_handler.execute_api(code.operation, parameters)
 
             if code.operation not in [
                 "if_not_goto",
