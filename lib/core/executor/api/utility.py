@@ -13,26 +13,26 @@ from lib.services import env, logger, summary
 from lib.utilities import sleep_with_progress
 
 
-def comment(executor, parameters):
+def comment(executor, params):
     """
     Add comment to logs and summary.
 
-    Parameters:
-        0: comment (str) - Comment text
+    Parameters (accessed via params object):
+        params.comment_text (str): Comment text to log
     """
-    comment_text = parameters[0]
+    comment_text = params.comment_text
     logger.info(comment_text)
     summary.dump_str_to_brief_summary(comment_text)
 
 
-def sleep(executor, parameters):
+def sleep(executor, params):
     """
     Sleep for specified duration.
 
-    Parameters:
-        0: seconds (int) - Sleep duration in seconds
+    Parameters (accessed via params object):
+        params.seconds (int): Number of seconds to sleep
     """
-    seconds = int(parameters[0])
+    seconds = params.seconds  # Already int from schema
     seconds = env.get_actual_timer(executor.cur_device.dev_name, seconds)
     sleep_with_progress(seconds, logger_func=logger.notice)
 
@@ -40,22 +40,20 @@ def sleep(executor, parameters):
 # Note: Named 'breakpoint_' because 'breakpoint' is a Python keyword
 # The trailing underscore will be stripped by the auto-discovery mechanism
 # to register this as 'breakpoint' API
-def breakpoint_(executor, parameters):
+def breakpoint_(executor, params):
     """
     Pause execution at breakpoint.
 
-    Parameters:
-        None
+    No parameters required.
     """
     executor.script.breakpoint()
 
 
-def enter_dev_debugmode(executor, parameters):
+def enter_dev_debugmode(executor, params):
     """
     Enter Python debugger (pdb).
 
-    Parameters:
-        None
+    No parameters required.
     """
     # pylint: disable=forgotten-debug-statement
     pdb.set_trace()

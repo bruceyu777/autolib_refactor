@@ -1,4 +1,818 @@
 {
+  "schema_version": "2.0",
+  "description": "Enhanced API schema with full parameter metadata for validation and documentation",
+  "apis": {
+    "expect": {
+      "description": "Expect pattern in output with optional retry logic",
+      "category": "expect",
+      "parse_mode": "options",
+      "parameters": {
+        "-e": {
+          "alias": "rule",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Regular expression pattern to match in device output"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Test case ID for result reporting"
+        },
+        "-t": {
+          "alias": "wait_seconds",
+          "type": "int",
+          "position": 2,
+          "default": 5,
+          "required": false,
+          "description": "Timeout in seconds to wait for pattern"
+        },
+        "-fail": {
+          "alias": "fail_match",
+          "type": "string",
+          "position": 3,
+          "default": "unmatch",
+          "enum": ["match", "unmatch"],
+          "required": false,
+          "description": "Fail condition: 'match' means pattern found fails, 'unmatch' means pattern found succeeds"
+        },
+        "-b": {
+          "alias": "before",
+          "type": "string",
+          "position": 4,
+          "required": false,
+          "description": "Unused legacy parameter"
+        },
+        "-a": {
+          "alias": "after",
+          "type": "string",
+          "position": 5,
+          "required": false,
+          "description": "Unused legacy parameter"
+        },
+        "-clear": {
+          "alias": "clear",
+          "type": "string",
+          "position": 6,
+          "default": "yes",
+          "enum": ["yes", "no"],
+          "required": false,
+          "description": "Clear device buffer before expecting"
+        },
+        "-retry_command": {
+          "alias": "retry_command",
+          "type": "string",
+          "position": 7,
+          "required": false,
+          "description": "Command to execute on retry if expect fails"
+        },
+        "-retry_cnt": {
+          "alias": "retry_cnt",
+          "type": "int",
+          "position": 8,
+          "default": 3,
+          "required": false,
+          "description": "Maximum number of retry attempts"
+        }
+      }
+    },
+    "expect_ctrl_c": {
+      "description": "Send Ctrl+C then expect pattern",
+      "category": "expect",
+      "parse_mode": "options",
+      "parameters": {
+        "-e": {
+          "alias": "rule",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Pattern to match"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Test case ID"
+        },
+        "-t": {
+          "alias": "wait_seconds",
+          "type": "int",
+          "position": 2,
+          "default": 5,
+          "required": false,
+          "description": "Timeout in seconds"
+        },
+        "-fail": {
+          "alias": "fail_match",
+          "type": "string",
+          "position": 3,
+          "default": "unmatch",
+          "required": false,
+          "enum": ["match", "unmatch"],
+          "description": "Fail condition"
+        },
+        "-b": {
+          "alias": "before",
+          "type": "string",
+          "position": 4,
+          "required": false
+        },
+        "-a": {
+          "alias": "after",
+          "type": "string",
+          "position": 5,
+          "required": false
+        },
+        "-clear": {
+          "alias": "clear",
+          "type": "string",
+          "position": 6,
+          "default": "yes",
+          "required": false,
+          "enum": ["yes", "no"],
+          "description": "Clear buffer"
+        },
+        "-retry_command": {
+          "alias": "retry_command",
+          "type": "string",
+          "position": 7,
+          "required": false,
+          "description": "Retry command"
+        },
+        "-retry_cnt": {
+          "alias": "retry_cnt",
+          "type": "int",
+          "position": 8,
+          "default": 3,
+          "required": false,
+          "description": "Retry count"
+        }
+      }
+    },
+    "expect_OR": {
+      "description": "Expect one of two patterns (logical OR)",
+      "category": "expect",
+      "parse_mode": "options",
+      "parameters": {
+        "-e1": {
+          "alias": "rule1",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "First pattern to match"
+        },
+        "-e2": {
+          "alias": "rule2",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Second pattern to match"
+        },
+        "-fail1": {
+          "alias": "fail1_match",
+          "type": "string",
+          "position": 2,
+          "default": "unmatch",
+          "required": false,
+          "enum": ["match", "unmatch"],
+          "description": "Fail condition for first pattern"
+        },
+        "-fail2": {
+          "alias": "fail2_match",
+          "type": "string",
+          "position": 3,
+          "default": "unmatch",
+          "required": false,
+          "enum": ["match", "unmatch"],
+          "description": "Fail condition for second pattern"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 4,
+          "required": true,
+          "description": "Test case ID"
+        },
+        "-t": {
+          "alias": "wait_seconds",
+          "type": "int",
+          "position": 5,
+          "default": 5,
+          "required": false,
+          "description": "Timeout in seconds"
+        }
+      }
+    },
+    "varexpect": {
+      "description": "Expect variable value in output",
+      "category": "expect",
+      "parse_mode": "options",
+      "parameters": {
+        "-e": {
+          "alias": "expect_str",
+          "type": "string",
+          "position": 0,
+          "required": false,
+          "description": "Unused"
+        },
+        "-v": {
+          "alias": "variable",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Variable name whose value to expect"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 2,
+          "required": true,
+          "description": "Test case ID"
+        },
+        "-t": {
+          "alias": "wait_seconds",
+          "type": "int",
+          "position": 3,
+          "default": 5,
+          "required": false,
+          "description": "Timeout in seconds"
+        },
+        "-fail": {
+          "alias": "fail_match",
+          "type": "string",
+          "position": 4,
+          "default": "unmatch",
+          "required": false,
+          "description": "Fail condition"
+        },
+        "-b": {
+          "alias": "before",
+          "type": "string",
+          "position": 5,
+          "required": false
+        }
+      }
+    },
+    "setvar": {
+      "description": "Extract value from pattern match and set variable",
+      "category": "variable",
+      "parse_mode": "options",
+      "parameters": {
+        "-e": {
+          "alias": "rule",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Regex pattern with capture group"
+        },
+        "-to": {
+          "alias": "name",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Variable name to set"
+        }
+      }
+    },
+    "setenv": {
+      "description": "Set environment variable for specific device",
+      "category": "variable",
+      "parse_mode": "options",
+      "parameters": {
+        "-n": {
+          "alias": "var_name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name"
+        },
+        "-v": {
+          "alias": "var_val",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Variable value"
+        },
+        "-d": {
+          "alias": "device_name",
+          "type": "string",
+          "position": 2,
+          "required": true,
+          "description": "Device name"
+        }
+      }
+    },
+    "compare": {
+      "description": "Compare two variables and record result",
+      "category": "variable",
+      "parse_mode": "options",
+      "parameters": {
+        "-v1": {
+          "alias": "var1",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "First variable name"
+        },
+        "-v2": {
+          "alias": "var2",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Second variable name"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 2,
+          "required": true,
+          "description": "Test case ID"
+        },
+        "-fail": {
+          "alias": "fail_match",
+          "type": "string",
+          "position": 3,
+          "default": "uneq",
+          "required": false,
+          "enum": ["eq", "uneq"],
+          "description": "Fail if equal or unequal"
+        }
+      }
+    },
+    "intset": {
+      "description": "Set integer variable",
+      "category": "variable",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "var_name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name"
+        },
+        {
+          "name": "var_value",
+          "type": "int",
+          "position": 1,
+          "required": true,
+          "description": "Integer value"
+        }
+      ]
+    },
+    "strset": {
+      "description": "Set string variable",
+      "category": "variable",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "var_name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name"
+        },
+        {
+          "name": "var_value",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "String value"
+        }
+      ]
+    },
+    "listset": {
+      "description": "Set list variable",
+      "category": "variable",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "var_name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name"
+        },
+        {
+          "name": "var_value",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "List value"
+        }
+      ]
+    },
+    "intchange": {
+      "description": "Modify integer variable using expression",
+      "category": "variable",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "expression_tokens",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Expression tokens (variable length)"
+        }
+      ]
+    },
+    "myftp": {
+      "description": "Execute FTP with pattern matching",
+      "category": "network",
+      "parse_mode": "options",
+      "parameters": {
+        "-e": {
+          "alias": "rule",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Pattern to match"
+        },
+        "-ip": {
+          "alias": "ip",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "FTP server IP address"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 2,
+          "required": true,
+          "description": "Test case ID"
+        },
+        "-fail": {
+          "alias": "fail_match",
+          "type": "string",
+          "position": 3,
+          "default": "unmatch",
+          "required": false,
+          "description": "Fail condition"
+        },
+        "-t": {
+          "alias": "wait_seconds",
+          "type": "int",
+          "position": 4,
+          "default": 5,
+          "required": false,
+          "description": "Timeout in seconds"
+        },
+        "-u": {
+          "alias": "user_name",
+          "type": "string",
+          "position": 5,
+          "required": false,
+          "description": "FTP username"
+        },
+        "-p": {
+          "alias": "password",
+          "type": "string",
+          "position": 6,
+          "required": false,
+          "description": "FTP password"
+        },
+        "-c": {
+          "alias": "command",
+          "type": "string",
+          "position": 7,
+          "required": false,
+          "description": "FTP command to execute"
+        },
+        "-a": {
+          "alias": "action",
+          "type": "string",
+          "position": 8,
+          "default": "continue",
+          "required": false,
+          "enum": ["stop", "continue", "nextgroup"],
+          "description": "Action on failure"
+        }
+      }
+    },
+    "mytelnet": {
+      "description": "Execute Telnet with pattern matching",
+      "category": "network",
+      "parse_mode": "options",
+      "parameters": {
+        "-d": {
+          "alias": "unused",
+          "type": "string",
+          "position": 0,
+          "required": false
+        },
+        "-e": {
+          "alias": "rule",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Pattern to match"
+        },
+        "-ip": {
+          "alias": "ip",
+          "type": "string",
+          "position": 2,
+          "required": true,
+          "description": "Telnet server IP"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 3,
+          "required": true,
+          "description": "Test case ID"
+        },
+        "-fail": {
+          "alias": "fail_match",
+          "type": "string",
+          "position": 4,
+          "default": "unmatch",
+          "required": false,
+          "description": "Fail condition"
+        },
+        "-t": {
+          "alias": "wait_seconds",
+          "type": "int",
+          "position": 5,
+          "default": 5,
+          "required": false,
+          "description": "Timeout in seconds"
+        },
+        "-u": {
+          "alias": "user_name",
+          "type": "string",
+          "position": 6,
+          "required": false,
+          "description": "Username"
+        },
+        "-p": {
+          "alias": "password",
+          "type": "string",
+          "position": 7,
+          "required": false,
+          "description": "Password"
+        }
+      }
+    },
+    "report": {
+      "description": "Mark test case for reporting",
+      "category": "report",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "qaid",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Test case ID to report"
+        }
+      ]
+    },
+    "collect_dev_info": {
+      "description": "Collect device information for test case",
+      "category": "report",
+      "parse_mode": "options",
+      "parameters": {
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Test case ID"
+        }
+      }
+    },
+    "setlicense": {
+      "description": "Set license variable",
+      "category": "report",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "lic_type",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "License type"
+        },
+        {
+          "name": "file_name",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "License file name"
+        },
+        {
+          "name": "var_name",
+          "type": "string",
+          "position": 2,
+          "required": true,
+          "description": "Variable to store license"
+        }
+      ]
+    },
+    "sleep": {
+      "description": "Sleep for specified seconds",
+      "category": "utility",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "seconds",
+          "type": "int",
+          "position": 0,
+          "required": true,
+          "description": "Number of seconds to sleep"
+        }
+      ]
+    },
+    "comment": {
+      "description": "Add comment to logs and summary",
+      "category": "utility",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "comment_text",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Comment text"
+        }
+      ]
+    },
+    "breakpoint": {
+      "description": "Pause execution and enter debugger",
+      "category": "utility",
+      "parse_mode": "positional",
+      "parameters": []
+    },
+    "enter_dev_debugmode": {
+      "description": "Enter Python pdb debugger",
+      "category": "utility",
+      "parse_mode": "positional",
+      "parameters": []
+    },
+    "clearbuff": {
+      "description": "Clear device buffer",
+      "category": "buffer",
+      "parse_mode": "positional",
+      "parameters": []
+    },
+    "clean_buffer": {
+      "description": "Clear device buffer (alias)",
+      "category": "buffer",
+      "parse_mode": "positional",
+      "parameters": []
+    },
+    "clear_buffer": {
+      "description": "Clear device buffer (alias)",
+      "category": "buffer",
+      "parse_mode": "positional",
+      "parameters": []
+    },
+    "forcelogin": {
+      "description": "Force login to current device",
+      "category": "device",
+      "parse_mode": "positional",
+      "parameters": []
+    },
+    "auto_login": {
+      "description": "Enable or disable automatic login",
+      "category": "device",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "enabled",
+          "type": "int",
+          "position": 0,
+          "required": true,
+          "description": "1 to enable, 0 to disable"
+        }
+      ]
+    },
+    "keep_running": {
+      "description": "Set keep_running flag for device",
+      "category": "device",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "enabled",
+          "type": "int",
+          "position": 0,
+          "required": true,
+          "description": "1 to enable, 0 to disable"
+        }
+      ]
+    },
+    "confirm_with_newline": {
+      "description": "Set confirm_with_newline flag",
+      "category": "device",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "enabled",
+          "type": "int",
+          "position": 0,
+          "required": true,
+          "description": "1 to enable, 0 to disable"
+        }
+      ]
+    },
+    "wait_for_confirm": {
+      "description": "Set wait_for_confirm flag",
+      "category": "device",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "enabled",
+          "type": "int",
+          "position": 0,
+          "required": true,
+          "description": "1 to enable, 0 to disable"
+        }
+      ]
+    },
+    "restore_image": {
+      "description": "Restore device image to specific release and build",
+      "category": "device",
+      "parse_mode": "options",
+      "parameters": {
+        "-v": {
+          "alias": "release",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Release version"
+        },
+        "-b": {
+          "alias": "build",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Build number"
+        }
+      }
+    },
+    "resetFirewall": {
+      "description": "Reset firewall configuration",
+      "category": "device",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "cmd",
+          "type": "string",
+          "position": 0,
+          "required": false,
+          "default": "execute factoryreset",
+          "description": "Reset command"
+        }
+      ]
+    },
+    "resetFAP": {
+      "description": "Reset FAP device",
+      "category": "device",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "cmd",
+          "type": "string",
+          "position": 0,
+          "required": false,
+          "default": "factoryreset",
+          "description": "Reset command"
+        }
+      ]
+    },
+    "send_literal": {
+      "description": "Send literal string with escape sequences",
+      "category": "command",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "literal",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Double-quoted string with escape sequences"
+        }
+      ]
+    },
+    "include": {
+      "description": "Include and execute another script",
+      "category": "script",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "script_path",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Path to script to include"
+        }
+      ]
+    }
+  },
   "valid_commands": [
     "set",
     "edit",
@@ -10,8 +824,6 @@
     "next",
     "end",
     "unset",
-    "keep_running",
-    "resetFirewall",
     "show",
     "append",
     "select",
@@ -21,270 +833,45 @@
     "conf",
     "clear",
     "sh",
-    "myset",
-    "myend",
-    "mynext",
-    "mydelete",
-    "comment",
-    "Comment",
-    "ctrl_c",
-    "nan_enter",
     "clone",
     "dia",
     "fnsysctl",
     "con",
     "y",
-    "sleep",
     "rename",
-    "myexec",
     "move",
-    "clean_buffer",
     "admin",
+    "sudo",
+    "myset",
+    "myend",
+    "mynext",
+    "mydelete",
+    "myexec",
+    "keep_running",
+    "resetFirewall",
+    "comment",
+    "Comment",
+    "ctrl_c",
+    "nan_enter",
+    "sleep",
+    "clean_buffer",
     "expect_ctrl_c",
     "restore_image",
     "confirm_with_newline",
     "wait_for_confirm",
     "auto_login",
-    "sudo",
     "send_literal",
     "resetFAP"
   ],
-  "script": ["api", "section", "command", "keyword", "include", "comment"],
-  "api": {
-    "setvar": [
-      "parse",
-      [
-        ["identifier", "-e"],
-        [["string", "identifier"], null],
-        ["identifier", "-to"],
-        [["identifier", "string"], null]
-      ]
-    ],
-    "collect_dev_info": [
-      "parse",
-      [
-        ["identifier", "-for"],
-        [["number", "identifier"], null]
-      ]
-    ],
-    "restore_image": [
-      "parse_options",
-      [
-        {
-          "-v": null,
-          "-b": null
-        },
-        [
-          ["identifier", null],
-          [["number", "variable"], null]
-        ]
-      ]
-    ],
-    "report": ["parse", [[["number", "identifier"], null]]],
-    "expect": [
-      "parse_options",
-      [
-        {
-          "-e": null,
-          "-for": null,
-          "-t": 5,
-          "-fail": "unmatch",
-          "-b": null,
-          "-a": null,
-          "-clear": "yes",
-          "-retry_command": null,
-          "-retry_cnt": 3
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "expect_ctrl_c": [
-      "parse_options",
-      [
-        {
-          "-e": null,
-          "-for": null,
-          "-t": 5,
-          "-fail": "unmatch",
-          "-b": null,
-          "-a": null,
-          "-clear": "yes",
-          "-retry_command": null,
-          "-retry_cnt": 3
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "myftp": [
-      "parse_options",
-      [
-        {
-          "-e": null,
-          "-ip": null,
-          "-for": null,
-          "-fail": null,
-          "-t": 5,
-          "-u": null,
-          "-p": null,
-          "-c": null,
-          "-a": "continue"
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "mytelnet": [
-      "parse_options",
-      [
-        {
-          "-d": null,
-          "-e": null,
-          "-ip": null,
-          "-for": null,
-          "-fail": null,
-          "-t": 5,
-          "-u": null,
-          "-p": null
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "expect_OR": [
-      "parse_options",
-      [
-        {
-          "-e1": null,
-          "-e2": null,
-          "-fail1": "unmatch",
-          "-fail2": "unmatch",
-          "-for": null,
-          "-t": 5
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "setenv": [
-      "parse_options",
-      [
-        {
-          "-n": null,
-          "-v": null,
-          "-d": null
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "compare": [
-      "parse_options",
-      [
-        {
-          "-v1": null,
-          "-v2": null,
-          "-for": null,
-          "-fail": "uneq"
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "varexpect": [
-      "parse_options",
-      [
-        {
-          "-e": null,
-          "-v": null,
-          "-for": null,
-          "-t": 5,
-          "-fail": null,
-          "-b": null
-        },
-        [
-          ["identifier", null],
-          [["identifier", "number", "string", "variable", "operator"], null]
-        ]
-      ]
-    ],
-    "sleep": ["parse", [[["number", "identifier"], null]]],
-    "clearbuff": ["parse", []],
-    "breakpoint": ["parse", []],
-    "enter_dev_debugmode": ["parse", []],
-    "resetFirewall": ["parse", []],
-    "resetFAP": ["parse", []],
-    "clear_buffer": ["parse", [["number", null]]],
-    "clean_buffer": ["parse", []],
-    "keep_running": ["parse", [["number", null]]],
-    "confirm_with_newline": ["parse", [["number", null]]],
-    "wait_for_confirm": ["parse", [["number", null]]],
-    "auto_login": ["parse", [["number", null]]],
-    "forcelogin": ["parse", []],
-    "setlicense": [
-      "parse",
-      [
-        ["identifier", "-t"],
-        ["identifier", null],
-        ["identifier", "-for"],
-        ["identifier", null],
-        ["identifier", "-to"],
-        ["identifier", null]
-      ]
-    ],
-    "send_literal": ["parse", [["string", null]]]
-  },
-  "keyword": {
-    "if": ["control_block", ["expression", "script", ["elseif", "else", "fi"]]],
-    "elseif": [
-      "control_block",
-      ["expression", "script", ["elseif", "else", "fi"]]
-    ],
-    "else": ["control_block", ["script", "fi"]],
-    "fi": ["control_block", []],
-    "loop": ["control_block", ["expression", "script", "until"]],
-    "until": ["control_block", ["expression"]],
-    "while": ["control_block", ["expression", "script", "endwhile"]],
-    "endwhile": ["control_block", ["expression"]],
-    "intchange": ["control_block", ["expression"]],
-    "strset": [
-      "parse",
-      [
-        ["identifier", null],
-        [["identifier", "number", "string"], null]
-      ]
-    ],
-    "intset": [
-      "parse",
-      [
-        ["identifier", null],
-        [["identifier", "number"], null]
-      ]
-    ],
-    "listset": [
-      "parse",
-      [
-        ["identifier", null],
-        [["identifier", "number"], null]
-      ]
-    ]
-  },
-  "deprecated_commands_replacement": {
+  "script_types": [
+    "api",
+    "section",
+    "command",
+    "keyword",
+    "include",
+    "comment"
+  ],
+  "deprecated_commands": {
     "^myexe[^\\s]*\\s+(.*)$": "execute \\1",
     "^mynext(.*?)": "next",
     "^myset[^\\s]*\\s+(.*)$": "set \\1",
@@ -292,5 +879,70 @@
     "^myend": "end",
     "^pcsend[^\\s]*\\s+(.*)$": "send_literal \"\\1\"",
     "^sendraw[^\\s]*\\s+(.*)$": "send_literal \\1"
+  },
+  "keywords": {
+    "if": {
+      "type": "control_block",
+      "flow": ["expression", "script", ["elseif", "else", "fi"]]
+    },
+    "elseif": {
+      "type": "control_block",
+      "flow": ["expression", "script", ["elseif", "else", "fi"]]
+    },
+    "else": {
+      "type": "control_block",
+      "flow": ["script", "fi"]
+    },
+    "fi": {
+      "type": "control_block",
+      "flow": []
+    },
+    "loop": {
+      "type": "control_block",
+      "flow": ["expression", "script", "until"]
+    },
+    "until": {
+      "type": "control_block",
+      "flow": ["expression"]
+    },
+    "while": {
+      "type": "control_block",
+      "flow": ["expression", "script", "endwhile"]
+    },
+    "endwhile": {
+      "type": "control_block",
+      "flow": ["expression"]
+    },
+    "intchange": {
+      "type": "control_block",
+      "flow": ["expression"]
+    },
+    "strset": {
+      "type": "parse",
+      "rules": [
+        [
+          ["identifier", null],
+          [["identifier", "number", "string"], null]
+        ]
+      ]
+    },
+    "intset": {
+      "type": "parse",
+      "rules": [
+        [
+          ["identifier", null],
+          [["identifier", "number"], null]
+        ]
+      ]
+    },
+    "listset": {
+      "type": "parse",
+      "rules": [
+        [
+          ["identifier", null],
+          [["identifier", "number"], null]
+        ]
+      ]
+    }
   }
 }

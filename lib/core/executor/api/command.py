@@ -8,20 +8,22 @@ Module name 'command' becomes the category name.
 from lib.services import logger
 
 
-def send_literal(executor, parameters):
+def send_literal(executor, params):
     """
     Send a literal string with escape sequences.
 
-    Parameters:
-        0: literal (str) - Double-quoted string with escape sequences
+    Parameters (accessed via params object):
+        params.literal (str): Double-quoted string with escape sequences
     """
+    literal = params.literal
+
     if (
-        parameters
-        and len(parameters[0]) >= 2
-        and parameters[0].startswith('"')
-        and parameters[0].endswith('"')
+        literal
+        and len(literal) >= 2
+        and literal.startswith('"')
+        and literal.endswith('"')
     ):
-        cmd = parameters[0][1:-1]
+        cmd = literal[1:-1]
         cmd = cmd.encode().decode("unicode_escape").replace("CRLF", "\r\n")
         executor.cur_device.send(cmd)
     else:

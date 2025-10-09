@@ -128,11 +128,11 @@ class ApiMixin:
 
     def execute_api(self, api_endpoint: str, parameters: Tuple):
         """
-        Execute an API by name.
+        Execute an API by name with automatic parameter adaptation.
 
         Args:
             api: API name
-            parameters: Tuple of parameters
+            parameters: Tuple of parameters (will be wrapped in ApiParams)
 
         Returns:
             API result
@@ -144,18 +144,28 @@ class ApiMixin:
         if not _API_REGISTRY:
             discover_apis()
 
-        # Try to get from method (for backward compatibility with old _operation naming)
-        method_name = f"_{api_endpoint}"
-        if hasattr(self, method_name):
-            func = getattr(self, method_name)
-            return func(parameters)
+        # Wrap parameters in ApiParams for modern APIs
+        from lib.core.compiler.schema_loader import get_schema
+        from lib.core.executor.api_params import ApiParams
 
-        # Try to get from registry
+        schema = get_schema(api_endpoint)
+        if schema:
+            params = ApiParams(parameters, schema)
+            # Auto-validate parameters
+            try:
+                params.validate()
+            except ValueError as e:
+                raise ValueError(
+                    f"Parameter validation failed for '{api_endpoint}': {e}"
+                ) from e
+        else:
+            # No schema - wrap without validation
+            params = ApiParams.from_tuple(parameters)
+
+        # Get from registry
         if api_endpoint in _API_REGISTRY:
             func = _API_REGISTRY[api_endpoint]
-            return func(
-                self.executor if hasattr(self, "executor") else self, parameters
-            )
+            return func(self.executor if hasattr(self, "executor") else self, params)
 
         raise AttributeError(f"API '{api_endpoint}' not found")
 
@@ -173,8 +183,7 @@ class ApiMixin:
         if not _API_REGISTRY:
             discover_apis()
 
-        method_name = f"_{api_endpoint}"
-        return hasattr(self, method_name) or api_endpoint in _API_REGISTRY
+        return api_endpoint in _API_REGISTRY
 
 
 class ApiHandler(ApiMixin):
@@ -238,7 +247,35 @@ class ApiRegistry:
         metadata = get_api_metadata(func)
         doc = metadata["doc"].strip() if metadata["doc"] else ""
 
-        # Extract parameter info from docstring
+        # Try to get schema information for enhanced help
+        from lib.core.compiler.schema_loader import get_schema
+
+        schema = get_schema(name)
+        if schema:
+            # Use schema for parameter info with CLI options
+            params = []
+            for param in schema.parameters:
+                option_str = f" [{param.option}]" if param.option else ""
+                type_str = param.type
+                req_str = "required" if param.required else "optional"
+                default_str = (
+                    f" (default: {param.default})" if param.default is not None else ""
+                )
+                params.append(
+                    f"{param.name}{option_str}: {param.description} ({type_str}, {req_str}){default_str}"
+                )
+
+            return {
+                "name": metadata["name"],
+                "description": schema.description
+                or (doc.split("\n")[0] if doc else "No description available"),
+                "full_doc": schema.get_help(),
+                "parameters": params,
+                "category": schema.category,
+                "parse_mode": schema.parse_mode,
+            }
+
+        # Fallback to docstring parsing if no schema
         params = []
         if "Parameters:" in doc:
             param_section = doc.split("Parameters:")[1].split("\n\n")[0]
