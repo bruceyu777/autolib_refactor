@@ -5,7 +5,7 @@ Variable manipulation and comparison APIs.
 Module name 'variable' becomes the category name.
 """
 
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,protected-access
 
 
 from lib.services import env, logger
@@ -58,11 +58,26 @@ def setvar(executor, params):
 
 def intset(executor, params):
     """
-    Set integer variable.
+    Set integer variable (keyword implementation).
+
+    This function is called when the <intset> keyword is used in scripts.
+
+    Syntax:
+        <intset variable_name number>
+
+    Examples:
+        <intset RETRY_COUNT 5>
+        <intset MAX_WAIT 300>
+        <intset PORT 8080>
 
     Parameters (accessed via params object):
-        params.var_name (str): Variable name
+        params.var_name (str): Variable name (without $ prefix)
         params.var_value (int): Integer value
+
+    Notes:
+        - Variable is stored globally and can be accessed with $variable_name
+        - Value must be numeric
+        - Variable name should not include the $ prefix
     """
     var_name = params.var_name
     var_value = params.var_value
@@ -71,11 +86,26 @@ def intset(executor, params):
 
 def strset(executor, params):
     """
-    Set string variable.
+    Set string variable (keyword implementation).
+
+    This function is called when the <strset> keyword is used in scripts.
+
+    Syntax:
+        <strset variable_name value>
+
+    Examples:
+        <strset PLATFORM_TYPE FortiGate-100E>
+        <strset BUILD_NUMBER 12345>
+        <strset STATUS none>
 
     Parameters (accessed via params object):
-        params.var_name (str): Variable name
+        params.var_name (str): Variable name (without $ prefix)
         params.var_value (str): String value
+
+    Notes:
+        - Variable is stored globally and can be accessed with $variable_name
+        - Value can be string, number, or identifier
+        - Variable name should not include the $ prefix
     """
     var_name = params.var_name
     var_value = params.var_value
@@ -84,11 +114,26 @@ def strset(executor, params):
 
 def listset(executor, params):
     """
-    Set list variable.
+    Set list variable (keyword implementation).
+
+    This function is called when the <listset> keyword is used in scripts.
+
+    Syntax:
+        <listset variable_name value>
+
+    Examples:
+        <listset PORTS 80,443,8080>
+        <listset DEVICES FGT1,FGT2,FGT3>
+        <listset IPS 192.168.1.1,192.168.1.2>
 
     Parameters (accessed via params object):
-        params.var_name (str): Variable name
-        params.var_value (str): List value
+        params.var_name (str): Variable name (without $ prefix)
+        params.var_value (str): List value (comma-separated or single value)
+
+    Notes:
+        - Variable is stored globally and can be accessed with $variable_name
+        - Value can be comma-separated items or single value
+        - Variable name should not include the $ prefix
     """
     var_name = params.var_name
     var_value = params.var_value
@@ -97,16 +142,37 @@ def listset(executor, params):
 
 def intchange(executor, params):
     """
-    Modify integer variable using expression.
+    Modify integer variable using arithmetic expression (keyword implementation).
+
+    This function is called when the <intchange> keyword is used in scripts.
+
+    Syntax:
+        <intchange $variable_name operator value>
+
+    Examples:
+        <intchange $count + 1>
+        <intchange $index - 10>
+        <intchange $total * 2>
+        <intchange $result / 5>
+
+    Supported operators:
+        + (addition)
+        - (subtraction)
+        * (multiplication)
+        / (division)
 
     Parameters (accessed via params object):
         params.expression_tokens: Variable number of expression tokens
+                                  (variable, operator, value)
 
-    Note: This API receives variable-length parameters as a tuple,
-    so we handle it specially.
+    Notes:
+        - First token must be a variable (with $ prefix)
+        - Result is stored back to the variable
+        - This API receives variable-length parameters as a tuple
     """
     # For variable-length expressions, we get the raw data
     # This API needs special handling since it doesn't have fixed params
+    # pylint: disable=protected-access
     parameters = params._raw if hasattr(params, "_raw") else params.to_dict().values()
 
     new_expression = []

@@ -60,7 +60,7 @@ def _log_expect_result(is_succeeded, qaid, rule, fail_match, timeout_timer):
             timeout_timer,
         )
     else:
-        logger.notice(
+        logger.warning(
             "\n* Expect Failure(%s) *\nRule: '%s'\n'fail_match' Flag: %s\nTimeout Timer: %ss\n\n",
             qaid,
             rule,

@@ -302,13 +302,13 @@ def run_autotest_main(args):
         logger.error("Please specify the testcase script or testcase group.")
         sys.exit(-1)
 
-    logger.notice("\n**** Start test job with AUTOLIB - %s. ****", __version__)
-    logger.notice("CLI from user: %s", " ".join(sys.argv))
-    logger.notice("Test Environment: %s", args.env)
+    logger.info("\n**** Start test job with AUTOLIB - %s. ****", __version__)
+    logger.info("CLI from user: %s", " ".join(sys.argv))
+    logger.info("Test Environment: %s", args.env)
 
     try:
         Job(args).run()
-        logger.notice("Test job is launched.")
+        logger.info("Test job is launched.")
     except Exception:
         logger.exception("Test job failed.")
         if not args.check:

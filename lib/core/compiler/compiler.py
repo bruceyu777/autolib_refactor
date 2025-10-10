@@ -1,3 +1,4 @@
+import threading
 from copy import deepcopy
 
 from lib.services import env, logger
@@ -10,26 +11,36 @@ class Compiler:
     def __init__(self):
         self.files = {}
         self.devices = set()
+        self._lock = threading.RLock()  # Reentrant lock for recursive compilation
 
     def _compile_file(self, file_name):
+        # Check cache without lock first (performance optimization)
         if file_name in self.files:
             return
-        in_debug_mode = getattr(logger, "in_debug_mode", False)
-        lexer = Lexer(file_name, dump_token=in_debug_mode)
-        tokens, lines = lexer.parse()
-        parser = Parser(file_name, tokens, lines)
-        vm_codes, devices, called_files = parser.run(dump_code_flag=in_debug_mode)
 
-        self.files[file_name] = vm_codes
-        self.devices |= devices
+        # Acquire lock for compilation and cache update
+        with self._lock:
+            # Double-check after acquiring lock (another thread may have compiled it)
+            if file_name in self.files:
+                return
 
-        for f, current_device in called_files:
-            f = env.variable_interpolation(f, current_device=current_device)
-            self._compile_file(f)
+            in_debug_mode = getattr(logger, "in_debug_mode", False)
+            lexer = Lexer(file_name, dump_token=in_debug_mode)
+            tokens, lines = lexer.parse()
+            parser = Parser(file_name, tokens, lines)
+            vm_codes, devices, called_files = parser.run(dump_code_flag=in_debug_mode)
+
+            self.files[file_name] = vm_codes
+            self.devices |= devices
+
+            # Recursive compilation happens within the lock
+            for f, current_device in called_files:
+                f = env.variable_interpolation(f, current_device=current_device)
+                self._compile_file(f)
 
     def run(self, file_name):
         self._compile_file(file_name)
-        logger.debug("Compiled %s", file_name)
+        logger.info("Compiled %s", file_name)
 
     def retrieve_vm_codes(self, file_name):
         # NOTE:

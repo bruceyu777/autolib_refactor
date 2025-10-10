@@ -127,7 +127,7 @@ class Executor:
         self.log_file_handler = handler
 
     def __enter__(self):
-        logger.notice("\n** Start executing script ==> %s", self.script)
+        logger.info("\n** Start executing script ==> %s", self.script)
         summary.dump_script_start_time_to_brief_summary()
         if getattr(logger, "in_debug_mode", False):
             self._add_file_handler()
@@ -138,7 +138,7 @@ class Executor:
             self.report_script_result()
             self.clear_devices_buffer()
         logger.removeHandler(self.log_file_handler)
-        logger.notice("\n** Finished executing script ==> %s", self.script)
+        logger.info("\n** Finished executing script ==> %s", self.script)
 
     def clear_devices_buffer(self):
         for device in self.devices.values():

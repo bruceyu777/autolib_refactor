@@ -34,7 +34,7 @@ def sleep(executor, params):
     """
     seconds = params.seconds  # Already int from schema
     seconds = env.get_actual_timer(executor.cur_device.dev_name, seconds)
-    sleep_with_progress(seconds, logger_func=logger.notice)
+    sleep_with_progress(seconds, logger_func=logger.info)
 
 
 # Note: Named 'breakpoint_' because 'breakpoint' is a Python keyword

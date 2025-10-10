@@ -68,10 +68,6 @@ class ScriptSyntax:
             if section not in self.schema:
                 raise ValueError(f"Schema must have '{section}' section")
 
-        # Cache for quick lookups
-        self._api_cache = {}
-        self._build_api_cache()
-
         # PERFORMANCE: Cache tuple for is_valid_command() to avoid repeated tuple() calls
         # This eliminates ~150 tuple creations per 100 scripts (2-3% speedup)
         self._valid_commands_tuple = tuple(self.schema["valid_commands"])
@@ -80,33 +76,22 @@ class ScriptSyntax:
         self.line_pattern = self.generate_line_pattern()
         self.token_pattern = self.generate_token_pattern()
 
-    def _build_api_cache(self):
-        """Build cache of API names for quick lookup."""
-        for api_name in self.schema["apis"].keys():
-            self._api_cache[api_name] = True
-
     def get_deprecated_cmd_replace_patterns(self):
-        """Get deprecated command replacement patterns from schema."""
         return self.schema["deprecated_commands"]
 
     def is_valid_command(self, command):
-        """Check if command is valid (from schema)."""
         return command.startswith(self._valid_commands_tuple)
 
     def is_valid_script_type(self, script_type):
-        """Check if script type is valid (from schema)."""
         return script_type in self.schema["script_types"]
 
     def is_valid_line_type(self, line_type):
-        """Check if line type is valid."""
         return line_type in self.LINE_PATTERN_TABLE
 
     def is_valid_token_type(self, token_type):
-        """Check if token type is valid."""
         return token_type in self.TOKEN_PATTERN_TABLE
 
     def at_top_level_category(self, category):
-        """Check if category is 'api' or 'keyword'."""
         return category in ["api", "keyword"]
 
     def get_token_syntax_definition(self, token):
@@ -128,7 +113,6 @@ class ScriptSyntax:
         return None
 
     def _get_api_syntax_definition(self, api_name):
-        """Get syntax definition for API token."""
         api_schema = self.schema["apis"].get(api_name)
         if not api_schema:
             return None
@@ -144,7 +128,6 @@ class ScriptSyntax:
         return None
 
     def _build_options_syntax(self, api_schema):
-        """Build options-based parsing syntax."""
         options_dict = {}
         params = api_schema.get("parameters", {})
 
@@ -161,7 +144,6 @@ class ScriptSyntax:
         return ("parse_options", [options_dict, option_rule])
 
     def _build_positional_syntax(self, api_schema):
-        """Build positional parsing syntax."""
         params = api_schema.get("parameters", [])
 
         if not params:
@@ -170,21 +152,23 @@ class ScriptSyntax:
         # Build token rules for each parameter
         param_rules = []
         type_mapping = {
-            "string": "identifier",
-            "int": "number",
-            "number": "number",
-            "bool": "identifier",
+            "string": [
+                "identifier",
+                "number",
+            ],  # Strings can be numeric (e.g., "801830")
+            "int": ["number"],
+            "number": ["number"],
+            "bool": ["identifier"],
         }
 
         for param in params:
             param_type = param.get("type", "string")
-            legacy_type = type_mapping.get(param_type, "identifier")
-            param_rules.append([[legacy_type], None])
+            legacy_types = type_mapping.get(param_type, ["identifier"])
+            param_rules.append([legacy_types, None])
 
         return ("parse", param_rules)
 
     def _get_keyword_syntax_definition(self, keyword):
-        """Get syntax definition for keyword token."""
         keyword_def = self.schema["keywords"].get(keyword)
         if not keyword_def:
             return None
@@ -202,25 +186,21 @@ class ScriptSyntax:
         return None
 
     def get_keyword_cli_syntax(self, keyword):
-        """Get control flow syntax for a keyword (from schema)."""
         keyword_def = self.schema["keywords"].get(keyword)
         if keyword_def:
             return keyword_def.get("flow", [])
         return None
 
     def _generate_keyword_pattern(self):
-        """Generate regex pattern for all keywords from schema."""
         keywords = self.schema["keywords"].keys()
         sorted_keywords = sorted(keywords, key=len, reverse=True)
         return "|".join(rf"{keyword}" for keyword in sorted_keywords)
 
     def _generate_statement_pattern(self):
-        """Generate pattern for statement matching."""
         keyword_pattern = self._generate_keyword_pattern()
         return rf"\<\s*(?P<statement_content>({keyword_pattern}).*)\>"
 
     def _generate_api_pattern(self):
-        """Generate pattern for API matching from schema."""
         api_pattern_list = []
 
         for api_name, api_schema in self.schema["apis"].items():
@@ -242,7 +222,6 @@ class ScriptSyntax:
         return r"|".join(api_pattern_list)
 
     def generate_line_pattern(self):
-        """Generate compiled line pattern."""
         ScriptSyntax.LINE_PATTERN_TABLE["statement"] = (
             self._generate_statement_pattern()
         )
@@ -257,7 +236,6 @@ class ScriptSyntax:
         return line_pattern
 
     def generate_token_pattern(self):
-        """Generate compiled token pattern."""
         token_pattern_table = ScriptSyntax.TOKEN_PATTERN_TABLE
         token_pattern = re.compile(
             r"|".join(
