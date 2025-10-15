@@ -43,10 +43,10 @@ def setlicense(executor, params):
 
     Parameters (accessed via params object):
         params.lic_type (str): License type [-t]
-        params.file_name (str): License file name
+        params.sub_type (str): License sub_type
         params.var_name (str): Variable name to store license [-to]
     """
     lic_type = params.lic_type
-    file_name = params.file_name
+    sub_type = params.sub_type
     var_name = params.var_name
-    env.set_license_var(lic_type, file_name, var_name)
+    env.set_license_var(lic_type, sub_type, var_name)

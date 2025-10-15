@@ -1,6 +1,7 @@
 {
   "schema_version": "2.0",
   "description": "Enhanced API schema with full parameter metadata for validation and documentation",
+  "developer note": "If you add a new API, make sure to update both the syntax definition file and its implementation, as they must stay in sync!",
   "apis": {
     "expect": {
       "description": "Expect pattern in output with optional retry logic",
@@ -365,7 +366,7 @@
           "alias": "qaid",
           "type": "string",
           "position": 2,
-          "required": true,
+          "required": false,
           "description": "Test case ID"
         },
         "-fail": {
@@ -388,14 +389,14 @@
           "alias": "user_name",
           "type": "string",
           "position": 5,
-          "required": false,
+          "required": true,
           "description": "FTP username"
         },
         "-p": {
           "alias": "password",
           "type": "string",
           "position": 6,
-          "required": false,
+          "required": true,
           "description": "FTP password"
         },
         "-c": {
@@ -468,14 +469,14 @@
           "alias": "user_name",
           "type": "string",
           "position": 6,
-          "required": false,
+          "required": true,
           "description": "Username"
         },
         "-p": {
           "alias": "password",
           "type": "string",
           "position": 7,
-          "required": false,
+          "required": true,
           "description": "Password"
         }
       }
@@ -511,30 +512,30 @@
     "setlicense": {
       "description": "Set license variable",
       "category": "report",
-      "parse_mode": "positional",
-      "parameters": [
-        {
-          "name": "lic_type",
+      "parse_mode": "options",
+      "parameters": {
+        "-t": {
+          "alias": "lic_type",
           "type": "string",
           "position": 0,
           "required": true,
-          "description": "License type"
+          "description": "License Type, such as: 04V"
         },
-        {
-          "name": "file_name",
+        "-for": {
+          "alias": "sub_type",
           "type": "string",
           "position": 1,
           "required": true,
-          "description": "License file name"
+          "description": "License Sub-Type, such as VDOM"
         },
-        {
-          "name": "var_name",
+        "-to": {
+          "alias": "var_name",
           "type": "string",
           "position": 2,
           "required": true,
           "description": "Variable to store license"
         }
-      ]
+      }
     },
     "sleep": {
       "description": "Sleep for specified seconds",
@@ -801,7 +802,7 @@
     "^mydel[^\\s]*\\s+(.*)$": "delete \\1",
     "^myend": "end",
     "^pcsend[^\\s]*\\s+(.*)$": "send_literal \"\\1\"",
-    "^sendraw[^\\s]*\\s+(.*)$": "send_literal \\1"
+    "^sendraw[^\\s]*\\s+(.*)$": "send_literal \"\\1\""
   },
   "keywords": {
     "if": {
