@@ -6,4 +6,4 @@ from .log import add_logger_handler, logger, setup_logger
 from .oriole import oriole
 from .output import output
 from .result_manager import ScriptResultManager
-from .web_server import launch_webserver_on
+from .web_server import webserver_main

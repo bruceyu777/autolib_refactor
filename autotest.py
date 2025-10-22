@@ -10,9 +10,9 @@ from lib import (
     Job,
     Upgrade,
     imageservice_operations,
-    launch_webserver_on,
     logger,
     setup_logger,
+    webserver_main,
 )
 
 PROG_DESCRIPTION = """Regression Test Automation Framework.
@@ -47,15 +47,28 @@ def create_webserver_parser(parent):
         description="To launch Autotest HTTP Web Server as Working Portal",
     )
     parser.add_argument(
-        "-p", "--port", dest="port", help="Specify port number to listen", default=8080
+        "--port",
+        dest="webserver_port",
+        type=int,
+        help="Specify port number to listen",
+        default=8080,
     )
     parser.add_argument(
         "-i",
         "--ip_address",
         dest="ip_address",
-        help="Specify ip address to listen",
-        default="127.0.0.1",
+        help="Specify IP address to listen on",
+        default="0.0.0.0",
     )
+    parser.add_argument(
+        "-a",
+        "--action",
+        dest="action",
+        help="Specify action to take",
+        choices=["start", "stop", "restart"],
+        default="start",
+    )
+    return parser
 
 
 def create_imageservice_parser(parent):
@@ -366,7 +379,7 @@ def run_sub_command_main(args):
     if args.command == "upgrade":
         Upgrade(args.build, branch=args.branch).run()
     elif args.command == "webserver":
-        launch_webserver_on(args.ip_address, args.port)
+        webserver_main(args.ip_address, args.webserver_port, args.action)
     elif args.command == "imageservice":
         imageservice_operations(
             args.fortigates,

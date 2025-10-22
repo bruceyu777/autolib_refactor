@@ -2,7 +2,7 @@ import os
 import sys
 import webbrowser
 
-from lib.services import env, launch_webserver_on, logger, oriole, output, summary
+from lib.services import env, logger, oriole, output, summary, webserver_main
 
 from .group_task import GroupTask
 from .task import Task as ScriptTask
@@ -41,7 +41,7 @@ class Job:
     def start_http_server(self):
         ip, port = env.get_local_http_server_conf()
         if ip and port:
-            launch_webserver_on(ip, port)
+            webserver_main(ip, port)
         else:
             sys.exit(0)
 
