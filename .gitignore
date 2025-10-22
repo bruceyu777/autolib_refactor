@@ -10,7 +10,7 @@ __pycache__/*
 
 *.pyc
 
-.vscode/settings.json
+.vscode
 out/*
 .VSCodeCounter/*
 testcase/*
@@ -57,3 +57,7 @@ testcase_backup2
 env.501E.conf.local4.temp
 .DS_Store
 version.bak
+
+.claude
+node_modules
+autotest
