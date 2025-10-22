@@ -9,6 +9,8 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
+
 from datetime import datetime
 from urllib.parse import parse_qs, quote, urlparse
 
@@ -23,7 +25,6 @@ SMALL_FILE_LINE_LIMIT = 10000  # 10K lines - show entire file
 DEFAULT_TAIL_LINES = 1000
 DEFAULT_HEAD_LINES = 1000
 MAX_VIEWABLE_SIZE = 10 * 1024 * 1024  # 10MB per chunk
-API_PATTERN = re.compile(r"/__([a-zA-Z0-9_]*)__")
 
 # pylint: disable=broad-exception-raised
 
@@ -383,6 +384,20 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             total_lines=total_lines,
         )
 
+    def _load_response_for_html_file(self, safe_path):
+        with open(safe_path, "r", encoding="utf-8") as file:
+            file_content = file.read()
+        template = web_server_env.get_template("html_file.template")
+        response_content = template.render(
+            path=self.path,
+            breadcrumbs=self._prepare_breadcrumbs(),
+            file_content=file_content,
+        )
+        self.send_response(200)
+        self.send_header("Content-type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(response_content.encode("utf-8"))
+
     def _load_response_with_file_content(self, safe_path):
         """Load and display file content based on file size and line count"""
         try:
@@ -620,7 +635,10 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, str(e))
 
     def extract_api_endpoint(self):
-        return re.search(API_PATTERN, self.path).group(1)
+        for api in self.api_endpoint_handlers:
+            if f"__{api}__" in self.path:
+                return api
+        return None
 
     def _handle_health_check(self):
         self.send_response(200)
@@ -646,8 +664,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             logger.error("Error in download endpoint: %s", e, exc_info=True)
             self.send_error(500, str(e))
 
-    def api_handling(self, api_endpoint, params):
-        mapping = {
+    @property
+    def api_endpoint_handlers(self):
+        return  {
             "health": self._handle_health_check,
             "tail": self._handle_tail_endpoint,
             "head": self._handle_head_endpoint,
@@ -655,7 +674,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             "search": self._handle_search_endpoint,
             "download": self._handle_download_endpoint,
         }
-        handler_func = mapping.get(api_endpoint)
+
+    def api_handling(self, api_endpoint, params):
+        handler_func = self.api_endpoint_handlers.get(api_endpoint)
         if not handler_func:
             self.send_error(404, "API endpoint not found")
             return
@@ -680,16 +701,19 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            if API_PATTERN.search(self.path):
+            api_endpoint = self.extract_api_endpoint()
+            if api_endpoint:
                 params = self._parse_query_params()
-                api_endpoint = self.extract_api_endpoint()
                 self.api_handling(api_endpoint, params)
                 return
 
             # Regular file serving
             safe_path = self.translate_path(self.path)
             if CustomHandler._is_viewable(safe_path):
-                self._load_response_with_file_content(safe_path)
+                if safe_path.endswith(".html"):
+                    self._load_response_for_html_file(safe_path)
+                else:
+                    self._load_response_with_file_content(safe_path)
             else:
                 super().do_GET()
         except BrokenPipeError:
@@ -698,7 +722,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             logger.error("Error in do_GET for path %s: %s", self.path, e, exc_info=True)
             try:
                 self.send_error(
-                    500, f"Internal server error: {type(e).__name__}, path: {self.path}"
+                    500, f"Internal server error: {traceback.format_exc()}, path: {self.path}"
                 )
             except Exception:
                 pass
