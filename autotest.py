@@ -246,6 +246,11 @@ def create_main_parser():
         default=False,
         help="Disable strict mode to allow the script to run even if it contains syntax errors",
     )
+    parser.add_argument(
+        "--task_path",
+        dest="task_path",
+        help="Specify Oriole task path to send test results.",
+    )
     return parser
 
 

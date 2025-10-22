@@ -34,6 +34,7 @@ class OrioleClient:
         self.submit_flag = "None"
         self.reports = []
         self.release_tag = None
+        self.task_path = None
 
     def report_to_submit(self):
         if self.submit_flag == "None":
@@ -47,12 +48,21 @@ class OrioleClient:
         self.submit_flag = (
             args.submit_flag if hasattr(args, "submit_flag") else self.submit_flag
         )
+        self.task_path = args.task_path if hasattr(args, "task_path") else None
         if self.submit_flag:
             self.user = env.get_section_var("ORIOLE", "USER")
             self.password = env.get_section_var("ORIOLE", "ENCODE_PASSWORD")
         selected_fields = env.filter_section_items("ORIOLE", "RES_FIELD_")
         self.specified_fields = {k.lower(): v for k, v in selected_fields.items()}
         self.specified_fields.setdefault("mark", "AutoLib_v3")
+
+    def get_task_path(self):
+        if self.task_path:
+            return self.task_path
+        task_path_template = env.get_section_var(
+            "ORIOLE", "TASK_PATH", fallback="/FOS/{RELEASE}/Regression"
+        )
+        return task_path_template.format(RELEASE=self.release_tag)
 
     def send_oriole(self):
         report_file = self.report_to_submit()
@@ -67,14 +77,8 @@ class OrioleClient:
                     "report": report,
                     "release_tag": self.release_tag,
                     "project": "FAP" if env.is_fap_dut() else "FOS",
+                    "task_path": self.get_task_path(),
                 }
-
-                task_path_template = env.get_section_var("ORIOLE", "TASK_PATH")
-                if task_path_template:
-                    payload["task_path"] = task_path_template.format(
-                        RELEASE=self.release_tag
-                    )
-
                 response = requests.request(
                     "POST",
                     ORIOLE_SUBMIT_API_URL,
