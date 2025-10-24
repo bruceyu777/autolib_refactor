@@ -68,6 +68,14 @@ def create_webserver_parser(parent):
         choices=["start", "stop", "restart"],
         default="start",
     )
+    parser.add_argument(
+        "-l",
+        "--log_level",
+        dest="log_level",
+        type=int,
+        help="Specify log level, default is 0, 0=errors only, 1=info, 2=debug",
+        default=0,
+    )
     return parser
 
 
@@ -379,7 +387,9 @@ def run_sub_command_main(args):
     if args.command == "upgrade":
         Upgrade(args.build, branch=args.branch).run()
     elif args.command == "webserver":
-        webserver_main(args.ip_address, args.webserver_port, args.action)
+        webserver_main(
+            args.ip_address, args.webserver_port, args.action, args.log_level
+        )
     elif args.command == "imageservice":
         imageservice_operations(
             args.fortigates,
