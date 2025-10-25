@@ -10,12 +10,10 @@ from .constants import (
     VIEWABLE_TESTFILE_EXTENSION,
     VIEWABLE_TESTFILE_PREFIX,
 )
-from .debug import is_debug_enabled
 from .file_reader import FileReader
 from .templates_loader import web_server_template_env
 
 
-# Define a custom handler that suppresses logging messages
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     viewable_testfile_prefix = VIEWABLE_TESTFILE_PREFIX
@@ -52,32 +50,27 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(response_content.encode("utf-8"))
 
-            if is_debug_enabled(2):
-                logger.debug(
-                    "Rendered template: %s for path: %s", template_name, self.path
-                )
+            logger.debug("Rendered template: %s for path: %s", template_name, self.path)
         except Exception as e:
             logger.error(
                 "Error rendering template %s: %s", template_name, e, exc_info=True
             )
-            if is_debug_enabled(1):
-                logger.error(
-                    "Template rendering failed: %s - %s: %s",
-                    template_name,
-                    type(e).__name__,
-                    e,
-                )
+            logger.error(
+                "Template rendering failed: %s - %s: %s",
+                template_name,
+                type(e).__name__,
+                e,
+            )
             self.send_error(500, f"Template error: {type(e).__name__}")
 
     def _load_non_large_file(self, safe_path, file_size, line_count):
         try:
-            if is_debug_enabled(2):
-                logger.debug(
-                    "Loading non-large file: %s (size=%s, lines=%s)",
-                    safe_path,
-                    file_size,
-                    line_count,
-                )
+            logger.debug(
+                "Loading non-large file: %s (size=%s, lines=%s)",
+                safe_path,
+                file_size,
+                line_count,
+            )
 
             file_content, start_line = FileReader.try_multiple_encodings(
                 safe_path, FileReader.read_file_tail, line_count or 1000
@@ -100,24 +93,17 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             logger.error(
                 "Error loading medium file %s: %s", safe_path, e, exc_info=True
             )
-            if is_debug_enabled(1):
-                logger.error(
-                    "Failed to load non-large file: %s - %s: %s",
-                    safe_path,
-                    type(e).__name__,
-                    e,
-                )
+            logger.error(
+                "Failed to load non-large file: %s - %s: %s",
+                safe_path,
+                type(e).__name__,
+                e,
+            )
             raise
 
     def _load_large_file_options(self, safe_path, file_size):
-        """Show options menu for large files (>100MB)"""
-        if is_debug_enabled(2):
-            logger.debug(
-                "Loading large file options: %s (size=%s)", safe_path, file_size
-            )
-
+        logger.debug("Loading large file options: %s (size=%s)", safe_path, file_size)
         total_lines = FileReader.count_lines(safe_path)
-
         self._render_template_response(
             "large_file_options.template",
             path=self.path,
@@ -127,9 +113,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         )
 
     def _load_response_for_html_file(self, safe_path):
-        if is_debug_enabled(2):
-            logger.debug("Loading HTML file: %s", safe_path)
-
+        logger.debug("Loading HTML file: %s", safe_path)
         with open(safe_path, "r", encoding="utf-8") as file:
             file_content = file.read()
         template = web_server_template_env.get_template("html_file.template")
@@ -144,11 +128,8 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(response_content.encode("utf-8"))
 
     def _load_response_with_file_content(self, safe_path):
-        """Load and display file content based on file size and line count"""
         try:
-            if is_debug_enabled(1):
-                logger.info("Loading file: %s", safe_path)
-
+            logger.info("Loading file: %s", safe_path)
             file_size = os.path.getsize(safe_path)
             line_count = FileReader.count_lines(safe_path)
             tier = self._get_file_line_size_tier(line_count)
@@ -159,19 +140,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 self._load_non_large_file(safe_path, file_size, line_count)
 
         except FileNotFoundError:
-            if is_debug_enabled(1):
-                logger.error("File not found: %s", safe_path)
+            logger.error("File not found: %s", safe_path)
             self.send_error(404, "File not found")
         except PermissionError:
-            if is_debug_enabled(1):
-                logger.error("Permission denied: %s", safe_path)
+            logger.error("Permission denied: %s", safe_path)
             self.send_error(403, "Permission denied")
         except Exception as e:
             logger.error("Error loading file %s: %s", safe_path, e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "Failed to load file: %s - %s: %s", safe_path, type(e).__name__, e
-                )
+            logger.error(
+                "Failed to load file: %s - %s: %s", safe_path, type(e).__name__, e
+            )
             self.send_error(500, f"Internal server error: {type(e).__name__}")
 
     def format_size(self, size):
@@ -241,9 +219,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def list_directory(self, path):
         try:
-            if is_debug_enabled(2):
-                logger.debug("Listing directory: %s", path)
-
+            logger.debug("Listing directory: %s", path)
             directory_meta = self._prepare_directory_meta(path)
             template = web_server_template_env.get_template("index.template")
             response_content = template.render(
@@ -256,19 +232,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(response_content.encode("utf-8"))
         except PermissionError:
-            if is_debug_enabled(1):
-                logger.error("Permission denied listing directory: %s", path)
+            logger.error("Permission denied listing directory: %s", path)
             self.send_error(403, "No permission to list directory")
         except FileNotFoundError:
-            if is_debug_enabled(1):
-                logger.error("Directory not found: %s", path)
+            logger.error("Directory not found: %s", path)
             self.send_error(404, "Directory not found")
         except Exception as e:
             logger.error("Error listing directory %s: %s", path, e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "Failed to list directory: %s - %s: %s", path, type(e).__name__, e
-                )
+            logger.error(
+                "Failed to list directory: %s - %s: %s", path, type(e).__name__, e
+            )
             self.send_error(500, f"Internal server error: {type(e).__name__}")
 
     def _parse_query_params(self):
@@ -280,10 +253,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def _handle_tail_endpoint(self, safe_path, params):
         try:
-            if is_debug_enabled(1):
-                logger.info(
-                    "API tail: %s - lines=%s", safe_path, params.get("lines", 1000)
-                )
+            logger.info("API tail: %s - lines=%s", safe_path, params.get("lines", 1000))
 
             total_lines = FileReader.count_lines(safe_path)
             requested_lines = int(params.get("lines", 1000))
@@ -311,18 +281,12 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             )
         except Exception as e:
             logger.error("Error in tail endpoint: %s", e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "API tail failed: %s - %s: %s", safe_path, type(e).__name__, e
-                )
+            logger.error("API tail failed: %s - %s: %s", safe_path, type(e).__name__, e)
             self.send_error(500, str(e))
 
     def _handle_head_endpoint(self, safe_path, params):
         try:
-            if is_debug_enabled(1):
-                logger.info(
-                    "API head: %s - lines=%s", safe_path, params.get("lines", 1000)
-                )
+            logger.info("API head: %s - lines=%s", safe_path, params.get("lines", 1000))
 
             total_lines = FileReader.count_lines(safe_path)
             requested_lines = int(params.get("lines", 1000))
@@ -350,10 +314,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             )
         except Exception as e:
             logger.error("Error in head endpoint: %s", e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "API head failed: %s - %s: %s", safe_path, type(e).__name__, e
-                )
+            logger.error("API head failed: %s - %s: %s", safe_path, type(e).__name__, e)
             self.send_error(500, str(e))
 
     def _handle_range_endpoint(self, safe_path, params):
@@ -361,10 +322,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             start_line = int(params.get("start", 1))
             requested_end = int(params.get("end", start_line + 1000))
 
-            if is_debug_enabled(1):
-                logger.info(
-                    "API range: %s - lines %s-%s", safe_path, start_line, requested_end
-                )
+            logger.info(
+                "API range: %s - lines %s-%s", safe_path, start_line, requested_end
+            )
 
             total_lines = FileReader.count_lines(safe_path)
             end_line = min(total_lines, requested_end) if total_lines else requested_end
@@ -390,18 +350,16 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             )
         except Exception as e:
             logger.error("Error in range endpoint: %s", e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "API range failed: %s - %s: %s", safe_path, type(e).__name__, e
-                )
+            logger.error(
+                "API range failed: %s - %s: %s", safe_path, type(e).__name__, e
+            )
             self.send_error(500, str(e))
 
     def _handle_search_endpoint(self, safe_path, params):
         try:
             pattern = params.get("pattern", "")
 
-            if is_debug_enabled(1):
-                logger.info("API search: %s - pattern='%s'", safe_path, pattern)
+            logger.info("API search: %s - pattern='%s'", safe_path, pattern)
 
             if not pattern:
                 self.send_error(400, "Missing 'pattern' parameter")
@@ -430,14 +388,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             )
         except Exception as e:
             logger.error("Error in search endpoint: %s", e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "API search failed: %s - pattern='%s' - %s: %s",
-                    safe_path,
-                    pattern,
-                    type(e).__name__,
-                    e,
-                )
+            logger.error(
+                "API search failed: %s - pattern='%s' - %s: %s",
+                safe_path,
+                pattern,
+                type(e).__name__,
+                e,
+            )
             self.send_error(500, str(e))
 
     def extract_api_endpoint(self):
@@ -447,8 +404,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         return None
 
     def _handle_health_check(self):
-        if is_debug_enabled(2):
-            logger.debug("API health check")
+        logger.debug("API health check")
 
         self.send_response(200)
         self.send_header("Content-type", "text/plain")
@@ -457,8 +413,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def _handle_download_endpoint(self, safe_path, _params):
         try:
-            if is_debug_enabled(1):
-                logger.info("API download: %s", safe_path)
+            logger.info("API download: %s", safe_path)
 
             with open(safe_path, "rb") as file:
                 content = file.read()
@@ -474,10 +429,9 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
         except Exception as e:
             logger.error("Error in download endpoint: %s", e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "API download failed: %s - %s: %s", safe_path, type(e).__name__, e
-                )
+            logger.error(
+                "API download failed: %s - %s: %s", safe_path, type(e).__name__, e
+            )
             self.send_error(500, str(e))
 
     @property
@@ -492,13 +446,11 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         }
 
     def api_handling(self, api_endpoint, params):
-        if is_debug_enabled(2):
-            logger.debug("API request: %s - params=%s", api_endpoint, params)
+        logger.debug("API request: %s - params=%s", api_endpoint, params)
 
         handler_func = self.api_endpoint_handlers.get(api_endpoint)
         if not handler_func:
-            if is_debug_enabled(1):
-                logger.error("API endpoint not found: %s", api_endpoint)
+            logger.error("API endpoint not found: %s", api_endpoint)
             self.send_error(404, "API endpoint not found")
             return
 
@@ -509,15 +461,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
         filepath = params.get("path")
         if not filepath:
-            if is_debug_enabled(1):
-                logger.error("API %s: missing 'path' parameter", api_endpoint)
+            logger.error("API %s: missing 'path' parameter", api_endpoint)
             self.send_error(400, "Missing 'path' parameter")
             return
 
         safe_path = self.translate_path(filepath)
         if not os.path.isfile(safe_path):
-            if is_debug_enabled(1):
-                logger.error("API %s: file not found - %s", api_endpoint, safe_path)
+            logger.error("API %s: file not found - %s", api_endpoint, safe_path)
             self.send_error(404, "File not found: %s" % safe_path)
             return
 
@@ -526,8 +476,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            if is_debug_enabled(2):
-                logger.debug("GET request: %s", self.path)
+            logger.debug("GET request: %s", self.path)
 
             api_endpoint = self.extract_api_endpoint()
             if api_endpoint:
@@ -548,14 +497,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             pass
         except Exception as e:
             logger.error("Error in do_GET for path %s: %s", self.path, e, exc_info=True)
-            if is_debug_enabled(1):
-                logger.error(
-                    "do_GET failed: %s - %s: %s\n%s",
-                    self.path,
-                    type(e).__name__,
-                    e,
-                    traceback.format_exc(),
-                )
+            logger.error(
+                "do_GET failed: %s - %s: %s\n%s",
+                self.path,
+                type(e).__name__,
+                e,
+                traceback.format_exc(),
+            )
             try:
                 self.send_error(
                     500,

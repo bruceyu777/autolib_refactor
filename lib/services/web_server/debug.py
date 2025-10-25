@@ -3,12 +3,32 @@ from datetime import datetime
 from pathlib import Path
 
 _handler_added = False
-_debug_level = 0
 
 
-def is_debug_enabled(level=1):
-    """Check if debug logging is enabled at the specified level."""
-    return _debug_level >= level
+def new_log_filepath():
+    outputs_dir = Path.cwd() / "outputs" / "webserver"
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return str(outputs_dir / f"webserver_debug_daemon_{timestamp}.log")
+
+
+def get_logging_level(log_level):
+    if log_level <= 0:
+        return logging.ERROR
+    if log_level == 1:
+        return logging.INFO
+    return logging.DEBUG
+
+
+def new_file_handler(log_file, log_level):
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(log_level)
+    formatter = logging.Formatter(
+        "%(asctime)s - [%(levelname)s] - %(funcName)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    file_handler.setFormatter(formatter)
+    return file_handler
 
 
 def setup_webserver_daemon_logging(log_level=0):
@@ -24,10 +44,7 @@ def setup_webserver_daemon_logging(log_level=0):
     - 1: INFO level logs to webserver_debug_daemon_TIMESTAMP.log
     - 2: DEBUG level logs to webserver_debug_daemon_TIMESTAMP.log
     """
-    global _handler_added, _debug_level  # pylint: disable=global-statement
-
-    # Set module-level debug level for is_debug_enabled()
-    _debug_level = log_level
+    global _handler_added  # pylint: disable=global-statement
 
     # Only set up once
     if _handler_added:
@@ -35,33 +52,9 @@ def setup_webserver_daemon_logging(log_level=0):
 
     from ..log import logger  # pylint: disable=import-outside-toplevel
 
-    # Create log file in outputs directory
-    outputs_dir = Path.cwd() / "outputs"
-    outputs_dir.mkdir(parents=True, exist_ok=True)
-
-    if log_level == 0:
-        _level = logging.ERROR
-        log_file = outputs_dir / "webserver_daemon.log"
-    else:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_file = outputs_dir / f"webserver_debug_daemon_{timestamp}.log"
-        _level = logging.DEBUG if log_level >= 2 else logging.INFO
-
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(_level)
-
-    # Create formatter based on debug level
-    if is_debug_enabled():
-        formatter = logging.Formatter(
-            "%(asctime)s - [%(levelname)s] - %(funcName)s:%(lineno)d - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-    else:
-        formatter = logging.Formatter(
-            "%(asctime)s - [%(levelname)s] - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
-        )
-
-    file_handler.setFormatter(formatter)
+    log_file = new_log_filepath()
+    _level = get_logging_level(log_level)
+    file_handler = new_file_handler(log_file, _level)
     logger.addHandler(file_handler)
 
     # Set logger level to capture messages at the desired level

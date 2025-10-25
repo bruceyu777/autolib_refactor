@@ -42,32 +42,34 @@ setup_webserver_daemon_logging()
 
 **What gets logged where**:
 
-| DEBUG_LEVEL | Daemon Log File                                      | What's Logged    |
-| ----------- | ---------------------------------------------------- | ---------------- |
-| 0 (default) | `outputs/webserver_daemon.log`                       | ERROR level only |
-| 1           | `outputs/webserver_debug_daemon_YYYYMMDD_HHMMSS.log` | INFO and above   |
-| 2           | `outputs/webserver_debug_daemon_YYYYMMDD_HHMMSS.log` | DEBUG and above  |
+| DEBUG_LEVEL | Daemon Log File                                                | What's Logged    |
+| ----------- | -------------------------------------------------------------- | ---------------- |
+| 0 (default) | `outputs/webserver/webserver_debug_daemon_YYYYMMDD_HHMMSS.log` | ERROR level only |
+| 1           | `outputs/webserver/webserver_debug_daemon_YYYYMMDD_HHMMSS.log` | INFO and above   |
+| 2           | `outputs/webserver/webserver_debug_daemon_YYYYMMDD_HHMMSS.log` | DEBUG and above  |
 
 ## Coding Pattern
 
-### ✅ CORRECT: Use logger with conditional debug details
+### ✅ CORRECT: Use logger directly - automatic filtering by log level
 
 ```python
 from ..log import logger
-from .debug import is_debug_enabled
 
 # Always log important events
 logger.info("HTTP server started on port %s", self.port)
 
-# Conditional debug details
-if is_debug_enabled(2):
-    logger.debug("HTTP server created: %s", server_address)
+# Debug details - automatically filtered based on logger level
+logger.debug("HTTP server created: %s", server_address)
 
-# Performance metrics (debug only)
-if is_debug_enabled(2):
-    elapsed = time.time() - start_time
-    logger.debug("File read took %.3fs", elapsed)
+# Performance metrics - always measure, logging will filter
+start_time = time.time()
+# ... do work ...
+elapsed = time.time() - start_time
+logger.debug("File read took %.3fs", elapsed)
 ```
+
+**Key Point**: No need to check debug level manually. The logging module automatically
+filters messages based on the configured level set by `setup_webserver_daemon_logging()`.
 
 ### ❌ WRONG: Don't set up logging in parent process
 
@@ -99,12 +101,6 @@ setup_webserver_daemon_logging()  # Only call in daemon!
 - Internal state for troubleshooting
 
 ## Log File Names
-
-**Production (DEBUG_LEVEL=0)**:
-
-- `outputs/webserver_daemon.log` - Errors only, no timestamp (persistent file)
-
-**Debug Mode (DEBUG_LEVEL=1 or 2)**:
 
 - `outputs/webserver_debug_daemon_20251023_184416.log` - Timestamped per daemon start
 
@@ -153,7 +149,7 @@ setup_webserver_daemon_logging()
 
 ## Debug Output Examples
 
-**With DEBUG_LEVEL=0** (`webserver_daemon.log`):
+**With DEBUG_LEVEL=0** (`webserver_debug_daemon_20251023_185000.log`):
 
 ```
 2025-10-23 18:50:23 - [ERROR] - Unable to start webserver: Address already in use

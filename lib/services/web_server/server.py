@@ -12,7 +12,7 @@ import psutil
 import setproctitle
 
 from ..log import logger
-from .debug import is_debug_enabled, setup_webserver_daemon_logging
+from .debug import setup_webserver_daemon_logging
 from .handler import CustomHandler
 
 
@@ -32,26 +32,20 @@ class WebServer:
         self.httpd = None
         self.shutdown_flag = threading.Event()
 
-        if is_debug_enabled():
-            logger.debug("WebServer initialized: ip=%s, port=%s", ip, self.port)
+        logger.debug("WebServer initialized: ip=%s, port=%s", ip, self.port)
 
     def _create_server(self):
         """Create and configure the HTTP server"""
         server_address = (self.ip, self.port)
         httpd = ThreadedHTTPServer(server_address, CustomHandler)
         httpd.timeout = 1.0  # Timeout for serve_forever loop to check shutdown
-
-        if is_debug_enabled(2):
-            logger.debug("HTTP server created: %s", server_address)
-
+        logger.debug("HTTP server created: %s", server_address)
         return httpd
 
     def create(self):
         """Start the HTTP server with error handling"""
         try:
-            if is_debug_enabled(1):
-                logger.info("Starting HTTP server on port %s", self.port)
-
+            logger.info("Starting HTTP server on port %s", self.port)
             self.httpd = self._create_server()
             logger.info("HTTP server started on port %s", self.port)
 
@@ -94,10 +88,7 @@ class WebServer:
                 available = True
             except OSError:
                 available = False
-
-        if is_debug_enabled(2):
-            logger.debug("Port %s available: %s", self.port, available)
-
+        logger.debug("Port %s available: %s", self.port, available)
         return available
 
     def _get_pid_by_port(self):
@@ -108,13 +99,12 @@ class WebServer:
                     proc = psutil.Process(conn.pid)
                     # Be extra sure by checking if the process name matches
                     if self.process_name in proc.name():
-                        if is_debug_enabled(2):
-                            logger.debug(
-                                "Found process %s (PID %s) listening on port %s",
-                                self.process_name,
-                                conn.pid,
-                                self.port,
-                            )
+                        logger.debug(
+                            "Found process %s (PID %s) listening on port %s",
+                            self.process_name,
+                            conn.pid,
+                            self.port,
+                        )
                         return conn.pid
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
@@ -123,12 +113,11 @@ class WebServer:
     def _is_webserver_exists(self):
         for process in psutil.process_iter(["pid", "name"]):
             if self.process_name in process.info["name"]:
-                if is_debug_enabled(2):
-                    logger.debug(
-                        "Found webserver process: %s (PID %s)",
-                        self.process_name,
-                        process.info["pid"],
-                    )
+                logger.debug(
+                    "Found webserver process: %s (PID %s)",
+                    self.process_name,
+                    process.info["pid"],
+                )
                 return True
         return False
 
@@ -177,14 +166,11 @@ class WebServer:
     def _run_with_watchdog(self, max_restarts=5, restart_window=300):
         restart_times = []
         consecutive_failures = 0
-
-        if is_debug_enabled(1):
-            logger.info(
-                "Starting watchdog: max_restarts=%s, restart_window=%ss",
-                max_restarts,
-                restart_window,
-            )
-
+        logger.info(
+            "Starting watchdog: max_restarts=%s, restart_window=%ss",
+            max_restarts,
+            restart_window,
+        )
         while True:
             # Clean up old restart times outside the window
             cutoff = time.time() - restart_window
@@ -245,8 +231,7 @@ class WebServer:
     def start(self):
         """Fork a daemon process and start the web server with watchdog"""
         try:
-            if is_debug_enabled(2):
-                logger.debug("Forking daemon process for web server")
+            logger.debug("Forking daemon process for web server")
 
             pid = os.fork()
             if pid > 0:
@@ -284,8 +269,7 @@ class WebServer:
             logging.getLogger("http.server").setLevel(logging.ERROR)
             setproctitle.setproctitle(self.process_name)
 
-            if is_debug_enabled(2):
-                logger.debug("Daemon process started with name: %s", self.process_name)
+            logger.debug("Daemon process started with name: %s", self.process_name)
 
             # Run with watchdog
             self._run_with_watchdog(max_restarts=5, restart_window=300)

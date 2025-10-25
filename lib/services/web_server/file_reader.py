@@ -9,7 +9,6 @@ from .constants import (
     DEFAULT_TAIL_LINES,
     MAX_VIEWABLE_SIZE,
 )
-from .debug import is_debug_enabled
 
 
 class FileReader:
@@ -29,7 +28,7 @@ class FileReader:
         Returns:
             tuple: (lines_list, bytes_read)
         """
-        start_time = time.time() if is_debug_enabled(2) else None
+        start_time = time.time()
 
         blocks = []
         bytes_read = 0
@@ -63,15 +62,14 @@ class FileReader:
                 if bytes_read >= file_size:
                     raise  # Can't decode entire file
 
-        if is_debug_enabled(2):
-            elapsed = time.time() - start_time
-            logger.debug(
-                "Read backwards: %d bytes, %d lines, encoding=%s, time=%.3fs",
-                bytes_read,
-                len(lines),
-                encoding,
-                elapsed,
-            )
+        elapsed = time.time() - start_time
+        logger.debug(
+            "Read backwards: %d bytes, %d lines, encoding=%s, time=%.3fs",
+            bytes_read,
+            len(lines),
+            encoding,
+            elapsed,
+        )
 
         return lines, bytes_read
 
@@ -106,7 +104,7 @@ class FileReader:
         Returns:
             tuple: (content, start_line_number)
         """
-        start_time = time.time() if is_debug_enabled(2) else None
+        start_time = time.time()
 
         try:
             with open(filepath, "rb") as f:
@@ -115,8 +113,7 @@ class FileReader:
                 file_size = f.tell()
 
                 if file_size == 0:
-                    if is_debug_enabled(2):
-                        logger.debug("read_file_tail: %s is empty", filepath)
+                    logger.debug("read_file_tail: %s is empty", filepath)
                     return "", 0
 
                 # Read backwards until we have enough lines
@@ -134,16 +131,15 @@ class FileReader:
                 )
                 start_line = max(1, total_lines - len(result_lines) + 1)
 
-                if is_debug_enabled(2):
-                    elapsed = time.time() - start_time
-                    logger.debug(
-                        "read_file_tail: %s - %d lines (start=%d, total=%s), time=%.3fs",
-                        filepath,
-                        len(result_lines),
-                        start_line,
-                        total_lines,
-                        elapsed,
-                    )
+                elapsed = time.time() - start_time
+                logger.debug(
+                    "read_file_tail: %s - %d lines (start=%d, total=%s), time=%.3fs",
+                    filepath,
+                    len(result_lines),
+                    start_line,
+                    total_lines,
+                    elapsed,
+                )
 
                 return content, start_line
 
@@ -158,7 +154,7 @@ class FileReader:
         Returns:
             tuple: (content, start_line_number, total_lines)
         """
-        start_time = time.time() if is_debug_enabled(2) else None
+        start_time = time.time()
 
         try:
             lines = []
@@ -169,14 +165,13 @@ class FileReader:
                     lines.append(line.rstrip("\n"))
             content = "\n".join(lines)
 
-            if is_debug_enabled(2):
-                elapsed = time.time() - start_time
-                logger.debug(
-                    "read_file_head: %s - %d lines, time=%.3fs",
-                    filepath,
-                    len(lines),
-                    elapsed,
-                )
+            elapsed = time.time() - start_time
+            logger.debug(
+                "read_file_head: %s - %d lines, time=%.3fs",
+                filepath,
+                len(lines),
+                elapsed,
+            )
 
             # Head always starts at line 1
             return content, 1
@@ -191,7 +186,7 @@ class FileReader:
         Returns:
             tuple: (content, start_line_number)
         """
-        start_time = time.time() if is_debug_enabled(2) else None
+        start_time = time.time()
 
         try:
             lines = []
@@ -204,16 +199,15 @@ class FileReader:
                     lines.append(line.rstrip("\n"))
             content = "\n".join(lines)
 
-            if is_debug_enabled(2):
-                elapsed = time.time() - start_time
-                logger.debug(
-                    "read_file_range: %s - lines %d-%d (%d lines), time=%.3fs",
-                    filepath,
-                    start_line,
-                    end_line,
-                    len(lines),
-                    elapsed,
-                )
+            elapsed = time.time() - start_time
+            logger.debug(
+                "read_file_range: %s - lines %d-%d (%d lines), time=%.3fs",
+                filepath,
+                start_line,
+                end_line,
+                len(lines),
+                elapsed,
+            )
 
             # Range uses the provided start_line
             return content, start_line
@@ -223,7 +217,7 @@ class FileReader:
 
     @staticmethod
     def search_in_file(filepath, pattern, context_lines=5):
-        start_time = time.time() if is_debug_enabled(2) else None
+        start_time = time.time()
 
         try:
             cmd = [
@@ -239,15 +233,14 @@ class FileReader:
                 cmd, capture_output=True, text=True, check=False, timeout=30
             )
 
-            if is_debug_enabled(2):
-                elapsed = time.time() - start_time
-                logger.debug(
-                    "search_in_file: %s - pattern='%s', returncode=%d, time=%.3fs",
-                    filepath,
-                    pattern,
-                    result.returncode,
-                    elapsed,
-                )
+            elapsed = time.time() - start_time
+            logger.debug(
+                "search_in_file: %s - pattern='%s', returncode=%d, time=%.3fs",
+                filepath,
+                pattern,
+                result.returncode,
+                elapsed,
+            )
 
             if result.returncode == 0:
                 return result.stdout
@@ -270,40 +263,36 @@ class FileReader:
         encodings = ["utf-8", "latin-1", "cp1252", "iso-8859-1"]
         last_error = None
 
-        if is_debug_enabled(2):
-            logger.debug(
-                "try_multiple_encodings: %s - trying %d encodings",
-                filepath,
-                len(encodings),
-            )
+        logger.debug(
+            "try_multiple_encodings: %s - trying %d encodings",
+            filepath,
+            len(encodings),
+        )
 
         for encoding in encodings:
             try:
                 result = read_func(filepath, *args, encoding=encoding)
-                if is_debug_enabled(2):
-                    logger.debug(
-                        "try_multiple_encodings: %s - success with %s",
-                        filepath,
-                        encoding,
-                    )
+                logger.debug(
+                    "try_multiple_encodings: %s - success with %s",
+                    filepath,
+                    encoding,
+                )
                 return result
             except (UnicodeDecodeError, LookupError) as e:
                 last_error = e
-                if is_debug_enabled(2):
-                    logger.debug(
-                        "try_multiple_encodings: %s - %s failed: %s",
-                        filepath,
-                        encoding,
-                        e,
-                    )
+                logger.debug(
+                    "try_multiple_encodings: %s - %s failed: %s",
+                    filepath,
+                    encoding,
+                    e,
+                )
                 continue
 
         # All encodings failed, try binary
-        if is_debug_enabled(2):
-            logger.debug(
-                "try_multiple_encodings: %s - all encodings failed, using binary",
-                filepath,
-            )
+        logger.debug(
+            "try_multiple_encodings: %s - all encodings failed, using binary",
+            filepath,
+        )
 
         try:
             with open(filepath, "rb") as f:
@@ -321,7 +310,7 @@ class FileReader:
 
         Returns the number of lines matching Python's file iteration behavior.
         """
-        start_time = time.time() if is_debug_enabled(2) else None
+        start_time = time.time()
 
         def _count_lines(filepath):
             count = 0
@@ -335,14 +324,13 @@ class FileReader:
             file_size = os.path.getsize(filepath)
             if file_size < 1024 * 1024:  # 1MB
                 count = _count_lines(filepath)
-                if is_debug_enabled(2):
-                    elapsed = time.time() - start_time
-                    logger.debug(
-                        "count_lines: %s - %d lines (Python method), time=%.3fs",
-                        filepath,
-                        count,
-                        elapsed,
-                    )
+                elapsed = time.time() - start_time
+                logger.debug(
+                    "count_lines: %s - %d lines (Python method), time=%.3fs",
+                    filepath,
+                    count,
+                    elapsed,
+                )
                 return count
 
             # For larger files, use wc -l with adjustment for Python semantics
@@ -367,26 +355,24 @@ class FileReader:
                         if last_byte != b"\n":
                             count += 1
 
-                if is_debug_enabled(2):
-                    elapsed = time.time() - start_time
-                    logger.debug(
-                        "count_lines: %s - %d lines (wc method), time=%.3fs",
-                        filepath,
-                        count,
-                        elapsed,
-                    )
-                return count
-
-            # Final fallback to Python counting
-            count = _count_lines(filepath)
-            if is_debug_enabled(2):
                 elapsed = time.time() - start_time
                 logger.debug(
-                    "count_lines: %s - %d lines (fallback method), time=%.3fs",
+                    "count_lines: %s - %d lines (wc method), time=%.3fs",
                     filepath,
                     count,
                     elapsed,
                 )
+                return count
+
+            # Final fallback to Python counting
+            count = _count_lines(filepath)
+            elapsed = time.time() - start_time
+            logger.debug(
+                "count_lines: %s - %d lines (fallback method), time=%.3fs",
+                filepath,
+                count,
+                elapsed,
+            )
             return count
         except Exception as e:
             logger.warning("Error counting lines in %s: %s", filepath, e)
