@@ -735,6 +735,69 @@
           "description": "Path to script to include"
         }
       ]
+    },
+    "strset": {
+      "description": "Set string variable",
+      "category": "variable",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "var_name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name (without $ prefix)"
+        },
+        {
+          "name": "var_value",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "String value to assign"
+        }
+      ]
+    },
+    "intset": {
+      "description": "Set integer variable",
+      "category": "variable",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "var_name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name (without $ prefix)"
+        },
+        {
+          "name": "var_value",
+          "type": "int",
+          "position": 1,
+          "required": true,
+          "description": "Integer value to assign"
+        }
+      ]
+    },
+    "listset": {
+      "description": "Set list variable",
+      "category": "variable",
+      "parse_mode": "positional",
+      "parameters": [
+        {
+          "name": "var_name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name (without $ prefix)"
+        },
+        {
+          "name": "var_value",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "List value to assign (comma-separated)"
+        }
+      ]
     }
   },
   "valid_commands": [

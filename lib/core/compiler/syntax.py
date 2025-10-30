@@ -153,9 +153,11 @@ class ScriptSyntax:
         param_rules = []
         type_mapping = {
             "string": [
-                "identifier",
-                "number",
-            ],  # Strings can be numeric (e.g., "801830")
+                "string",  # Accept quoted strings like "admin\\n"
+                "identifier",  # Accept unquoted identifiers
+                "number",  # Strings can be numeric (e.g., "801830")
+                "variable",
+            ],
             "int": ["number"],
             "number": ["number"],
             "bool": ["identifier"],
