@@ -798,6 +798,108 @@
           "description": "List value to assign (comma-separated)"
         }
       ]
+    },
+    "exec_code": {
+      "description": "Execute code in specified language and store result in variable",
+      "category": "code_execution",
+      "parse_mode": "options",
+      "parameters": {
+        "-lang": {
+          "alias": "lang",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "enum": ["python", "bash"],
+          "description": "Programming language to execute (python|bash|javascript|ruby)"
+        },
+        "-var": {
+          "alias": "var",
+          "type": "string",
+          "position": 1,
+          "required": true,
+          "description": "Variable name to store the execution result"
+        },
+        "-file": {
+          "alias": "file",
+          "type": "string",
+          "position": 2,
+          "required": true,
+          "description": "Path to code file to execute"
+        },
+        "-func": {
+          "alias": "func",
+          "type": "string",
+          "position": 3,
+          "required": false,
+          "description": "Function name to call when using -file"
+        },
+        "-args": {
+          "alias": "args",
+          "type": "string",
+          "position": 4,
+          "required": false,
+          "description": "Comma-separated arguments to pass to function"
+        },
+        "-timeout": {
+          "alias": "timeout",
+          "type": "int",
+          "position": 5,
+          "required": false,
+          "default": 30,
+          "description": "Execution timeout in seconds"
+        }
+      }
+    },
+    "check_var": {
+      "description": "Check if variable matches expected value and report result",
+      "category": "variable",
+      "parse_mode": "options",
+      "parameters": {
+        "-name": {
+          "alias": "name",
+          "type": "string",
+          "position": 0,
+          "required": true,
+          "description": "Variable name to check"
+        },
+        "-value": {
+          "alias": "value",
+          "type": "string",
+          "position": 1,
+          "required": false,
+          "description": "Expected exact value (mutually exclusive with -pattern and -contains)"
+        },
+        "-pattern": {
+          "alias": "pattern",
+          "type": "string",
+          "position": 2,
+          "required": false,
+          "description": "Regular expression pattern to match (mutually exclusive with -value and -contains)"
+        },
+        "-contains": {
+          "alias": "contains",
+          "type": "string",
+          "position": 3,
+          "required": false,
+          "description": "Substring that must be present (mutually exclusive with -value and -pattern)"
+        },
+        "-for": {
+          "alias": "qaid",
+          "type": "string",
+          "position": 4,
+          "required": true,
+          "description": "Test case ID (QAID) for result reporting"
+        },
+        "-fail": {
+          "alias": "fail_match",
+          "type": "string",
+          "position": 5,
+          "required": false,
+          "default": "unmatch",
+          "enum": ["match", "unmatch"],
+          "description": "Fail condition: 'match' (fail if matched) or 'unmatch' (fail if not matched)"
+        }
+      }
     }
   },
   "valid_commands": [

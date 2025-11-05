@@ -1,9 +1,9 @@
 import pytest
 
-from lib.core.device.pexpect_wrapper import OutputBuffer
+from lib.core.device.session.pexpect_wrapper.output_buffer import OutputBuffer
 
 
-@pytest.mark.skip()
+@pytest.mark.skip(reason="OutputBuffer tests require device integration")
 def test_output_buffer():
     multiline_str = """Operation Mode: TP
     Virtual domains status: 1 in NAT mode, 0 in TP mode"""
@@ -34,7 +34,7 @@ FortiGate-201F (global) #
     output_buffer = OutputBuffer()
     output_buffer.append(str2)
 
-    pattern = "(?n)Serial-Number: (FG[\d\w]+)"
+    pattern = r"(?n)Serial-Number: (FG[\d\w]+)"
     res = output_buffer.search(pattern)
     assert res is not None
 
@@ -290,7 +290,8 @@ FDS Address
 
 FortiGate-VM64-KVM # """
 
-    # pattern = r"AV Engine\r\n---------\r\nVersion: ([\d.]+).*Virus Definitions\r\n---------\r\nVersion: ([\d.]+).*Extended set\r\n---------\r\nVersion: ([\d.]+).*IPS Attack Engine\r\n---------\r\nVersion: ([\d.]+).*Attack Definitions\r\n---------\r\nVersion: ([\d.]+).*Attack Extended Definitions\r\n---------\r\nVersion: ([\d.]+).*Application Definitions\r\n---------\r\nVersion: ([\d.]+).*IPS Malicious URL Database\r\n---------\r\nVersion: ([\d.]+).*Flow-based Virus Definitions\r\n---------\r\nVersion: ([\d.]+).*Botnet Domain Database\r\n---------\r\nVersion: ([\d.]+).*URL Allow list\r\n---------\r\nVersion: ([\d.]+).*"
+    # Long pattern for comprehensive matching (commented out for brevity)
+    # pattern = r"AV Engine\r\n---------\r\nVersion: ([\d.]+).*Virus Definitions..."
     pattern2 = r"AV Engine\r\n.*"
     output_buffer = OutputBuffer()
     output_buffer.append(str3)
@@ -362,7 +363,7 @@ drwx---rwx    3 550      2147483647       96 Apr 24  2023 build1499  <-
     output_buffer = OutputBuffer()
     output_buffer.append(s)
 
-    pattern = "build(\d{1,4})  <-"
+    pattern = r"build(\d{1,4})  <-"
     res = output_buffer.search(pattern)
     print(res)
     assert res is not None
@@ -388,7 +389,7 @@ FGVM04TM23004610 (Interim)# """
     output_buffer = OutputBuffer()
     output_buffer.append(s)
 
-    pattern = 'trandisp="snat\+dnat'
+    pattern = r'trandisp="snat\+dnat'
     res = output_buffer.search(pattern)
     print(res)
     assert res is not None

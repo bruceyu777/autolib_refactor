@@ -150,9 +150,10 @@ class Group(Script):
         - Shared compiler cache reduces redundant work
         - Much lower memory footprint
         """
+        total_scripts = len(all_scripts)
         logger.info(
             "Compiling %d scripts in parallel using %d workers",
-            len(all_scripts),
+            total_scripts,
             max_workers,
         )
 
@@ -170,7 +171,7 @@ class Group(Script):
                 script = self._process_compilation_result(future.result())
                 self.included_scripts[line_number] = script
 
-        logger.info("Parallel compilation completed")
+        logger.info("Parallel compilation completed for %d scripts!", total_scripts)
 
     def _compile_sequential(self, all_scripts, num_scripts):
         """Compile scripts sequentially (fallback for small script counts)."""

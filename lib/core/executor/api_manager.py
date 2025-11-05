@@ -6,11 +6,18 @@ All public functions (not starting with _) in API modules are automatically
 registered as APIs, with the module name serving as the category.
 """
 
+import glob
 import importlib
+import importlib.util
 import inspect
+import os
 import pkgutil
+import sys
 from typing import Callable, Dict, Tuple
 
+from lib.core.compiler.schema_loader import get_schema
+from lib.core.executor.api_params import ApiParams
+from lib.services import logger
 from lib.settings import PARAGRAPH_SEP
 
 from . import api as api_package
@@ -24,11 +31,9 @@ def discover_apis():
     """
     Automatically discover all API modules and their public functions.
 
-    This function:
-    1. Scans all modules in the 'api' package
-    2. Finds all public functions (not starting with _)
-    3. Registers them with module name as category
-    4. Handles special name mappings (e.g., 'else' for 'else_')
+    Now scans BOTH:
+    1. Built-in APIs from lib/core/executor/api/ package
+    2. User-defined APIs from plugins/apis/ directory
 
     Returns:
         Tuple of (api_registry, category_registry)
@@ -37,11 +42,26 @@ def discover_apis():
     _API_REGISTRY.clear()
     _CATEGORY_REGISTRY.clear()
 
-    # Get the api package path
-    api_path = api_package.__path__
-    api_package_name = api_package.__name__
+    # Discover built-in APIs from package
+    _discover_from_package(api_package, "Built-In")
 
-    # Iterate through all modules in the api package
+    # Discover user-defined APIs from directory
+    _discover_from_directory("plugins/apis", "User-Defined")
+
+    return _API_REGISTRY, _CATEGORY_REGISTRY
+
+
+def _discover_from_package(package, category_prefix):
+    """
+    Discover APIs from an installed package.
+
+    Args:
+        package: Python package to scan
+        category_prefix: Prefix for category names
+    """
+    api_path = package.__path__
+    api_package_name = package.__name__
+
     for _, module_name, ispkg in pkgutil.iter_modules(api_path):
         if ispkg:
             continue  # Skip sub-packages
@@ -50,29 +70,84 @@ def discover_apis():
         full_module_name = f"{api_package_name}.{module_name}"
         module = importlib.import_module(full_module_name)
 
-        # Use module name as category (e.g., 'device', 'command', 'buffer')
-        category = module_name.replace("_", " ").title()
+        # Use module name as category
+        category = f"{category_prefix} - {module_name.replace('_', ' ').title()}"
 
-        # Find all public functions in the module
-        for name, obj in inspect.getmembers(module, inspect.isfunction):
-            # Skip private functions (starting with _)
-            if name.startswith("_"):
+        # Register all public functions from this module
+        _register_module_functions(module, category)
+
+
+def _discover_from_directory(directory, category_prefix):
+    """
+    Discover APIs from a filesystem directory.
+
+    Args:
+        directory: Directory path to scan for .py files
+        category_prefix: Prefix for category names
+    """
+    if not os.path.exists(directory):
+        logger.info("User API directory not found: %s", directory)
+        return
+
+    # Add directory to path temporarily for imports
+    abs_directory = os.path.abspath(directory)
+    if abs_directory not in sys.path:
+        sys.path.insert(0, abs_directory)
+
+    try:
+        # Find all .py files
+        for py_file in glob.glob(f"{directory}/**/*.py", recursive=True):
+            if py_file.endswith("__init__.py"):
                 continue
 
-            # Special handling for 'else_' -> 'else' mapping
-            api_endpoint = (
-                name.rstrip("_") if name.endswith("_") and name != "_" else name
-            )
+            # Import module dynamically
+            module_name = os.path.splitext(os.path.basename(py_file))[0]
+            spec = importlib.util.spec_from_file_location(module_name, py_file)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
 
-            # Register the function
-            _API_REGISTRY[api_endpoint] = obj
+                # Use module name as category
+                category = (
+                    f"{category_prefix} - {module_name.replace('_', ' ').title()}"
+                )
 
-            # Register in category registry
-            if category not in _CATEGORY_REGISTRY:
-                _CATEGORY_REGISTRY[category] = []
-            _CATEGORY_REGISTRY[category].append(api_endpoint)
+                # Register all public functions from this module
+                _register_module_functions(module, category)
 
-    return _API_REGISTRY, _CATEGORY_REGISTRY
+                logger.info(
+                    "Discovered user API module: %s from %s", module_name, py_file
+                )
+
+    finally:
+        # Clean up sys.path
+        if abs_directory in sys.path:
+            sys.path.remove(abs_directory)
+
+
+def _register_module_functions(module, category):
+    """
+    Register all public functions from a module as APIs.
+
+    Args:
+        module: Python module to scan
+        category: Category name for these APIs
+    """
+    for name, obj in inspect.getmembers(module, inspect.isfunction):
+        # Skip private functions
+        if name.startswith("_"):
+            continue
+
+        # Special handling for 'else_' -> 'else' mapping
+        api_endpoint = name.rstrip("_") if name.endswith("_") and name != "_" else name
+
+        # Register the function
+        _API_REGISTRY[api_endpoint] = obj
+
+        # Register in category registry
+        if category not in _CATEGORY_REGISTRY:
+            _CATEGORY_REGISTRY[category] = []
+        _CATEGORY_REGISTRY[category].append(api_endpoint)
 
 
 def get_all_apis() -> Dict[str, Callable]:
@@ -145,9 +220,6 @@ class ApiMixin:
             discover_apis()
 
         # Wrap parameters in ApiParams for modern APIs
-        from lib.core.compiler.schema_loader import get_schema
-        from lib.core.executor.api_params import ApiParams
-
         schema = get_schema(api_endpoint)
         if schema:
             params = ApiParams(parameters, schema)
@@ -248,8 +320,6 @@ class ApiRegistry:
         doc = metadata["doc"].strip() if metadata["doc"] else ""
 
         # Try to get schema information for enhanced help
-        from lib.core.compiler.schema_loader import get_schema
-
         schema = get_schema(name)
         if schema:
             # Use schema for parameter info with CLI options

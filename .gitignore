@@ -23,7 +23,7 @@ artifacts/*
 svn_testcases/*
 v720/*
 lib/tests/v720/
-output
+outputs
 output.txt
 test.txt
 vm_codes.txt
@@ -61,3 +61,6 @@ version.bak
 .claude
 node_modules
 autotest
+htmlcov
+.claudeignore
+.coverage

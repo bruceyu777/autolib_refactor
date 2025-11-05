@@ -7,6 +7,7 @@ Module name 'variable' becomes the category name.
 
 # pylint: disable=unused-argument,protected-access
 
+import re
 
 from lib.services import env, logger
 
@@ -218,4 +219,74 @@ def compare(executor, params):
         result_str,
         qaid,
         fail_match,
+    )
+
+
+def check_var(executor, params):
+    """
+    Check if variable matches expected value and report result.
+
+    Parameters (accessed via params object):
+        params.name (str): Variable name to check [-name]
+        params.value (str, optional): Expected exact value [-value]
+        params.pattern (str, optional): Regex pattern to match [-pattern]
+        params.contains (str, optional): Substring to check [-contains]
+        params.qaid (str): Test case ID [-for]
+        params.fail_match (str): "match" or "unmatch" (default: "unmatch") [-fail]
+
+    Example:
+        check_var -name hostname -value "FGT-Branch" -for 801830
+        check_var -name hostname -pattern "FGT-.*" -for 801831
+        check_var -name status -contains "success" -for 801832
+    """
+    # Extract parameters
+    name = params.name
+    value = params.get("value")
+    pattern = params.get("pattern")
+    contains = params.get("contains")
+    qaid = params.qaid
+    fail_match = params.get("fail_match", "unmatch") == "match"
+
+    # Get variable value using env service (CORRECTED!)
+    var_value = env.get_var(name)
+
+    if var_value is None:
+        raise ValueError(f"Variable '{name}' not found")
+
+    # Determine match based on check type
+    if value is not None:
+        matched = str(var_value) == str(value)
+        check_desc = f"exact match: '{value}'"
+    elif pattern is not None:
+        matched = bool(re.search(pattern, str(var_value)))
+        check_desc = f"pattern: '{pattern}'"
+    elif contains is not None:
+        matched = str(contains) in str(var_value)
+        check_desc = f"contains: '{contains}'"
+    else:
+        raise ValueError("Must specify one of: value, pattern, or contains")
+
+    # XOR logic like expect API
+    is_succeeded = bool(matched) ^ fail_match
+
+    # Record result
+    line_number = getattr(executor, "last_line_number", 0)
+    result_status = "PASS" if is_succeeded else "FAIL"
+    cli_output = (
+        f"Variable '{name}' = '{var_value}' | "
+        f"Check: {check_desc} | Result: {result_status}"
+    )
+    executor.result_manager.add_qaid_expect_result(
+        qaid=qaid,
+        is_succeeded=is_succeeded,
+        line_number=line_number,
+        cli_output=cli_output,
+    )
+
+    logger.info(
+        "check_var: %s=%s | %s | %s",
+        name,
+        var_value,
+        check_desc,
+        "PASS" if is_succeeded else "FAIL",
     )

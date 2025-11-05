@@ -28,11 +28,11 @@ Input: Script File (.fos)
    ↓
 ┌──────────────────────┐
 │   Schema Loader      │  ← cli_syntax.json (loaded once)
-│   (syntax.py)        │     • 33 APIs
-│                      │     • 48 Valid Commands
-│   • Loads schema     │     • 12 Keywords
-│   • Compiles regex   │     • Deprecated patterns
-│   • Caches patterns  │
+│   (syntax.py)        │     • 35 APIs (built-in)
+│                      │     • User-defined APIs (plugins/apis/)
+│   • Loads schema     │     • 48 Valid Commands
+│   • Compiles regex   │     • 12 Keywords
+│   • Caches patterns  │     • Deprecated patterns
 └──────────┬───────────┘
            │
            ↓
@@ -748,8 +748,9 @@ params.wait_seconds # 10 (validated and cast to int)
        │         executor.goto(loop_start)            │
        └──────────────────────────────────────────────┘
 
-4. API EXECUTION
+4. API EXECUTION (Built-in & User-Defined)
    ↓
+   # Built-in API example
    def expect(executor, params):
        rule = params.rule          # From schema: "-e" option
        qaid = params.qaid          # From schema: "-for" option
@@ -761,6 +762,18 @@ params.wait_seconds # 10 (validated and cast to int)
        # Report result
        if qaid:
            executor.report(qaid, "pass")
+
+   # User-defined API example (from plugins/apis/)
+   def extract_hostname(executor, params):
+       var = params.var
+       ↓
+       # Extract from device output
+       import re
+       match = re.search(r'Hostname:\s+(\w+)', executor.last_output)
+       hostname = match.group(1) if match else 'unknown'
+       ↓
+       # Store in variables using env service
+       env.add_var(var, hostname)
 ```
 
 ---
@@ -967,6 +980,320 @@ Time  Line  Operation         Parameters                    Action
 
 ---
 
+## User-Defined API Plugin System
+
+### Overview
+
+The framework now supports user-defined APIs through an auto-discovery plugin system. Users can create custom APIs without modifying core code.
+
+### Plugin Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   PLUGIN DISCOVERY SYSTEM                    │
+└─────────────────────────────────────────────────────────────┘
+
+api_manager.discover_apis()
+   ↓
+   ┌──────────────────────┐         ┌──────────────────────┐
+   │ Built-in APIs        │         │ User-Defined APIs    │
+   │ lib/core/executor/   │         │ plugins/apis/        │
+   │ api/*.py             │         │ *.py                 │
+   │                      │         │                      │
+   │ • exec_code          │         │ • extract_hostname   │
+   │ • check_var          │         │ • deploy_config      │
+   │ • expect             │         │ • (user created)     │
+   │ • sendline           │         │                      │
+   │ • ... (33 total)     │         │ (auto-discovered)    │
+   └──────────┬───────────┘         └──────────┬───────────┘
+              │                                 │
+              └────────────┬────────────────────┘
+                           ↓
+                    _API_REGISTRY
+                   (unified registry)
+                           ↓
+                    Executor dispatch
+```
+
+### Creating User-Defined APIs
+
+**File**: `plugins/apis/my_api.py`
+
+```python
+from lib.services import env, logger
+
+def my_custom_api(executor, params):
+    """
+    Custom API description.
+
+    Parameters:
+        params.input_param (str): Description [-input_param]
+        params.output_var (str): Variable name [-output_var]
+    """
+    # Get parameters
+    input_param = params.input_param
+    output_var = params.output_var
+
+    # Process...
+    result = process(executor.last_output, input_param)
+
+    # Store result (IMPORTANT: use env.add_var!)
+    env.add_var(output_var, result)
+
+    return result
+```
+
+**Usage in test script**:
+
+```
+[FGT_A]
+get system status
+my_custom_api -input_param "value" -output_var result
+```
+
+### New Built-in APIs (2025-11)
+
+#### 1. `exec_code` - Code Execution API
+
+Execute Python, Bash, JavaScript, or Ruby code from external files.
+
+**Schema** (cli_syntax.json):
+
+```json
+{
+  "exec_code": {
+    "category": "code_execution",
+    "parse_mode": "options",
+    "parameters": {
+      "-lang": { "alias": "lang", "type": "string", "required": true },
+      "-var": { "alias": "var", "type": "string", "required": true },
+      "-file": { "alias": "file", "type": "string", "required": true },
+      "-func": { "alias": "func", "type": "string", "required": false },
+      "-args": { "alias": "args", "type": "string", "required": false },
+      "-timeout": { "alias": "timeout", "type": "int", "default": 30 }
+    }
+  }
+}
+```
+
+**Usage Examples**:
+
+```
+# Execute Python script
+exec_code -lang python -var hostname -file "scripts/extract_hostname.py"
+
+# Execute Python with function call
+exec_code -lang python -var result -file "plugins/lib/parser.py" -func "parse_status"
+
+# Execute Python with function arguments
+exec_code -lang python -var formatted -file "plugins/lib/format.py" -func "format_output" -args "json,pretty"
+
+# Execute Bash script
+exec_code -lang bash -var ip -file "scripts/get_ip.sh"
+```
+
+**Logging Output**:
+
+When exec_code executes, it provides comprehensive logging for debugging:
+
+```
+[INFO] exec_code: Starting execution
+[INFO]   Language: python
+[INFO]   File: scripts/extract_hostname.py
+[INFO]   Variable: hostname
+[INFO]   Timeout: 30s
+[DEBUG] exec_code: Loading code from file: scripts/extract_hostname.py
+[DEBUG] exec_code: Resolved file path: /workspace/scripts/extract_hostname.py
+[DEBUG] exec_code: Code loaded successfully (245 bytes)
+[DEBUG] exec_code: Getting code executor for language: python
+[DEBUG] exec_code: Built execution context with 8 keys
+[INFO] exec_code: Executing python code from scripts/extract_hostname.py
+[INFO] exec_code: Execution completed successfully
+[DEBUG] exec_code: Result type: str
+[DEBUG] exec_code: Result value: FGT-Branch-01
+[INFO] exec_code: Stored result in variable: $hostname
+```
+
+**Context Available in Code Files**:
+
+Your code files have access to a `context` dictionary containing:
+
+- `context['last_output']` - Device output from the last command
+- `context['device']` - Current device object
+- `context['devices']` - All available devices dict
+- `context['variables']` - Runtime variables (env.variables)
+- `context['config']` - Environment config (env.user_env)
+- `context['get_variable'](name)` - Helper to get variable by name
+- `context['set_variable'](name, val)` - Helper to set variable value
+- `context['workspace']` - Workspace directory path
+- `context['logger']` - Logger instance for custom logging
+
+**Example Code File** (`scripts/extract_hostname.py`):
+
+```python
+"""Extract hostname from device output."""
+import re
+
+# Access device output from context
+output = context['last_output']
+
+# Extract hostname using regex
+match = re.search(r'Hostname:\s+(\w+)', output)
+hostname = match.group(1) if match else 'unknown'
+
+# Return value (will be stored in specified variable)
+__result__ = hostname
+```
+
+**Best Practices**:
+
+1. **Organize code files** in `scripts/` or `plugins/lib/` directories
+2. **Use descriptive file names** (e.g., `extract_hostname.py`, not `script1.py`)
+3. **Add docstrings** to explain what the code does
+4. **Keep files focused** on a single task for better maintainability
+5. **Use `-func` parameter** to call specific functions from library files
+6. **Set appropriate `-timeout` values** for long-running operations
+7. **Always set `__result__`** to return values from Python code
+8. **Test code files independently** before using in scripts
+
+#### 2. `check_var` - Variable Validation API
+
+Validate variable contents and report results.
+
+**Schema** (cli_syntax.json):
+
+```json
+{
+  "check_var": {
+    "category": "variable",
+    "parse_mode": "options",
+    "parameters": {
+      "-name": { "alias": "name", "type": "string", "required": true },
+      "-value": { "alias": "value", "type": "string", "required": false },
+      "-pattern": { "alias": "pattern", "type": "string", "required": false },
+      "-contains": { "alias": "contains", "type": "string", "required": false },
+      "-for": { "alias": "qaid", "type": "string", "required": true },
+      "-fail": { "alias": "fail_match", "type": "string", "default": "unmatch" }
+    }
+  }
+}
+```
+
+**Usage**:
+
+```
+# Exact match
+check_var -name hostname -value "FGT-Branch-01" -for 801830
+
+# Regex pattern
+check_var -name hostname -pattern "FGT-.*" -for 801831
+
+# Contains substring
+check_var -name status -contains "success" -for 801832
+
+# Inverse logic (fail if matched)
+check_var -name error_log -contains "ERROR" -for 801833 -fail match
+
+report 801830
+report 801831
+report 801832
+report 801833
+```
+
+### Complete Example with Plugins
+
+```
+# test_script.txt
+
+[FGT_A]
+get system status
+
+# Use user-defined API (from plugins/apis/hostname.py)
+extract_hostname -var hostname
+
+# Validate with built-in check_var
+check_var -name hostname -pattern "FGT-.*" -for 801830
+
+# Execute Python script for complex logic
+exec_code -lang python -var admin_url -file "scripts/build_admin_url.py"
+
+check_var -name admin_url -contains "https://" -for 801831
+
+# Use another user-defined API (from plugins/apis/deployment.py)
+deploy_config -config_template "configs/base.conf" -result_var deploy_status
+
+# Check deployment result
+exec_code -lang python -var deploy_ok -file "scripts/check_deploy_status.py"
+
+check_var -name deploy_ok -value "True" -for 801832
+
+report 801830
+report 801831
+report 801832
+```
+
+**Example Code Files**:
+
+`scripts/build_admin_url.py`:
+
+```python
+"""Build admin URL from configuration."""
+config = context['config']
+mgmt_ip = config.get('GLOBAL', 'MGMT_IP')
+admin_port = config.get('GLOBAL', 'ADMIN_PORT', fallback='443')
+__result__ = f'https://{mgmt_ip}:{admin_port}'
+```
+
+`scripts/check_deploy_status.py`:
+
+```python
+"""Check if deployment was successful."""
+status = context['variables'].get('deploy_status', {})
+__result__ = status.get('success', False)
+```
+
+### API Discovery Process
+
+```
+1. Initialization (api_manager.discover_apis())
+   ↓
+   Clear existing registries
+   ↓
+2. Discover Built-in APIs
+   ↓
+   _discover_from_package(api_package, "Built-In")
+   ↓
+   Scan: lib/core/executor/api/*.py
+   ↓
+   Register all public functions (not starting with _)
+   ↓
+3. Discover User-Defined APIs
+   ↓
+   _discover_from_directory("plugins/apis", "User-Defined")
+   ↓
+   Scan: plugins/apis/**/*.py
+   ↓
+   Dynamically import modules
+   ↓
+   Register all public functions (not starting with _)
+   ↓
+4. Result
+   ↓
+   _API_REGISTRY: {"exec": func, "extract_hostname": func, ...}
+   _CATEGORY_REGISTRY: {"Built-In - Code Execution": ["exec"], ...}
+```
+
+### Key Features
+
+1. **Auto-Discovery**: No registration required - just create `.py` file
+2. **Standard Pattern**: All APIs use `(executor, params)` signature
+3. **Schema Support**: Optional JSON schema files for parameter validation
+4. **Hot-Reload**: Can reload plugins without restart (development mode)
+5. **Namespacing**: Built-in vs User-Defined categories prevent conflicts
+6. **Security**: Functions starting with `_` are automatically excluded
+
+---
+
 ## Related Files
 
 ### Core Compiler Files
@@ -983,9 +1310,17 @@ Time  Line  Operation         Parameters                    Action
 
 ### Execution Files (separate package)
 
-- `lib/core/executor/api_manager.py` - API dispatcher
+- `lib/core/executor/api_manager.py` - API dispatcher (enhanced with plugin discovery)
 - `lib/core/executor/api_params.py` - Parameter adapter
-- `lib/core/executor/apis/*.py` - API implementations
+- `lib/core/executor/api/*.py` - Built-in API implementations
+- `lib/core/executor/api/code_execution.py` - Code execution API (exec)
+- `lib/core/executor/code_executor.py` - Multi-language code execution engine
+
+### Plugin Files
+
+- `plugins/apis/*.py` - User-defined API plugins (auto-discovered)
+- `plugins/lib/*.py` - Shared library code for plugins
+- `plugins/README.md` - Plugin development guide
 
 ### Documentation
 
@@ -998,6 +1333,12 @@ Time  Line  Operation         Parameters                    Action
 
 ---
 
-**Last Updated**: 2025-10-08
-**Version**: 2.0 (Unified Schema Architecture)
+**Last Updated**: 2025-11-03
+**Version**: 2.1 (Plugin System + Code Execution)
 **Status**: Production Ready
+
+**Changelog**:
+
+- **v2.1** (2025-11-03): Added user-defined API plugin system, exec_code API, check_var API
+- **v2.0** (2025-10-08): Unified schema architecture
+- **v1.0** (2025-09-01): Initial compilation workflow documentation

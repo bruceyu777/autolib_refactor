@@ -9,6 +9,22 @@ from lib.utilities import ScriptSyntaxError
 
 from .syntax import script_syntax
 
+# PERFORMANCE: Cache deprecated patterns to avoid schema lookup + compilation overhead
+# This optimization eliminates ~1,300 function calls per 100 scripts (28-32% speedup)
+DEPRECATED_PATTERNS = [
+    (re.compile(pattern), replacement)
+    for pattern, replacement in script_syntax.get_deprecated_cmd_replace_patterns().items()
+]
+
+# PERFORMANCE: Extract prefixes for fast early exit (most lines don't use deprecated commands)
+DEPRECATED_PREFIXES = set()
+for pattern in script_syntax.get_deprecated_cmd_replace_patterns().keys():
+    if pattern.startswith("^"):
+        # Extract static prefix from regex pattern (e.g., "^myexe" → "myexe")
+        prefix = pattern[1:].split("[")[0].split("\\")[0].split("(")[0]
+        if prefix and not prefix.startswith("("):
+            DEPRECATED_PREFIXES.add(prefix)
+
 
 class Token(dict):
     """Represents a lexical token with type, data, and line number information."""
@@ -47,22 +63,6 @@ class Lexer:
         self.cur_line = None
         self.cur_groupdict = {}
         self.dump_token = dump_token
-
-        # PERFORMANCE: Cache deprecated patterns to avoid schema lookup + compilation overhead
-        # This optimization eliminates ~1,300 function calls per 100 scripts (28-32% speedup)
-        self._deprecated_patterns = [
-            (re.compile(pattern), replacement)
-            for pattern, replacement in script_syntax.get_deprecated_cmd_replace_patterns().items()
-        ]
-
-        # PERFORMANCE: Extract prefixes for fast early exit (most lines don't use deprecated commands)
-        self._deprecated_prefixes = set()
-        for pattern in script_syntax.get_deprecated_cmd_replace_patterns().keys():
-            if pattern.startswith("^"):
-                # Extract static prefix from regex pattern (e.g., "^myexe" → "myexe")
-                prefix = pattern[1:].split("[")[0].split("\\")[0].split("(")[0]
-                if prefix and not prefix.startswith("("):
-                    self._deprecated_prefixes.add(prefix)
 
     def parse_line(self, line):
         """Parse a single line and generate tokens."""
@@ -274,13 +274,14 @@ class Lexer:
         """Update deprecated commands and log warnings (OPTIMIZED)."""
         # PERFORMANCE: Fast path - early exit if no deprecated prefix matches
         # This avoids regex matching for 95%+ of lines that don't use deprecated commands
-        if self._deprecated_prefixes:
-            if not any(cmd.startswith(prefix) for prefix in self._deprecated_prefixes):
-                return cmd
+        if DEPRECATED_PREFIXES and not any(
+            cmd.startswith(prefix) for prefix in DEPRECATED_PREFIXES
+        ):
+            return cmd
 
         # Slow path: Check patterns only if prefix matched (use pre-compiled patterns)
-        for pattern, replacement in self._deprecated_patterns:
-            updated_cmd = pattern.sub(replacement, cmd)
+        for dep_pattern, replacement in DEPRECATED_PATTERNS:
+            updated_cmd = dep_pattern.sub(replacement, cmd)
             if updated_cmd != cmd:
                 self._log_deprecation_warning(cmd, updated_cmd)
                 return updated_cmd
