@@ -27,7 +27,7 @@ ERROR_INFO = (
 class FosDev(Device):
 
     DEFAULT_ADMIN = "admin"
-    TEMP_PASSWORD = "552103"
+    TEMP_PASSWORD = "Fortinet@552103"
     DEFAULT_PASSWORD = ""
     asking_for_username = "login: $"
     asking_for_password = "assword: $"
@@ -281,6 +281,16 @@ class FosDev(Device):
         if "forced to change your" in cli_output:
             self._handle_password_enforcement()
 
+    def disable_password_policy(self):
+        # mantis 1208336, password-policy enabled by default
+        self.send_line("get system password-policy")
+        is_enabled, _ = self.search(r"status\s+:\s+enable", 2, -1)
+        if is_enabled:
+            commands = ["config system password-policy", "set status disable", "end"]
+            for cmd in commands:
+                self.send_line(cmd)
+                self.search(self.general_view, 30, -1)
+
     def _handle_password_enforcement(self):
         temp_password = (
             self.dev_cfg["PASSWORD"]
@@ -291,12 +301,18 @@ class FosDev(Device):
         self.search(self.asking_for_password, 30, -1)
         self.send_line(temp_password)
         self.search(self.general_view, 30, -1)
-        if self.dev_cfg["PASSWORD"] and self.dev_cfg["PASSWORD"] != temp_password:
-            self.set_admin_password(
-                self.DEFAULT_ADMIN, self.dev_cfg["PASSWORD"], temp_password
-            )
-        if not self.dev_cfg["PASSWORD"]:
+        if self.is_vdom_enabled:
+            self._goto_global_view()
+        self.disable_password_policy()
+        if self.dev_cfg["PASSWORD"]:
+            if self.dev_cfg["PASSWORD"] != temp_password:
+                self.set_admin_password(
+                    self.DEFAULT_ADMIN, self.dev_cfg["PASSWORD"], temp_password
+                )
+        else:
             self.unset_admin_password("admin", temp_password)
+        if self.is_vdom_enabled:
+            self._return_to_user_view()
         if self.dev_cfg["PASSWORD"] != temp_password:
             self.search(self.asking_for_username, 5, -1)
             self._login_without_check_prompt(
