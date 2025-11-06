@@ -122,10 +122,8 @@ def _build_context(executor):
         "last_output": executor.last_output,
         "device": executor.cur_device,
         "devices": executor.devices,
-        # Variable access (CORRECTED!)
         "variables": env.variables,  # Runtime variables (defaultdict)
         "config": env.user_env,  # Parsed config (FosConfigParser)
-        # Helper functions (CORRECTED!)
         "get_variable": lambda name: env.get_var(name),
         "set_variable": lambda name, val: env.add_var(name, val),
         # Utilities

@@ -202,24 +202,25 @@ class ScriptSyntax:
         keyword_pattern = self._generate_keyword_pattern()
         return rf"\<\s*(?P<statement_content>({keyword_pattern}).*)\>"
 
+    @staticmethod
+    def _has_required_parameter(params):
+        if isinstance(params, dict):
+            return any(p.get("required", False) for p in params.values())
+        if isinstance(params, list):
+            return any(p.get("required", False) for p in params)
+        return False
+
+    def _api_pattern(self, api_name):
+        api_schema = self.schema["apis"][api_name]
+        params = api_schema.get("parameters", [])
+        if ScriptSyntax._has_required_parameter(params):
+            return rf"{api_name}\s+.+"
+        if len(params) > 0:
+            return rf"{api_name}\s*.*"
+        return f"{api_name}"
+
     def _generate_api_pattern(self):
-        api_pattern_list = []
-
-        for api_name, api_schema in self.schema["apis"].items():
-            params = api_schema.get("parameters", [])
-
-            # Check if API has parameters
-            has_params = False
-            if isinstance(params, dict):
-                has_params = len(params) > 0
-            elif isinstance(params, list):
-                has_params = len(params) > 0
-
-            if has_params:
-                api_pattern_list.append(rf"{api_name}\s+.+")
-            else:
-                api_pattern_list.append(rf"{api_name}")
-
+        api_pattern_list = [self._api_pattern(a) for a in self.schema["apis"]]
         api_pattern_list = sorted(api_pattern_list, key=len, reverse=True)
         return r"|".join(api_pattern_list)
 
@@ -228,7 +229,6 @@ class ScriptSyntax:
             self._generate_statement_pattern()
         )
         ScriptSyntax.LINE_PATTERN_TABLE["api"] = self._generate_api_pattern()
-
         line_pattern = re.compile(
             r"|".join(
                 rf"(?P<{type}>{pattern})"

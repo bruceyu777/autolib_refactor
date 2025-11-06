@@ -682,31 +682,13 @@
       "description": "Reset firewall configuration",
       "category": "device",
       "parse_mode": "positional",
-      "parameters": [
-        {
-          "name": "cmd",
-          "type": "string",
-          "position": 0,
-          "required": false,
-          "default": "execute factoryreset",
-          "description": "Reset command"
-        }
-      ]
+      "parameters": []
     },
     "resetFAP": {
       "description": "Reset FAP device",
       "category": "device",
       "parse_mode": "positional",
-      "parameters": [
-        {
-          "name": "cmd",
-          "type": "string",
-          "position": 0,
-          "required": false,
-          "default": "factoryreset",
-          "description": "Reset command"
-        }
-      ]
+      "parameters": []
     },
     "send_literal": {
       "description": "Send literal string with escape sequences",

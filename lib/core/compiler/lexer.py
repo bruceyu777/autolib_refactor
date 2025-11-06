@@ -65,7 +65,6 @@ class Lexer:
         self.dump_token = dump_token
 
     def parse_line(self, line):
-        """Parse a single line and generate tokens."""
         self.cur_line = rf"{line}"
         match = script_syntax.line_pattern.match(self.cur_line)
         self.cur_groupdict = match.groupdict()
@@ -87,11 +86,12 @@ class Lexer:
     def _process_matched_line_types(self):
         """Process all matched line types and invoke corresponding handlers."""
         for line_type, matched_content in self.cur_groupdict.items():
-            if matched_content is not None and script_syntax.is_valid_line_type(
-                line_type
-            ):
-                handler = getattr(self, line_type)
-                handler()
+            if matched_content is not None:
+                if script_syntax.is_valid_line_type(line_type):
+                    handler = getattr(self, line_type)
+                    handler()
+                    break
+                logger.warning("Invalid line type: %s", line_type)
 
     def add_token(self, _type, data):
         """Add a new token to the token list."""
@@ -107,21 +107,17 @@ class Lexer:
         """Handle single-line comments (no action needed)."""
 
     def section(self):
-        """Handle section declarations."""
         self.section_commented = False
         section_name = self.cur_groupdict["section_name"]
         self.add_token("section", section_name)
 
     def command(self):
-        """Handle command lines."""
         self.add_token("command", self.cur_line)
 
     def comment(self):
-        """Handle inline comments."""
         self.add_token("comment", self.cur_groupdict["comment_content"])
 
     def include(self):
-        """Handle include directives."""
         self.add_token("include", self.cur_groupdict["file_name"])
 
     # Token processing methods
@@ -158,12 +154,10 @@ class Lexer:
             self.add_token(token_type, matched_content)
 
     def _handle_variable_token(self, matched_group_dict):
-        """Handle variable tokens."""
         variable_name = matched_group_dict.get("variable_name")
         self.add_token("variable", variable_name)
 
     def _handle_number_token(self, matched_group_dict):
-        """Handle number tokens."""
         number = matched_group_dict.get("number_content")
         self.add_token("number", number)
 
@@ -174,7 +168,6 @@ class Lexer:
         self.add_token("string", expect_str)
 
     def tokenize(self, string):
-        """Tokenize a string into individual tokens."""
         pos = 0
         while pos < len(string):
             match = script_syntax.token_pattern.match(string, pos)
@@ -199,7 +192,6 @@ class Lexer:
             self.add_token(token_type, match.group("second"))
 
     def api(self):
-        """Handle API declarations."""
         self._parse_with_leftover("api", self.cur_line)
 
     def statement(self):
@@ -250,7 +242,6 @@ class Lexer:
 
     # File I/O methods
     def read(self):
-        """Read and decode the script file content."""
         with open(self.file_name, "rb") as file:
             content = file.read()
 

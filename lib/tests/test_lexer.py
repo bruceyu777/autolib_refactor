@@ -4,7 +4,7 @@ Tests for lib.core.compiler.lexer module.
 
 # pylint: disable=use-implicit-booleaness-not-comparison,singleton-comparison
 # pylint: disable=protected-access,unused-argument,unused-import
-
+import re
 from unittest.mock import mock_open, patch
 
 import pytest
@@ -155,7 +155,6 @@ class TestLexer:
 
     def test_deprecated_command_replacement(self, mocker):
         """Test deprecated command replacement and warning."""
-        import re
 
         # Mock the cached DEPRECATED_PATTERNS directly
         mock_pattern = re.compile(r"^oldcmd\s+(.+)$")
@@ -175,8 +174,6 @@ class TestLexer:
 
     def test_deprecated_command_no_match(self, mocker):
         """Test that non-deprecated commands are not modified."""
-        import re
-
         # Mock the cached DEPRECATED_PATTERNS directly
         mock_pattern = re.compile(r"^oldcmd\s+(.+)$")
         mocker.patch(

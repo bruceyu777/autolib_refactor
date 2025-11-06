@@ -221,6 +221,7 @@ class Executor:
     def get_internal_command(self, command):
         func_name = f"_{command}"
         if hasattr(self, func_name):
+            logger.debug("Internal command matched: %s", func_name)
             return getattr(self, func_name)
         return None
 
@@ -237,7 +238,7 @@ class Executor:
                     or self.last_line_number != line_number
                 ):
                     logger.debug(
-                        "%d  %s",
+                        "Line #%d - '%s'",
                         line_number,
                         self.script.get_script_line(line_number),
                     )

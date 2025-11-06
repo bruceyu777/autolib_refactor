@@ -12,6 +12,7 @@ import os
 from lib.services import env, logger
 
 
+# pylint: disable=too-many-locals
 def deploy_config(executor, params):
     """
     Deploy configuration using environment-specific values.
