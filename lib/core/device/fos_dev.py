@@ -175,12 +175,11 @@ class FosDev(Device):
         if login_error and password != self.DEFAULT_PASSWORD:
             logger.debug("Login failure, fallback to try default password!!")
             login_error, output = self._login_fallback_with_default_password(user)
-        if not login_error and "forced to change your password" in output:
-            self._handle_password_enforcement()
         if login_error:
             err = "*** Unable to login Device!!! ***"
             logger.error(err)
             raise RuntimeError(err)
+        self._handle_password_enforcement(output, password, self.dev_cfg["PASSWORD"])
 
     def _login_fallback_with_default_password(self, user):
         logger.warning("\nTry default password to login FortiGate!\n")
@@ -274,8 +273,9 @@ class FosDev(Device):
             logger.debug("Try to login again...")
         else:
             raise ResourceNotAvailable("Failed to login device")
-        if "forced to change your" in cli_output:
-            self._handle_password_enforcement()
+        self._handle_password_enforcement(
+            cli_output, self.DEFAULT_PASSWORD, self.dev_cfg["PASSWORD"]
+        )
 
     def disable_password_policy(self):
         # mantis 1208336, password-policy enabled by default
@@ -287,33 +287,38 @@ class FosDev(Device):
                 self.send_line(cmd)
                 self.search(self.general_view, 30, -1)
 
-    def _handle_password_enforcement(self):
-        temp_password = (
-            self.dev_cfg["PASSWORD"]
-            if self.dev_cfg["PASSWORD"]
-            else FosDev.TEMP_PASSWORD
-        )
-        self.send_line(temp_password)
+    def _set_temp_password(self):
+        self.send_line(FosDev.TEMP_PASSWORD)
         self.search(self.asking_for_password, 30, -1)
-        self.send_line(temp_password)
+        self.send_line(FosDev.TEMP_PASSWORD)
         self.search(self.general_view, 30, -1)
-        self.update_vdom_status()
-        if self.is_vdom_enabled:
-            self._goto_global_view()
-        self.disable_password_policy()
-        if self.dev_cfg["PASSWORD"]:
-            if self.dev_cfg["PASSWORD"] != temp_password:
-                self.set_admin_password(
-                    self.DEFAULT_ADMIN, self.dev_cfg["PASSWORD"], temp_password
-                )
-        else:
-            self.unset_admin_password("admin", temp_password)
 
-        if self.dev_cfg["PASSWORD"] != temp_password:
-            self.search(self.asking_for_username, 5, -1)
-            self._login_without_check_prompt(
-                self.DEFAULT_ADMIN, self.dev_cfg["PASSWORD"]
+    def _restore_to_required_password(self, password_to_set):
+        if not password_to_set:
+            self.unset_admin_password("admin", FosDev.TEMP_PASSWORD)
+        else:
+            self.set_admin_password(
+                self.DEFAULT_ADMIN, password_to_set, FosDev.TEMP_PASSWORD
             )
+        self.search(self.asking_for_username, 5, -1)
+        self._login_without_check_prompt(self.DEFAULT_ADMIN, password_to_set)
+
+    def _handle_password_enforcement(self, output, old_password, password_to_set):
+        if "are forced to change your password." in output:
+            # for upgrade user case, it requires to have extra Old password input
+            # for image burn case, it won't require this
+            if "Old password:" in output:
+                self.send_line(old_password)
+            self._set_temp_password()
+            self.update_vdom_status()
+            if self.is_vdom_enabled:
+                self._goto_global_view()
+            self.disable_password_policy()
+            if password_to_set != FosDev.TEMP_PASSWORD:
+                self._restore_to_required_password(password_to_set)
+                _, cli_output = self.search(self.general_view, 5, -1)
+                if "Welcome!" not in cli_output:
+                    raise RuntimeError("Unable to login Device!!!")
 
     def reset_config(self, cmd):
         with self.global_view():
