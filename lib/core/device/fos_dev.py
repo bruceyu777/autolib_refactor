@@ -35,7 +35,7 @@ class FosDev(Device):
     general_view = r"[ )~][#$] $"
 
     def __init__(self, dev_name):
-        self.model = self.is_vdom_enabled = ""
+        self.model = ""
         logger.info("Start calling the device initialization.")
         super().__init__(dev_name)
 
@@ -90,16 +90,12 @@ class FosDev(Device):
             f"Cannot connect to device {self.dev_name} after {max_attempts} attempts"
         )
 
-    def set_output_mode(self, mode="standard", is_vdom_enabled=None):
-        is_vdom_enabled = is_vdom_enabled or self.is_vdom_enabled
-        if is_vdom_enabled:
-            self._goto_global_view()
-        commands = ["config system console", "set output %s" % mode, "end"]
-        for cmd in commands:
-            self.send_command(cmd)
-            time.sleep(0.5)
-        if is_vdom_enabled:
-            self._return_to_user_view()
+    def set_output_mode(self, mode="standard"):
+        with self.global_view():
+            commands = ["config system console", "set output %s" % mode, "end"]
+            for cmd in commands:
+                self.send_command(cmd)
+                time.sleep(0.5)
 
     def switch(self, retry=0):
         # for diag command without any output when switched in, send whitespace will not show
@@ -301,6 +297,7 @@ class FosDev(Device):
         self.search(self.asking_for_password, 30, -1)
         self.send_line(temp_password)
         self.search(self.general_view, 30, -1)
+        self.update_vdom_status()
         if self.is_vdom_enabled:
             self._goto_global_view()
         self.disable_password_policy()
@@ -311,8 +308,7 @@ class FosDev(Device):
                 )
         else:
             self.unset_admin_password("admin", temp_password)
-        if self.is_vdom_enabled:
-            self._return_to_user_view()
+
         if self.dev_cfg["PASSWORD"] != temp_password:
             self.search(self.asking_for_username, 5, -1)
             self._login_without_check_prompt(
@@ -320,12 +316,12 @@ class FosDev(Device):
             )
 
     def reset_config(self, cmd):
-        if self.is_vdom_enabled:
-            self._goto_global_view()
-        self.send_line(cmd)
-        self.search("y/n", 30)
-        self.send_line("y")
-        self.login_firewall_after_reset()
+        with self.global_view():
+            self.send_line(cmd)
+            self.search("y/n", 30)
+            self.send_line("y")
+            self.is_vdom_enabled = False
+            self.login_firewall_after_reset()
 
     def check_kernel_panic(self, cli_output):
         keywords = ["NULL", "BUG: ", "Call Trace", " KERNEL ", "Kernel panic"]

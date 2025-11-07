@@ -36,15 +36,15 @@ class FortiVM(FosDev):
         )
 
     def reset_config(self, cmd):
-        if self.is_vdom_enabled:
-            self._goto_global_view()
-        if re.match("^exe.*?factoryreset$", cmd):
-            logger.info("Override '%s' command to keep vm license!", cmd)
-            cmd = "execute factoryreset keepvmlicense"
-        self.send_line(cmd)
-        self.search("y/n", 30)
-        self.send_line("y")
-        self.login_firewall_after_reset()
+        with self.global_view():
+            if re.match("^exe.*?factoryreset$", cmd):
+                logger.info("Override '%s' command to keep vm license!", cmd)
+                cmd = "execute factoryreset keepvmlicense"
+            self.send_line(cmd)
+            self.search("y/n", 30)
+            self.send_line("y")
+            self.is_vdom_enabled = False
+            self.login_firewall_after_reset()
 
     def login_firewall_after_reset(self):
         if env.is_running_on_vm():

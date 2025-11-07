@@ -1,6 +1,7 @@
 import csv
 import re
 import time
+from contextlib import contextmanager
 
 from lib.services.environment import DeviceConfig, env
 from lib.services.log import logger
@@ -58,6 +59,7 @@ class Device:
         self.initialize()
         self.license_info = {}
         self._extract_license_info()
+        self.is_vdom_enabled = False
 
     def get_actual_timer(self, timeout_timer):
         return env.get_actual_timer(self.dev_name, timeout_timer)
@@ -203,12 +205,10 @@ class Device:
             t2 = time.perf_counter()
             logger.debug("It takes %.1f s to collect system status.", t2 - t1)
             t1 = time.perf_counter()
-            is_vdom_enabled = (
+            self.is_vdom_enabled = (
                 system_status.get("Virtual domain configuration", DISABLE) != DISABLE
             )
-            autoupdate_versions = self.get_autoupdate_versions(
-                is_vdom_enabled=is_vdom_enabled
-            )
+            autoupdate_versions = self.get_autoupdate_versions()
             t2 = time.perf_counter()
             logger.debug("It takes %.1f s to collect autoupdate versions.", t2 - t1)
             system_status_selected = {
@@ -217,25 +217,36 @@ class Device:
             self._device_info = {**system_status_selected, **autoupdate_versions}
         return self._device_info
 
-    def get_autoupdate_versions(self, is_vdom_enabled=None):
-        if is_vdom_enabled:
-            self._goto_global_view()
+    def get_autoupdate_versions(self):
         self.clear_buffer()
-        *_, versions_raw = self.send_command("diag autoupdate versions", timeout=10)
-        logger.debug("The autoupdate version is\n%s", versions_raw)
-        pattern = re.compile(
-            r"\r\n([^\r\n]+)\r\n--+\r\nVersion: ([0-9.]+)[ \r\n]", flags=re.M | re.S
-        )
-        matched = pattern.findall(versions_raw)
-        update_versions = {}
-        if matched:
-            update_versions = dict(matched)
-        else:
-            logger.error("Failed to parse update versions")
-        if is_vdom_enabled:
-            self._return_to_user_view()
+        with self.global_view():
+            *_, versions_raw = self.send_command("diag autoupdate versions", timeout=10)
+            logger.debug("The autoupdate version is\n%s", versions_raw)
+            pattern = re.compile(
+                r"\r\n([^\r\n]+)\r\n--+\r\nVersion: ([0-9.]+)[ \r\n]", flags=re.M | re.S
+            )
+            matched = pattern.findall(versions_raw)
+            update_versions = {}
+            if matched:
+                update_versions = dict(matched)
+            else:
+                logger.error("Failed to parse update versions")
         logger.debug("The extracted autoupdate version is\n%s", update_versions)
         return update_versions
+
+    def update_vdom_status(self):
+        *_, output = self.send_command("?", timeout=1)
+        self.is_vdom_enabled = "Diagnose facility" not in output
+
+    @contextmanager
+    def global_view(self):
+        if self.is_vdom_enabled:
+            self._goto_global_view()
+        try:
+            yield
+        finally:
+            if self.is_vdom_enabled:
+                self._return_to_user_view()
 
     def _goto_global_view(self):
         self.send_command("config global")
