@@ -196,6 +196,9 @@ class Device:
             for key, default_value in default_values.items():
                 parsed_status.setdefault(key, default_value)
 
+            self.is_vdom_enabled = (
+                parsed_status.get("Virtual domain configuration", DISABLE) != DISABLE
+            )
         return parsed_status
 
     def get_device_info(self, on_fly=False):
@@ -205,9 +208,6 @@ class Device:
             t2 = time.perf_counter()
             logger.debug("It takes %.1f s to collect system status.", t2 - t1)
             t1 = time.perf_counter()
-            self.is_vdom_enabled = (
-                system_status.get("Virtual domain configuration", DISABLE) != DISABLE
-            )
             autoupdate_versions = self.get_autoupdate_versions()
             t2 = time.perf_counter()
             logger.debug("It takes %.1f s to collect autoupdate versions.", t2 - t1)
@@ -240,6 +240,7 @@ class Device:
 
     @contextmanager
     def global_view(self):
+        self.update_vdom_status()
         if self.is_vdom_enabled:
             self._goto_global_view()
         try:
