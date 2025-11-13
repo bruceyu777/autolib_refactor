@@ -55,11 +55,7 @@ class FortiVM(FosDev):
                 )
             )
             sleep_with_progress(sleep_time)
-        _, cli_output = self.search(self.asking_for_username, 10 * 60, -1)
-        self.check_kernel_panic(cli_output)
-        cli_output += self._login(self.DEFAULT_ADMIN, self.DEFAULT_PASSWORD)
-        if "forced to change your" in cli_output:
-            self._handle_password_enforcement()
+        super().login_firewall_after_reset()
 
     def _send_reset_command(self):
         self.send_line("exe factoryreset keepvmlicense")

@@ -175,6 +175,8 @@ class FosDev(Device):
         if login_error and password != self.DEFAULT_PASSWORD:
             logger.debug("Login failure, fallback to try default password!!")
             login_error, output = self._login_fallback_with_default_password(user)
+            if not login_error:
+                password = self.DEFAULT_PASSWORD
         if login_error:
             err = "*** Unable to login Device!!! ***"
             logger.error(err)
