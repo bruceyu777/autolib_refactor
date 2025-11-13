@@ -38,7 +38,7 @@ BUILD_NUMBER=$(sed 's/[[:space:]]*$//' version)
 
 update_version_file() {
     local version=$1
-    local current_date=$(date "+%Y-%m-%d")
+    local current_date=$(date "+%Y-%m-%d %H:%M:%S")
     local suffix_str=""
 
     [[ "$BUILD_SUFFIX" != "NONE" ]] && suffix_str="($BUILD_SUFFIX)"
