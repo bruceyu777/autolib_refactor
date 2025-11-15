@@ -450,8 +450,8 @@ class TestExecCodeLogging:
         # Verify logs
         assert "exec_code: Starting execution" in caplog.text
         assert "Language: python" in caplog.text
-        assert "File: test.py" in caplog.text
-        assert "Variable: result" in caplog.text
+        assert "File: 'test.py'" in caplog.text  # Note: log includes quotes
+        assert "Variable: 'result'" in caplog.text  # Note: log includes quotes
         assert "Executing python code from test.py" in caplog.text
         assert "Execution completed successfully" in caplog.text
         assert "Stored result in variable: $result" in caplog.text
@@ -516,8 +516,9 @@ class TestExecCodeLogging:
         with pytest.raises(FileNotFoundError):
             exec_code(mock_executor, mock_params)
 
-        # Verify error logs
-        assert "exec_code: File not found" in caplog.text
+        # Verify error logs (traceback includes FileNotFoundError and filename)
+        assert "exec_code: Execution failed" in caplog.text
+        assert "FileNotFoundError" in caplog.text
         assert "missing.py" in caplog.text
 
     def test_logging_on_unsupported_language(self, mocker, temp_dir, caplog):

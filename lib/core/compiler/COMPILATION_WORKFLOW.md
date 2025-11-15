@@ -13,6 +13,8 @@ This document provides a detailed illustration of the compilation workflow for p
 5. [Phase 3: Code Generation](#phase-3-code-generation)
 6. [Execution Flow](#execution-flow)
 7. [Example Walkthrough](#example-walkthrough)
+8. [Two-Phase Pattern Initialization](#two-phase-pattern-initialization)
+9. [User-Defined API Plugin System](#user-defined-api-plugin-system)
 
 ---
 
@@ -28,11 +30,15 @@ Input: Script File (.fos)
    ↓
 ┌──────────────────────┐
 │   Schema Loader      │  ← cli_syntax.json (loaded once)
-│   (syntax.py)        │     • 35 APIs (built-in)
-│                      │     • User-defined APIs (plugins/apis/)
-│   • Loads schema     │     • 48 Valid Commands
-│   • Compiles regex   │     • 12 Keywords
-│   • Caches patterns  │     • Deprecated patterns
+│   (syntax.py)        │     • TWO-PHASE INITIALIZATION:
+│                      │       Phase 1 (Module Load):
+│   • Loads schema     │         • 35 APIs (built-in only)
+│   • Compiles regex   │         • 48 Valid Commands
+│   • Caches patterns  │         • 12 Keywords
+│                      │       Phase 2 (First Compile):
+│                      │         • discover_apis() called
+│                      │         • User APIs from plugins/apis/
+│                      │         • Patterns refreshed
 └──────────┬───────────┘
            │
            ↓
@@ -101,16 +107,22 @@ Output: VM Code List + Metadata
 
 ```python
 # Main compilation entry point
-from lib.core.compiler.lexer import Lexer
-from lib.core.compiler.parser import Parser
+from lib.core.compiler.compiler import Compiler
 
-# Step 1: Tokenize
-lexer = Lexer("script.fos")
-tokens, lines = lexer.parse()
+# Initialize compiler
+compiler = Compiler()
 
-# Step 2: Parse
-parser = Parser("script.fos", tokens, lines)
-vm_codes, devices, called_files = parser.run()
+# Compile script (triggers two-phase initialization on first call)
+compiler.run("script.fos")
+
+# Pattern refresh happens automatically before first compilation:
+#   1. Compiler._ensure_patterns_refreshed() called
+#   2. script_syntax.refresh_patterns() discovers custom APIs
+#   3. Lexer patterns updated to include user-defined APIs
+
+# Retrieve compiled VM codes
+vm_codes = compiler.retrieve_vm_codes("script.fos")
+devices = compiler.retrieve_devices()
 
 # Step 3: Execute (via executor)
 # See lib/core/executor/ for execution phase
@@ -980,11 +992,174 @@ Time  Line  Operation         Parameters                    Action
 
 ---
 
+## Two-Phase Pattern Initialization
+
+### Problem: Circular Import
+
+The compiler needs to discover custom APIs from `plugins/apis/` to include them in lexer patterns. However, a direct approach causes a circular import:
+
+```
+syntax.py (module load)
+  → _generate_api_pattern()
+    → import api_manager
+      → import schema_loader
+        → import syntax
+          → ERROR: Partially initialized module!
+```
+
+### Solution: Two-Phase Initialization
+
+**Phase 1 - Module Load (Static APIs Only)**:
+
+- `syntax.py` initializes with built-in APIs from `cli_syntax.json`
+- No custom API discovery (avoids circular import)
+- Patterns generated with static APIs only
+
+**Phase 2 - First Compilation (Dynamic Discovery)**:
+
+- `Compiler._ensure_patterns_refreshed()` called before first compilation
+- `script_syntax.refresh_patterns()` discovers custom APIs
+- Patterns regenerated to include ALL APIs (built-in + custom)
+- Schema updated: `self.schema["apis"]` includes discovered APIs
+
+### Implementation
+
+```python
+# syntax.py - Phase 1 (Module Load)
+class ScriptSyntax:
+    def __init__(self, syntax_filepath):
+        # Load schema
+        with open(syntax_filepath) as f:
+            self.schema = json.load(f)
+
+        # PHASE 1: Generate patterns with static APIs only
+        self.line_pattern = self._generate_static_line_pattern()
+        self.token_pattern = self.generate_token_pattern()
+
+    def _generate_static_api_pattern(self):
+        """Generate API pattern from static schema only (no discovery)."""
+        all_apis = dict(self.schema["apis"])  # Built-in APIs only
+        api_pattern_list = [
+            self._api_pattern_for_api(api_name, all_apis[api_name])
+            for api_name in all_apis
+        ]
+        return r"|".join(sorted(api_pattern_list, key=len, reverse=True))
+
+    def refresh_patterns(self):
+        """PHASE 2: Refresh patterns to include discovered custom APIs."""
+        # Import after all modules loaded to prevent circular import
+        # pylint: disable=import-outside-toplevel
+        from lib.core.executor.api_manager import discover_apis
+
+        # Discover custom APIs
+        discovered_apis, _ = discover_apis()
+
+        # Merge static + custom APIs
+        all_apis = dict(self.schema["apis"])
+        for api_name in discovered_apis:
+            if api_name not in all_apis:
+                all_apis[api_name] = self._create_default_api_schema()
+
+        # Update schema (needed for parser's _get_api_syntax_definition)
+        self.schema["apis"] = all_apis
+
+        # Regenerate patterns with ALL APIs
+        api_pattern_list = [
+            self._api_pattern_for_api(api_name, all_apis[api_name])
+            for api_name in all_apis
+        ]
+        ScriptSyntax.LINE_PATTERN_TABLE["api"] = r"|".join(
+            sorted(api_pattern_list, key=len, reverse=True)
+        )
+
+        # Recompile line pattern
+        self.line_pattern = re.compile(...)
+
+# compiler.py - Phase 2 Trigger
+class Compiler:
+    _patterns_refreshed = False  # Class-level flag
+    _refresh_lock = threading.Lock()
+
+    @classmethod
+    def _ensure_patterns_refreshed(cls):
+        """Ensure patterns include custom APIs (one-time per process)."""
+        if not cls._patterns_refreshed:
+            with cls._refresh_lock:
+                if not cls._patterns_refreshed:
+                    script_syntax.refresh_patterns()
+                    cls._patterns_refreshed = True
+
+    def _compile_file(self, file_name):
+        # Ensure patterns refreshed on first compilation
+        self._ensure_patterns_refreshed()
+
+        # ... rest of compilation
+```
+
+### Benefits
+
+1. **No Circular Import**: `discover_apis()` imported only after all modules loaded
+2. **Thread-Safe**: Class-level lock ensures single execution in multi-threaded env
+3. **One-Time Cost**: Pattern refresh happens once per process
+4. **Automatic**: Users don't need to manually trigger discovery
+5. **Complete Coverage**: Custom APIs recognized in both lexer and parser
+
+### Timing
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              TWO-PHASE INITIALIZATION TIMELINE               │
+└─────────────────────────────────────────────────────────────┘
+
+T=0ms    Module Load
+         ↓
+         syntax.py loads
+         ↓
+         __init__() called
+         ↓
+         _generate_static_line_pattern()
+         ↓
+         Patterns: Built-in APIs only (35 APIs)
+
+T=100ms  First Compilation Request
+         ↓
+         compiler.run("script.fos")
+         ↓
+         _ensure_patterns_refreshed()
+         ↓
+         script_syntax.refresh_patterns()
+         ↓
+         discover_apis() scans plugins/apis/
+         ↓
+         Found 2 custom APIs (extract_hostname, deploy_config)
+         ↓
+         Patterns regenerated: 37 total APIs
+         ↓
+         Schema updated: self.schema["apis"] = all_apis
+         ↓
+         Lexer patterns recompiled
+
+T=102ms  Compilation Proceeds
+         ↓
+         Lexer recognizes custom APIs as 'api' tokens
+         ↓
+         Parser finds custom API schemas in self.schema["apis"]
+         ↓
+         VM codes generated correctly:
+           3 extract_hostname hostname  (operation='extract_hostname')
+         NOT:
+           3 command extract_hostname... (operation='command')
+```
+
+---
+
 ## User-Defined API Plugin System
 
 ### Overview
 
-The framework now supports user-defined APIs through an auto-discovery plugin system. Users can create custom APIs without modifying core code.
+The framework supports user-defined APIs through an auto-discovery plugin system. Users can create custom APIs without modifying core code.
+
+Custom APIs are discovered during Phase 2 of initialization (first compilation) and automatically included in lexer/parser patterns.
 
 ### Plugin Architecture
 
@@ -1255,11 +1430,24 @@ __result__ = status.get('success', False)
 ### API Discovery Process
 
 ```
-1. Initialization (api_manager.discover_apis())
+1. First Compilation Trigger
+   ↓
+   Compiler._ensure_patterns_refreshed()
+   ↓
+   script_syntax.refresh_patterns()
+   ↓
+   Call: discover_apis() from api_manager
+   ↓
+2. Check Cache
+   ↓
+   if _DISCOVERY_CACHE exists and not force_refresh:
+       Return cached results (fast path)
+   ↓
+3. Discovery (Cache Miss)
    ↓
    Clear existing registries
    ↓
-2. Discover Built-in APIs
+4. Discover Built-in APIs
    ↓
    _discover_from_package(api_package, "Built-In")
    ↓
@@ -1267,7 +1455,7 @@ __result__ = status.get('success', False)
    ↓
    Register all public functions (not starting with _)
    ↓
-3. Discover User-Defined APIs
+5. Discover User-Defined APIs
    ↓
    _discover_from_directory("plugins/apis", "User-Defined")
    ↓
@@ -1277,20 +1465,36 @@ __result__ = status.get('success', False)
    ↓
    Register all public functions (not starting with _)
    ↓
-4. Result
+6. Cache Results
    ↓
-   _API_REGISTRY: {"exec": func, "extract_hostname": func, ...}
-   _CATEGORY_REGISTRY: {"Built-In - Code Execution": ["exec"], ...}
+   _DISCOVERY_CACHE = (_API_REGISTRY.copy(), _CATEGORY_REGISTRY.copy())
+   ↓
+7. Return to syntax.py
+   ↓
+   Update self.schema["apis"] with discovered custom APIs
+   ↓
+   Regenerate lexer patterns with ALL APIs
+   ↓
+8. Result
+   ↓
+   _API_REGISTRY: {"exec_code": func, "extract_hostname": func, ...}
+   _CATEGORY_REGISTRY: {"Built-In - Code Execution": ["exec_code"], ...}
+   Lexer Patterns: Include both built-in and custom APIs
+   Parser Schema: Can find custom API definitions
 ```
 
 ### Key Features
 
 1. **Auto-Discovery**: No registration required - just create `.py` file
-2. **Standard Pattern**: All APIs use `(executor, params)` signature
-3. **Schema Support**: Optional JSON schema files for parameter validation
-4. **Hot-Reload**: Can reload plugins without restart (development mode)
-5. **Namespacing**: Built-in vs User-Defined categories prevent conflicts
-6. **Security**: Functions starting with `_` are automatically excluded
+2. **Two-Phase Initialization**: Avoids circular imports, discovers APIs at first compile
+3. **Compile-Time Recognition**: Custom APIs tokenized as 'api' not 'command'
+4. **Standard Pattern**: All APIs use `(executor, params)` signature
+5. **Schema Support**: Optional JSON schema files for parameter validation
+6. **Discovery Caching**: Results cached to avoid repeated filesystem scanning
+7. **Thread-Safe**: Pattern refresh uses class-level lock for multi-threaded safety
+8. **Hot-Reload**: Can force-refresh with `discover_apis(force_refresh=True)`
+9. **Namespacing**: Built-in vs User-Defined categories prevent conflicts
+10. **Security**: Functions starting with `_` are automatically excluded
 
 ---
 
@@ -1298,9 +1502,10 @@ __result__ = status.get('success', False)
 
 ### Core Compiler Files
 
+- `compiler.py` - Main compilation entry point (triggers two-phase init)
 - `lexer.py` - Lexical analysis (tokenization)
 - `parser.py` - Syntax analysis (parsing)
-- `syntax.py` - Schema loader and pattern generator
+- `syntax.py` - Schema loader and pattern generator (two-phase initialization)
 - `vm_code.py` - Intermediate representation
 - `schema_loader.py` - Schema registry and validation
 
@@ -1333,12 +1538,19 @@ __result__ = status.get('success', False)
 
 ---
 
-**Last Updated**: 2025-11-03
-**Version**: 2.1 (Plugin System + Code Execution)
+**Last Updated**: 2025-11-14
+**Version**: 2.2 (Two-Phase Initialization Fix)
 **Status**: Production Ready
 
 **Changelog**:
 
+- **v2.2** (2025-11-14): Fixed circular import with two-phase pattern initialization
+  - Custom APIs now properly discovered at compile-time (not module load)
+  - Added `Compiler._ensure_patterns_refreshed()` for one-time pattern refresh
+  - Added `script_syntax.refresh_patterns()` for dynamic API discovery
+  - Fixed: Custom APIs no longer compiled as 'command' tokens
+  - Thread-safe pattern refresh with class-level lock
+  - Discovery caching to avoid repeated filesystem scans
 - **v2.1** (2025-11-03): Added user-defined API plugin system, exec_code API, check_var API
 - **v2.0** (2025-10-08): Unified schema architecture
 - **v1.0** (2025-09-01): Initial compilation workflow documentation

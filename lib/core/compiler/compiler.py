@@ -5,15 +5,41 @@ from lib.services import env, logger
 
 from .lexer import Lexer
 from .parser import Parser
+from .syntax import script_syntax
 
 
 class Compiler:
+    # Class-level flag for pattern refresh (shared across all instances)
+    _patterns_refreshed = False
+    _refresh_lock = threading.Lock()
+
     def __init__(self):
         self.files = {}
         self.devices = set()
         self._lock = threading.RLock()  # Reentrant lock for recursive compilation
 
+    @classmethod
+    def _ensure_patterns_refreshed(cls):
+        """
+        Ensure patterns include custom APIs (one-time operation per process).
+
+        This is called before first compilation to discover custom APIs from
+        plugins/apis/ and regenerate lexer patterns to include them.
+        """
+        if not cls._patterns_refreshed:
+            with cls._refresh_lock:
+                # Double-check after acquiring lock (thread safety)
+                if not cls._patterns_refreshed:
+                    logger.debug(
+                        "First compilation - refreshing patterns for custom APIs"
+                    )
+                    script_syntax.refresh_patterns()
+                    cls._patterns_refreshed = True
+
     def _compile_file(self, file_name):
+        # Ensure patterns refreshed on first compilation (discovers custom APIs)
+        self._ensure_patterns_refreshed()
+
         # Check cache without lock first (performance optimization)
         if file_name in self.files:
             return

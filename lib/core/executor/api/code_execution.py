@@ -10,7 +10,9 @@ from lib.services import env, logger
 
 def exec_code(executor, params):
     """
-    Execute code in specified language from file and store result in variable.(*** Running ENV is your control PC ***)
+    Execute code in specified language from file and store result in variable.
+
+    Note: Code runs on your control PC, not on the device.
 
     Parameters (accessed via params object):
         params.lang (str): Language (python|bash|javascript|ruby) [-lang]
@@ -89,7 +91,7 @@ def exec_code(executor, params):
 
     except Exception:
         logger.exception("*** exec_code: Execution failed!!! ***")
-        return None
+        raise
 
 
 def _load_code_file(executor, filepath):

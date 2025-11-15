@@ -16,6 +16,8 @@ import re
 from collections import OrderedDict
 from pathlib import Path
 
+from lib.services import logger
+
 
 class ScriptSyntax:
     """
@@ -72,8 +74,9 @@ class ScriptSyntax:
         # This eliminates ~150 tuple creations per 100 scripts (2-3% speedup)
         self._valid_commands_tuple = tuple(self.schema["valid_commands"])
 
-        # Generate patterns
-        self.line_pattern = self.generate_line_pattern()
+        # PHASE 1: Generate patterns with static APIs only (avoid circular import)
+        # Custom APIs from plugins/apis/ are added later via refresh_patterns()
+        self.line_pattern = self._generate_static_line_pattern()
         self.token_pattern = self.generate_token_pattern()
 
     def get_deprecated_cmd_replace_patterns(self):
@@ -210,9 +213,38 @@ class ScriptSyntax:
             return any(p.get("required", False) for p in params)
         return False
 
+    @staticmethod
+    def _create_default_api_schema():
+        """
+        Create default schema for dynamically discovered custom APIs.
+
+        Custom APIs default to "options" parse mode with parameters,
+        which matches the common pattern of: api_name -param1 value1 -param2 value2
+        """
+        return {
+            "category": "custom",
+            "parse_mode": "options",
+            "parameters": {},  # Will be parsed dynamically at runtime
+            "description": "Dynamically discovered custom API",
+        }
+
     def _api_pattern(self, api_name):
+        """Generate pattern for API using schema from self.schema."""
         api_schema = self.schema["apis"][api_name]
-        params = api_schema.get("parameters", [])
+        return self._api_pattern_for_api(api_name, api_schema)
+
+    def _api_pattern_for_api(self, api_name, api_schema):
+        """
+        Generate regex pattern for a specific API given its schema.
+
+        Args:
+            api_name: Name of the API
+            api_schema: Schema dict for the API
+
+        Returns:
+            Regex pattern string for matching this API
+        """
+        params = api_schema.get("parameters", {})
         if ScriptSyntax._has_required_parameter(params):
             return rf"{api_name}\s+.+"
         if len(params) > 0:
@@ -220,11 +252,57 @@ class ScriptSyntax:
         return f"{api_name}"
 
     def _generate_api_pattern(self):
-        api_pattern_list = [self._api_pattern(a) for a in self.schema["apis"]]
+        """
+        Generate API pattern (delegates to static version).
+
+        Use refresh_patterns() to include custom APIs after module initialization.
+        """
+        return self._generate_static_api_pattern()
+
+    def _generate_static_api_pattern(self):
+        """
+        Generate API pattern from static schema only (no dynamic discovery).
+
+        Returns pattern for built-in APIs defined in cli_syntax.json.
+        Custom APIs are added later via refresh_patterns().
+        """
+        # Only use static APIs from schema
+        all_apis = dict(self.schema["apis"])
+
+        # Generate patterns
+        api_pattern_list = [
+            self._api_pattern_for_api(api_name, all_apis[api_name])
+            for api_name in all_apis
+        ]
         api_pattern_list = sorted(api_pattern_list, key=len, reverse=True)
         return r"|".join(api_pattern_list)
 
+    def _generate_static_line_pattern(self):
+        """
+        Generate line pattern using only static APIs from schema.
+
+        Used during module initialization to avoid circular imports.
+        Call refresh_patterns() after all modules loaded to include custom APIs.
+        """
+        ScriptSyntax.LINE_PATTERN_TABLE["statement"] = (
+            self._generate_statement_pattern()
+        )
+        ScriptSyntax.LINE_PATTERN_TABLE["api"] = self._generate_static_api_pattern()
+
+        line_pattern = re.compile(
+            r"|".join(
+                rf"(?P<{type}>{pattern})"
+                for type, pattern in ScriptSyntax.LINE_PATTERN_TABLE.items()
+            )
+        )
+        return line_pattern
+
     def generate_line_pattern(self):
+        """
+        Generate line pattern (delegates to static version).
+
+        Use refresh_patterns() to include custom APIs.
+        """
         ScriptSyntax.LINE_PATTERN_TABLE["statement"] = (
             self._generate_statement_pattern()
         )
@@ -235,7 +313,68 @@ class ScriptSyntax:
                 for type, pattern in ScriptSyntax.LINE_PATTERN_TABLE.items()
             )
         )
+        # Update instance variable so lexer uses the new pattern
+        self.line_pattern = line_pattern
         return line_pattern
+
+    def refresh_patterns(self):
+        """
+        Refresh patterns to include dynamically discovered custom APIs.
+
+        This should be called after all modules are loaded (e.g., from Compiler
+        initialization) to discover custom APIs from plugins/apis/ and include
+        them in the lexer patterns.
+
+        Safe to call multiple times - will regenerate patterns each time.
+        """
+        try:
+            # Import after all modules loaded to prevent circular import
+            # pylint: disable=import-outside-toplevel
+            from lib.core.executor.api_manager import discover_apis
+
+            logger.debug("Discovering custom APIs for pattern generation...")
+            discovered_apis, _ = discover_apis()
+
+            # Merge static APIs with discovered custom APIs
+            all_apis = dict(self.schema["apis"])
+
+            custom_count = 0
+            for api_name in discovered_apis:
+                if api_name not in all_apis:
+                    all_apis[api_name] = self._create_default_api_schema()
+                    custom_count += 1
+
+            logger.info(
+                "Pattern refresh: %d total APIs (%d custom)",
+                len(all_apis),
+                custom_count,
+            )
+
+            # Update schema with ALL APIs (needed for parser's _get_api_syntax_definition)
+            self.schema["apis"] = all_apis
+
+            # Regenerate API pattern with ALL APIs
+            api_pattern_list = [
+                self._api_pattern_for_api(api_name, all_apis[api_name])
+                for api_name in all_apis
+            ]
+            api_pattern_list = sorted(api_pattern_list, key=len, reverse=True)
+            ScriptSyntax.LINE_PATTERN_TABLE["api"] = r"|".join(api_pattern_list)
+
+            # Recompile line pattern
+            self.line_pattern = re.compile(
+                r"|".join(
+                    rf"(?P<{type}>{pattern})"
+                    for type, pattern in ScriptSyntax.LINE_PATTERN_TABLE.items()
+                )
+            )
+
+            logger.debug("Pattern refresh complete")
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Failed to refresh patterns with custom APIs: %s", e)
+            logger.error("Custom APIs will not be recognized. Using static APIs only.")
+            # Don't raise - fallback to static APIs is acceptable
 
     def generate_token_pattern(self):
         token_pattern_table = ScriptSyntax.TOKEN_PATTERN_TABLE

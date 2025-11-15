@@ -26,8 +26,11 @@ from . import api as api_package
 _API_REGISTRY: Dict[str, Callable] = {}
 _CATEGORY_REGISTRY: Dict[str, list] = {}
 
+# Cache for API discovery results (for compile-time performance)
+_DISCOVERY_CACHE: Tuple[Dict, Dict] = None
 
-def discover_apis():
+
+def discover_apis(force_refresh=False):
     """
     Automatically discover all API modules and their public functions.
 
@@ -35,9 +38,22 @@ def discover_apis():
     1. Built-in APIs from lib/core/executor/api/ package
     2. User-defined APIs from plugins/apis/ directory
 
+    Args:
+        force_refresh: If True, bypass cache and re-discover APIs
+
     Returns:
         Tuple of (api_registry, category_registry)
+
+    Note:
+        Results are cached after first discovery to improve compile-time
+        performance. Use force_refresh=True to reload APIs after changes.
     """
+    global _DISCOVERY_CACHE
+
+    # Return cached result if available and not forcing refresh
+    if not force_refresh and _DISCOVERY_CACHE is not None:
+        return _DISCOVERY_CACHE
+
     # Clear existing registries
     _API_REGISTRY.clear()
     _CATEGORY_REGISTRY.clear()
@@ -47,6 +63,9 @@ def discover_apis():
 
     # Discover user-defined APIs from directory
     _discover_from_directory("plugins/apis", "User-Defined")
+
+    # Cache the results
+    _DISCOVERY_CACHE = (_API_REGISTRY.copy(), _CATEGORY_REGISTRY.copy())
 
     return _API_REGISTRY, _CATEGORY_REGISTRY
 
