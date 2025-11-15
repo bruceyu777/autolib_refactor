@@ -258,8 +258,10 @@ def check_var(executor, params):
         matched = str(var_value) == str(value)
         check_desc = f"exact match: '{value}'"
     elif pattern is not None:
-        matched = bool(re.search(pattern, str(var_value)))
-        check_desc = f"pattern: '{pattern}'"
+        # Normalize pattern to remove surrounding quotes (like setvar does)
+        normalized_pattern = _normalize_regexp(pattern)
+        matched = bool(re.search(normalized_pattern, str(var_value)))
+        check_desc = f"pattern: '{normalized_pattern}'"
     elif contains is not None:
         matched = str(contains) in str(var_value)
         check_desc = f"contains: '{contains}'"
