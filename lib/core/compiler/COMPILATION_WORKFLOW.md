@@ -779,9 +779,12 @@ params.wait_seconds # 10 (validated and cast to int)
    def extract_hostname(executor, params):
        var = params.var
        ↓
+       # Access device output via execution context
+       output = executor.context['last_output']
+       ↓
        # Extract from device output
        import re
-       match = re.search(r'Hostname:\s+(\w+)', executor.last_output)
+       match = re.search(r'Hostname:\s+(\w+)', output)
        hostname = match.group(1) if match else 'unknown'
        ↓
        # Store in variables using env service
@@ -1204,13 +1207,19 @@ def my_custom_api(executor, params):
     Parameters:
         params.input_param (str): Description [-input_param]
         params.output_var (str): Variable name [-output_var]
+
+    Context Access:
+        Device output and runtime data available via executor.context
     """
     # Get parameters
     input_param = params.input_param
     output_var = params.output_var
 
+    # Access device output via context
+    output = executor.context['last_output']
+
     # Process...
-    result = process(executor.last_output, input_param)
+    result = process(output, input_param)
 
     # Store result (IMPORTANT: use env.add_var!)
     env.add_var(output_var, result)
@@ -1289,19 +1298,41 @@ When exec_code executes, it provides comprehensive logging for debugging:
 [INFO] exec_code: Stored result in variable: $hostname
 ```
 
-**Context Available in Code Files**:
+**Execution Context**:
 
-Your code files have access to a `context` dictionary containing:
+The execution context is available to both plugin APIs and code files:
 
-- `context['last_output']` - Device output from the last command
-- `context['device']` - Current device object
-- `context['devices']` - All available devices dict
-- `context['variables']` - Runtime variables (env.variables)
-- `context['config']` - Environment config (env.user_env)
-- `context['get_variable'](name)` - Helper to get variable by name
-- `context['set_variable'](name, val)` - Helper to set variable value
-- `context['workspace']` - Workspace directory path
-- `context['logger']` - Logger instance for custom logging
+- **Plugin APIs**: Access via `executor.context['key']`
+- **Code files**: Access via `context['key']` (passed as global variable)
+
+**Available Context Keys**:
+
+- `last_output` - Device output from the last command (string)
+- `device` - Current device object
+- `devices` - All available devices dict
+- `variables` - Runtime variables (env.variables)
+- `config` - Environment config (env.user_env)
+- `get_variable` - Function to get variable by name
+- `set_variable` - Function to set variable value
+- `workspace` - Workspace directory path
+- `logger` - Logger instance for custom logging
+
+**Example (Plugin API)**:
+
+```python
+def my_api(executor, params):
+    output = executor.context['last_output']
+    config = executor.context['config']
+    # ... process
+```
+
+**Example (Code File)**:
+
+```python
+output = context['last_output']
+config = context['config']
+# ... process
+```
 
 **Example Code File** (`scripts/extract_hostname.py`):
 

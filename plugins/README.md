@@ -47,8 +47,8 @@ def my_custom_api(executor, params):
     input_param = params.input_param
     output_var = params.output_var
 
-    # Access device output
-    output = executor.last_output
+    # Access device output via context
+    output = executor.context['last_output']
 
     # Do processing...
     result = process(output, input_param)
@@ -62,11 +62,20 @@ def my_custom_api(executor, params):
 
 ### Accessing Context
 
-Your API has access to:
+Your API has access to the execution context via `executor.context`, which contains:
 
-- **`executor.last_output`**: Last command output from device
-- **`executor.cur_device`**: Current device object
-- **`executor.devices`**: All devices dict
+- **`executor.context['last_output']`**: Last command output from device (string)
+- **`executor.context['device']`**: Current device object
+- **`executor.context['devices']`**: All devices dict
+- **`executor.context['variables']`**: Runtime variables (defaultdict)
+- **`executor.context['config']`**: Parsed environment config (FosConfigParser)
+- **`executor.context['get_variable']`**: Function to get a runtime variable
+- **`executor.context['set_variable']`**: Function to set a runtime variable
+- **`executor.context['workspace']`**: Workspace directory path
+- **`executor.context['logger']`**: Logger instance
+
+**Recommended:** Use the `env` service for variable and config access:
+
 - **`env.variables`**: Runtime variables (defaultdict)
 - **`env.user_env`**: Parsed environment config (FosConfigParser)
 - **`env.get_var(name)`**: Get a runtime variable
@@ -231,6 +240,7 @@ __result__ = status.get('success', False)
 
 ### ❌ DON'T:
 
+- ~~Use `executor.last_output`~~ (use `executor.context['last_output']` instead)
 - ~~Use `executor.variables`~~ (doesn't exist!)
 - ~~Use `task.env`~~ (use `env.user_env` instead)
 - ~~Modify `executor` internal state directly~~
@@ -239,7 +249,26 @@ __result__ = status.get('success', False)
 
 ## Auto-Discovery
 
-Your APIs are automatically discovered when placed in `plugins/apis/`. No registration required!
+Your APIs are automatically discovered at **both compile-time and runtime** when placed in `plugins/apis/`. No manual registration required in `cli_syntax.json`!
+
+### How It Works
+
+**Compile-Time Discovery:**
+
+- The compiler scans `plugins/apis/` when generating lexer patterns
+- Custom APIs are included in the regex patterns used for tokenization
+- Your APIs are recognized as API tokens (not device commands) during parsing
+- This happens automatically when the script syntax module initializes
+
+**Runtime Discovery:**
+
+- The API manager discovers and registers all custom APIs
+- APIs are ready for execution by the executor
+- Function signatures are inspected to enable proper parameter handling
+
+### Result
+
+Your custom APIs work seamlessly from `plugins/apis/` without any schema registration. Just create your API function and it's immediately available in your test scripts!
 
 All public functions (not starting with `_`) are automatically registered as APIs.
 

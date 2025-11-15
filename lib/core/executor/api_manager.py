@@ -16,6 +16,7 @@ import sys
 from typing import Callable, Dict, Tuple
 
 from lib.core.compiler.schema_loader import get_schema
+from lib.core.executor.api.code_execution import build_context
 from lib.core.executor.api_params import ApiParams
 from lib.services import logger
 from lib.settings import PARAGRAPH_SEP
@@ -256,7 +257,12 @@ class ApiMixin:
         # Get from registry
         if api_endpoint in _API_REGISTRY:
             func = _API_REGISTRY[api_endpoint]
-            return func(self.executor if hasattr(self, "executor") else self, params)
+
+            # Set execution context for API access
+            executor = self.executor if hasattr(self, "executor") else self
+            executor.context = build_context(executor)
+
+            return func(executor, params)
 
         raise AttributeError(f"API '{api_endpoint}' not found")
 

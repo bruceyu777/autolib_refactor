@@ -64,7 +64,7 @@ def exec_code(executor, params):
 
         # Build execution context
         logger.debug("exec_code: Building execution context")
-        context = _build_context(executor)
+        context = build_context(executor)
         logger.debug("exec_code: Built execution context with %d keys", len(context))
 
         # Get code executor for language
@@ -112,16 +112,34 @@ def _wrap_function_call(code, func_name, args):
     return f"{code}\n\n__result__ = {func_name}({args_str})"
 
 
-def _build_context(executor):
+def build_context(executor):
     """
-    Build execution context with CORRECTED variable access.
+    Build execution context for API and code execution.
 
-    CRITICAL: Use env.variables and env.user_env, NOT executor.variables!
+    This context is available to both plugin APIs and code files executed
+    via exec_code. Access via executor.context['key_name'].
+
+    Available context keys:
+        last_output: Most recent device command output (string)
+        device: Current device connection object
+        devices: All device connections
+        variables: Runtime variables dict
+        config: Parsed config (FosConfigParser)
+        get_variable: Function to get variable value
+        set_variable: Function to set variable value
+        workspace: Workspace directory path
+        logger: Logger instance
+
+    Args:
+        executor: Executor instance
+
+    Returns:
+        Dictionary with execution context
     """
     # pylint: disable=unnecessary-lambda
     return {
         # Device access
-        "last_output": executor.last_output,
+        "last_output": str(executor.cur_device.conn.output_buffer),
         "device": executor.cur_device,
         "devices": executor.devices,
         "variables": env.variables,  # Runtime variables (defaultdict)

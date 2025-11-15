@@ -22,9 +22,12 @@ def extract_hostname(executor, params):
         get system status
         extract_hostname -var hostname
         send "# Hostname is {$hostname}"
+
+    Context access:
+        Device output is available via executor.context['last_output']
     """
     var = params.var
-    output = executor.last_output
+    output = executor.context["last_output"]
 
     # Extract hostname using regex
     match = re.search(r"Hostname:\s+(\w+)", output)

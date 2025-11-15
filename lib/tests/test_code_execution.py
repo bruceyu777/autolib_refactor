@@ -12,9 +12,9 @@ from unittest.mock import MagicMock, call
 import pytest
 
 from lib.core.executor.api.code_execution import (
-    _build_context,
     _load_code_file,
     _wrap_function_call,
+    build_context,
     exec_code,
 )
 from lib.core.executor.code_executor import BashExecutor, CodeExecutor, PythonExecutor
@@ -250,8 +250,7 @@ def get_value():
         # Mock dependencies
         mock_executor = MagicMock()
         mock_executor.workspace = str(temp_dir)
-        mock_executor.last_output = "hello world"
-        mock_executor.cur_device = MagicMock()
+        mock_executor.cur_device.conn.output_buffer = "hello world"
         mock_executor.devices = {}
 
         mock_params = MagicMock()
@@ -655,8 +654,7 @@ class TestCodeFileHelpers:
         """Test building execution context."""
         # Mock dependencies
         mock_executor = MagicMock()
-        mock_executor.last_output = "output"
-        mock_executor.cur_device = "device1"
+        mock_executor.cur_device.conn.output_buffer = "output"
         mock_executor.devices = {"device1": "dev"}
         mock_executor.workspace = "/workspace"
 
@@ -665,11 +663,11 @@ class TestCodeFileHelpers:
         mock_env.user_env = {"config_key": "config_value"}
 
         # Build context
-        context = _build_context(mock_executor)
+        context = build_context(mock_executor)
 
         # Verify context structure
         assert context["last_output"] == "output"
-        assert context["device"] == "device1"
+        assert context["device"] == mock_executor.cur_device
         assert context["devices"] == {"device1": "dev"}
         assert context["variables"] == {"var1": "value1"}
         assert context["config"] == {"config_key": "config_value"}
@@ -682,8 +680,7 @@ class TestCodeFileHelpers:
         """Test that context helper functions work correctly."""
         # Mock dependencies
         mock_executor = MagicMock()
-        mock_executor.last_output = ""
-        mock_executor.cur_device = None
+        mock_executor.cur_device.conn.output_buffer = ""
         mock_executor.devices = {}
 
         mock_env = mocker.patch("lib.core.executor.api.code_execution.env")
@@ -693,7 +690,7 @@ class TestCodeFileHelpers:
         mock_env.add_var = MagicMock()
 
         # Build context
-        context = _build_context(mock_executor)
+        context = build_context(mock_executor)
 
         # Test get_variable
         result = context["get_variable"]("test_var")
