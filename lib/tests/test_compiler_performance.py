@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from lib.core.compiler.lexer import Lexer
 from lib.core.compiler.parser import Parser
+from lib.core.compiler.settings import SYNTAX_DEFINITION_FILEPATH
 
 # Sample script templates for testing
 SCRIPT_TEMPLATES = [
@@ -166,7 +167,6 @@ def profile_compilation(script_files, profile_file="compilation.prof"):
 
 def analyze_schema_loading():
     """Analyze schema loading performance."""
-    from lib.core.compiler.syntax import SYNTAX_DEFINITION_FILEPATH
 
     # Cold load (first time)
     start = time.perf_counter()

@@ -14,9 +14,11 @@ Zero hardcoded data in Python code!
 import json
 import re
 from collections import OrderedDict
-from pathlib import Path
 
 from lib.services import logger
+
+from .schema_loader import get_schema_registry
+from .settings import SYNTAX_DEFINITION_FILEPATH
 
 
 class ScriptSyntax:
@@ -391,6 +393,16 @@ class ScriptSyntax:
             # Update schema with ALL APIs (needed for parser's _get_api_syntax_definition)
             self.schema["apis"] = all_apis
 
+            # IMPORTANT: Register custom APIs with schema_loader
+            # so get_schema() can find them at runtime (for ApiParams)
+            # pylint: disable=import-outside-toplevel
+            schema_registry = get_schema_registry()
+
+            for api_name in discovered_apis:
+                if api_name not in schema_registry._schemas:
+                    schema_registry.register_schema(api_name, all_apis[api_name])
+                    logger.debug("Registered custom API schema: %s", api_name)
+
             # Regenerate API pattern with ALL APIs
             api_pattern_list = [
                 self._api_pattern_for_api(api_name, all_apis[api_name])
@@ -426,7 +438,4 @@ class ScriptSyntax:
 
 
 # Singleton instance
-SYNTAX_DEFINITION_FILEPATH = (
-    Path(__file__).resolve().parent / "static" / "cli_syntax.json"
-)
 script_syntax = ScriptSyntax(SYNTAX_DEFINITION_FILEPATH)

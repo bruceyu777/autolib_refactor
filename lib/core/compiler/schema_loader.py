@@ -10,6 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
+from lib.services import logger
+
+from .settings import SYNTAX_DEFINITION_FILEPATH
+
 
 @dataclass
 class ParameterSchema:
@@ -250,6 +254,27 @@ class SchemaRegistry:
         """Check if schema exists for API."""
         return api_name in self._schemas
 
+    def register_schema(self, api_name: str, schema_dict: dict):
+        """
+        Register a new API schema dynamically (for custom APIs).
+
+        This allows custom APIs discovered at runtime to be registered
+        so they can be found by get_schema().
+
+        Args:
+            api_name: Name of the API
+            schema_dict: Schema definition dict
+
+        Example:
+            registry.register_schema("extract_hostname", {
+                "category": "custom",
+                "parse_mode": "options",
+                "parameters": {"-var": {...}}
+            })
+        """
+        self._schemas[api_name] = APISchema.from_dict(api_name, schema_dict)
+        logger.debug("Registered schema for custom API: %s", api_name)
+
     def get_help(self, api_name: str) -> str:
         """
         Get help text for an API.
@@ -320,8 +345,6 @@ def get_schema_registry() -> SchemaRegistry:
     # pylint: disable=global-statement
     global _schema_registry
     if _schema_registry is None:
-        from .syntax import SYNTAX_DEFINITION_FILEPATH
-
         _schema_registry = SchemaRegistry(SYNTAX_DEFINITION_FILEPATH)
     return _schema_registry
 
