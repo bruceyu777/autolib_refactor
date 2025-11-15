@@ -76,8 +76,74 @@ class TestCustomAPIPatternGeneration:
         # Generate pattern for custom API using script_syntax instance
         pattern = script_syntax._api_pattern_for_api("extract_hostname", api_schema)
 
-        # Default schema has empty parameters dict, so pattern is just the API name
-        assert pattern == "extract_hostname"
+        # Default schema has parameters (-var, -file, etc), so pattern includes them
+        assert pattern == r"extract_hostname\s*.*"
+
+    def test_misordered_parameters_sorted_by_position(self):
+        """Test that parameters are sorted by position, not dict order."""
+        from lib.core.compiler.schema_loader import APISchema
+        from lib.core.executor.api_params import ApiParams
+
+        # Create a schema with parameters in WRONG order (not sorted by position)
+        misordered_schema = {
+            "category": "test",
+            "parse_mode": "options",
+            "parameters": {
+                "-timeout": {  # position 3, but appears FIRST
+                    "alias": "timeout",
+                    "type": "int",
+                    "position": 3,
+                    "default": 30,
+                },
+                "-var": {  # position 0, but appears SECOND
+                    "alias": "var",
+                    "type": "string",
+                    "position": 0,
+                    "required": True,
+                },
+                "-file": {  # position 1, but appears THIRD
+                    "alias": "file",
+                    "type": "string",
+                    "position": 1,
+                    "required": False,
+                },
+                "-retries": {  # position 2, but appears FOURTH
+                    "alias": "retries",
+                    "type": "int",
+                    "position": 2,
+                    "default": 3,
+                },
+            },
+        }
+
+        # Build options syntax (this should sort by position)
+        operation, matched_rule = script_syntax._build_options_syntax(misordered_schema)
+        options_dict, _ = matched_rule
+
+        # Get the keys in order (should be sorted by position, not JSON order)
+        param_keys = list(options_dict.keys())
+
+        # Verify they're sorted by position: -var (0), -file (1), -retries (2), -timeout (3)
+        assert param_keys == [
+            "-var",
+            "-file",
+            "-retries",
+            "-timeout",
+        ], f"Expected position-sorted order, got: {param_keys}"
+
+        # Now test the full flow: create ApiParams with tuple in this order
+        # Simulate parser creating tuple: [options[k] for k in options]
+        test_values = ("result_var", "test.py", 5, 60)
+
+        # Create APISchema and ApiParams
+        api_schema = APISchema.from_dict("test_api", misordered_schema)
+        params = ApiParams(test_values, api_schema)
+
+        # Verify correct mapping (position-based, not dict-order-based)
+        assert params.var == "result_var"  # position 0
+        assert params.file == "test.py"  # position 1
+        assert params.retries == 5  # position 2
+        assert params.timeout == 60  # position 3
 
 
 class TestCustomAPITokenization:

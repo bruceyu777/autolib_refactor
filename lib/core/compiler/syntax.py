@@ -134,7 +134,13 @@ class ScriptSyntax:
         options_dict = {}
         params = api_schema.get("parameters", {})
 
-        for option, param_def in params.items():
+        # Sort parameters by position to ensure tuple order matches ApiParams expectations
+        # This prevents bugs when JSON schemas have parameters in non-position order
+        sorted_params = sorted(
+            params.items(), key=lambda item: item[1].get("position", 999)
+        )
+
+        for option, param_def in sorted_params:
             default = param_def.get("default")
             options_dict[option] = default
 
@@ -218,13 +224,45 @@ class ScriptSyntax:
         """
         Create default schema for dynamically discovered custom APIs.
 
-        Custom APIs default to "options" parse mode with parameters,
-        which matches the common pattern of: api_name -param1 value1 -param2 value2
+        Custom APIs default to "options" parse mode with common parameters.
+        The schema includes standard options like -var that most custom APIs use.
+        APIs can use any of these options, and the parser will handle them correctly.
         """
         return {
             "category": "custom",
             "parse_mode": "options",
-            "parameters": {},  # Will be parsed dynamically at runtime
+            "parameters": {
+                # Common parameter used by most custom APIs
+                "-var": {
+                    "alias": "var",
+                    "type": "string",
+                    "position": 0,
+                    "required": False,
+                    "description": "Variable name to store result",
+                },
+                # Additional common parameters can be added here
+                "-file": {
+                    "alias": "file",
+                    "type": "string",
+                    "position": 1,
+                    "required": False,
+                    "description": "File path parameter",
+                },
+                "-value": {
+                    "alias": "value",
+                    "type": "string",
+                    "position": 2,
+                    "required": False,
+                    "description": "Value parameter",
+                },
+                "-name": {
+                    "alias": "name",
+                    "type": "string",
+                    "position": 3,
+                    "required": False,
+                    "description": "Name parameter",
+                },
+            },
             "description": "Dynamically discovered custom API",
         }
 
