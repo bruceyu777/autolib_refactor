@@ -249,7 +249,7 @@ def check_var(executor, params):
 
     # Get variable value using env service (CORRECTED!)
     var_value = env.get_var(name)
-
+    logger.debug("Variable '%s' value:\n'%s'", name, var_value)
     if var_value is None:
         raise ValueError(f"Variable '{name}' not found")
 
@@ -286,7 +286,7 @@ def check_var(executor, params):
     )
 
     logger.info(
-        "check_var: %s=%s | %s | %s",
+        "check_var: '%s'\nValue: '%s'\nCheck Desc: '%s'\nResult: '%s'",
         name,
         var_value,
         check_desc,
