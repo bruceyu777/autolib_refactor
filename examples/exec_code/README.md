@@ -8,40 +8,50 @@ This directory contains examples demonstrating how to use the `exec_code` API fo
 
 ---
 
-## ⚠️ CRITICAL: Python Sandboxing & Import Restrictions
+## ✅ Python Sandboxing: Import Statements Now Supported!
 
-**Python code runs in a SANDBOXED environment for security. The `import` statement is DISABLED.**
+**Python code runs in a SANDBOXED environment for security. Import statements are NOW SUPPORTED for whitelisted modules!**
 
-### ❌ DO NOT DO THIS (Will cause ImportError):
-
-```python
-import re          # ❌ ImportError: __import__ not found
-import json        # ❌ ImportError: __import__ not found
-import datetime    # ❌ ImportError: __import__ not found
-import math        # ❌ ImportError: __import__ not found
-import os          # ❌ ImportError: __import__ not found
-```
-
-### ✅ DO THIS INSTEAD (Modules are pre-loaded):
+### ✅ IMPORTS NOW WORK (for whitelisted modules):
 
 ```python
-# Modules are already available - use them directly!
-pattern = re.search(r'test', text)          # ✅ Works!
-data = json.loads(string)                   # ✅ Works!
-now = datetime.datetime.now()               # ✅ Works!
-result = math.sqrt(16)                      # ✅ Works!
+import re                           # ✅ Now works!
+import json                         # ✅ Now works!
+import datetime                     # ✅ Now works!
+from datetime import datetime       # ✅ Now works!
+import math                         # ✅ Now works!
+
+# Use normally
+pattern = re.search(r'test', text)
+data = json.loads(string)
+now = datetime.now()
+result = math.sqrt(16)
 ```
 
-### Available Pre-loaded Modules:
+### ✅ OR Use Pre-loaded Modules (without import):
 
-- ✅ `re` - Regular expressions
-- ✅ `json` - JSON parsing
-- ✅ `datetime` - Date and time operations
-- ✅ `math` - Mathematical functions
-- ❌ `os`, `sys`, `subprocess` - NOT available (security)
-- ❌ Any other modules - NOT available
+```python
+# Modules are pre-loaded - import is optional!
+pattern = re.search(r'test', text)          # ✅ Also works!
+data = json.loads(string)                   # ✅ Also works!
+now = datetime.datetime.now()               # ✅ Also works!
+result = math.sqrt(16)                      # ✅ Also works!
+```
 
-**For file operations:** Use Bash scripts (`exec_code -lang bash`) instead of Python, as the `os` module is not available.
+### ❌ Non-whitelisted Modules (Security):
+
+```python
+import os          # ❌ ImportError: Module 'os' is not allowed in sandbox
+import sys         # ❌ ImportError: Module 'sys' is not allowed in sandbox
+import subprocess  # ❌ ImportError: Module 'subprocess' is not allowed in sandbox
+```
+
+### Available Modules:
+
+- ✅ **Whitelisted** (can import OR use directly): `re`, `json`, `datetime`, `math`
+- ❌ **Blocked** (security): `os`, `sys`, `subprocess`, and all other modules
+
+**For file operations:** Use Bash scripts (`exec_code -lang bash`) instead of Python, as the `os` module is not available for security.
 
 ---
 
@@ -266,12 +276,14 @@ def access_context_example():
 **IMPORTANT: Sandboxed Environment**
 
 Python code runs in a **sandboxed environment** for security:
+
 - ✅ **Available modules** (pre-loaded, no import needed): `re`, `json`, `datetime`, `math`
 - ✅ **Safe built-ins**: `abs`, `all`, `any`, `bool`, `dict`, `enumerate`, `filter`, `float`, `int`, `len`, `list`, `map`, `max`, `min`, `range`, `str`, `sum`, `tuple`, `zip`
 - ❌ **NOT available**: `import`, `__import__`, `open`, `os`, `sys`, `subprocess`, and other potentially unsafe operations
 - ❌ **Do NOT use import statements** - they will fail with `ImportError: __import__ not found`
 
 **Use pre-loaded modules directly:**
+
 ```python
 # CORRECT - modules are pre-loaded
 result = re.search(r'pattern', text)
@@ -777,7 +789,7 @@ exec_code -lang python -var data -file "lib/parser.py"
 
 ## Troubleshooting
 
-### ⚠️ Issue: "ImportError: __import__ not found" (MOST COMMON)
+### ⚠️ Issue: "ImportError: **import** not found" (MOST COMMON)
 
 **Cause:** Using `import` statements in Python code. The sandboxed environment doesn't include `import` for security.
 

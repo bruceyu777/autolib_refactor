@@ -78,10 +78,32 @@ class PythonExecutor(CodeExecutor):
         start_time = time.time()
 
         try:
+            # Define safe import function for restricted module loading
+            def _safe_import(
+                name, globals_dict=None, locals_dict=None, fromlist=(), level=0
+            ):
+                """
+                Restricted import that only allows whitelisted modules.
+
+                This enables users to write standard import statements while
+                maintaining security by blocking dangerous modules.
+                """
+                ALLOWED_MODULES = ["re", "json", "datetime", "math"]
+
+                if name in ALLOWED_MODULES:
+                    # Use the real __import__ from builtins
+                    return __import__(name, globals_dict, locals_dict, fromlist, level)
+
+                raise ImportError(
+                    f"Import of module '{name}' is not allowed in sandbox. "
+                    f"Allowed modules: {', '.join(ALLOWED_MODULES)}"
+                )
+
             # Create sandboxed global namespace
+            # IMPORTANT: Modules must be in global namespace, NOT in __builtins__
             safe_globals = {
                 "__builtins__": {
-                    # Safe built-ins
+                    # Safe built-in functions (ONLY actual Python builtins)
                     "abs": abs,
                     "all": all,
                     "any": any,
@@ -101,17 +123,17 @@ class PythonExecutor(CodeExecutor):
                     "sum": sum,
                     "tuple": tuple,
                     "zip": zip,
-                    # Safe modules
-                    "re": __import__("re"),
-                    "json": __import__("json"),
-                    "datetime": __import__("datetime"),
-                    "math": __import__("math"),
-                }
+                    # Add restricted __import__ to allow import statements
+                    "__import__": _safe_import,
+                },
+                # Pre-loaded modules (in global namespace, not builtins)
+                "re": __import__("re"),
+                "json": __import__("json"),
+                "datetime": __import__("datetime"),
+                "math": __import__("math"),
+                # Inject context
+                "context": self.context,
             }
-
-            # Inject context
-            safe_globals["context"] = self.context
-            safe_globals["__return__"] = None
 
             # Execute code
             exec(self.code, safe_globals)  # pylint: disable=exec-used

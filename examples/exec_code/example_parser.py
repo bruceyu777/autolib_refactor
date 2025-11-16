@@ -3,18 +3,23 @@ Example Python script demonstrating exec_code API usage with FULL context access
 
 ################################################################################
 #                                                                              #
-#   ⚠️  CRITICAL WARNING: DO NOT USE IMPORT STATEMENTS! ⚠️                     #
+#   ✅  IMPORT STATEMENTS NOW SUPPORTED (for whitelisted modules) ✅           #
 #                                                                              #
 #   This code runs in a SANDBOXED environment for security.                   #
-#   The 'import' statement is DISABLED and will cause ImportError.            #
+#   You can NOW use 'import' for whitelisted modules!                         #
 #                                                                              #
-#   ✅ CORRECT:                          ❌ WRONG:                             #
-#   result = re.search(...)              import re  # ImportError!            #
-#   data = json.loads(...)               import json  # ImportError!          #
-#   now = datetime.datetime.now()        import datetime  # ImportError!      #
+#   ✅ BOTH STYLES WORK:                                                       #
+#   import re                            # ✅ Now works!                       #
+#   result = re.search(...)              # ✅ Works!                          #
 #                                                                              #
-#   Pre-loaded modules (use directly without import):                         #
-#   - re, json, datetime, math                                                #
+#   import json                          # ✅ Now works!                       #
+#   data = json.loads(...)               # ✅ Works!                          #
+#                                                                              #
+#   from datetime import datetime        # ✅ Now works!                       #
+#   now = datetime.now()                 # ✅ Works!                          #
+#                                                                              #
+#   Whitelisted modules: re, json, datetime, math                             #
+#   Non-whitelisted modules (os, sys, etc.) will raise ImportError            #
 #                                                                              #
 ################################################################################
 
@@ -44,26 +49,38 @@ Usage in test script:
 """
 
 ################################################################################
-# ⚠️  IMPORTANT: DO NOT USE IMPORT STATEMENTS ⚠️
+# ✅  IMPORT STATEMENTS NOW WORK! ✅
 #
-# The modules re, json, datetime, and math are PRE-LOADED in the sandboxed
-# environment. Just use them directly without any import statement.
+# You can now use standard Python import statements for whitelisted modules.
+# Modules are also PRE-LOADED, so you can use them directly without import.
 #
-# WRONG:                          CORRECT:
-# import re                       pattern = re.search(r'test', text)
-# import json                     data = json.loads(string)
-# import datetime                 now = datetime.datetime.now()
-# import math                     result = math.sqrt(16)
+# BOTH APPROACHES WORK:
 #
-# Using 'import' will cause: ImportError: __import__ not found
+# With import (now supported):    Without import (pre-loaded):
+# import re                        pattern = re.search(r'test', text)
+# pattern = re.search(...)         data = json.loads(string)
+#                                  now = datetime.datetime.now()
+# import json                      result = math.sqrt(16)
+# data = json.loads(...)
+#
+# from datetime import datetime
+# now = datetime.now()
+#
+# Whitelisted: re, json, datetime, math
+# Non-whitelisted (os, sys, etc.): ImportError with clear message
 ################################################################################
 # pylint: disable=undefined-variable
 
 # Example 1: Simple calculation returning a value
 # When executed without -func, the script runs top-to-bottom
 # Set __result__ to return a value
-simple_calculation = 42 * 2
-__result__ = simple_calculation
+#
+# NOTE: This top-level code is COMMENTED OUT to prevent conflicts
+# when using -func parameter. To use this example, uncomment these lines
+# OR create a function wrapper.
+#
+# simple_calculation = 42 * 2
+# __result__ = simple_calculation
 
 
 # Example 2: Access execution context
@@ -766,10 +783,10 @@ def demo_all_context_keys():
         "has_error": hasattr(logger, "error") if logger else False,
     }
     if logger:
-        logging_methods = len([m for m in ['debug', 'info', 'warning', 'error'] if hasattr(logger, m)])
-        logger.info(
-            f"9. logger: Available with {logging_methods} methods"
+        logging_methods = len(
+            [m for m in ["debug", "info", "warning", "error"] if hasattr(logger, m)]
         )
+        logger.info(f"9. logger: Available with {logging_methods} methods")
         logger.info("=" * 60)
 
     return result
