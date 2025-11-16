@@ -1,6 +1,23 @@
 """
 Example Python script demonstrating exec_code API usage with FULL context access.
 
+################################################################################
+#                                                                              #
+#   ⚠️  CRITICAL WARNING: DO NOT USE IMPORT STATEMENTS! ⚠️                     #
+#                                                                              #
+#   This code runs in a SANDBOXED environment for security.                   #
+#   The 'import' statement is DISABLED and will cause ImportError.            #
+#                                                                              #
+#   ✅ CORRECT:                          ❌ WRONG:                             #
+#   result = re.search(...)              import re  # ImportError!            #
+#   data = json.loads(...)               import json  # ImportError!          #
+#   now = datetime.datetime.now()        import datetime  # ImportError!      #
+#                                                                              #
+#   Pre-loaded modules (use directly without import):                         #
+#   - re, json, datetime, math                                                #
+#                                                                              #
+################################################################################
+
 Python scripts have COMPLETE access to the execution context, unlike Bash scripts.
 
 Available context keys:
@@ -14,19 +31,33 @@ Available context keys:
     - workspace: str - Workspace directory path
     - logger: object - Logger instance
 
+Pre-loaded modules (NO IMPORT NEEDED - use directly):
+    - re: Regular expressions
+    - json: JSON parsing
+    - datetime: Date and time operations
+    - math: Mathematical functions
+
 Usage in test script:
     exec_code -lang python -var result -file "examples/exec_code/example_parser.py"
     exec_code -lang python -var parsed_data -file "examples/exec_code/example_parser.py" -func "parse_output"
     exec_code -lang python -var ip_addr -file "examples/exec_code/example_parser.py" -func "extract_ip" -args "'192.168.1.1'"
 """
 
-import datetime
-import json
-import os
-
+################################################################################
+# ⚠️  IMPORTANT: DO NOT USE IMPORT STATEMENTS ⚠️
+#
+# The modules re, json, datetime, and math are PRE-LOADED in the sandboxed
+# environment. Just use them directly without any import statement.
+#
+# WRONG:                          CORRECT:
+# import re                       pattern = re.search(r'test', text)
+# import json                     data = json.loads(string)
+# import datetime                 now = datetime.datetime.now()
+# import math                     result = math.sqrt(16)
+#
+# Using 'import' will cause: ImportError: __import__ not found
+################################################################################
 # pylint: disable=undefined-variable
-# Import datetime for use in examples
-import re
 
 # Example 1: Simple calculation returning a value
 # When executed without -func, the script runs top-to-bottom
@@ -544,6 +575,10 @@ def demo_workspace():
     Context key: workspace (str)
     Description: Path to the workspace directory.
 
+    Note: The 'os' module is not available in the sandboxed environment
+    for security reasons. For file operations, use Bash scripts or
+    request specific file operations through the framework.
+
     Returns:
         dict: Workspace information
     """
@@ -555,30 +590,23 @@ def demo_workspace():
 
     result = {
         "workspace_path": workspace,
-        "exists": os.path.exists(workspace) if workspace else False,
-        "is_directory": os.path.isdir(workspace) if workspace else False,
+        "available": True,
+        "note": "Use workspace path with Bash scripts for file operations",
     }
 
-    # Try to list some directories/files
-    if result["is_directory"]:
-        try:
-            items = os.listdir(workspace)
-            result["item_count"] = len(items)
-            result["items_sample"] = items[:10]  # First 10 items
-
-            # Check for common directories
-            common_dirs = ["lib", "examples", "testcase", "plugins"]
-            result["has_directories"] = {}
-            for dirname in common_dirs:
-                dir_path = os.path.join(workspace, dirname)
-                result["has_directories"][dirname] = os.path.isdir(dir_path)
-
-        except Exception as e:
-            result["error"] = str(e)
+    # Example: Build file paths (without os module)
+    # You can construct paths manually
+    example_paths = {
+        "lib_path": f"{workspace}/lib",
+        "examples_path": f"{workspace}/examples",
+        "testcase_path": f"{workspace}/testcase",
+        "config_path": f"{workspace}/config",
+    }
+    result["example_paths"] = example_paths
 
     if logger:
         logger.info(f"Workspace: {workspace}")
-        logger.debug(f"Workspace exists: {result['exists']}")
+        logger.debug("For file operations, use Bash scripts via exec_code")
 
     return result
 

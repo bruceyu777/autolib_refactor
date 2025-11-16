@@ -6,6 +6,45 @@ This directory contains examples demonstrating how to use the `exec_code` API fo
 
 `exec_code` is a powerful API that allows you to execute external code files (Python, Bash, JavaScript, Ruby) during test execution and store the results in variables. The code runs on your **control PC**, not on the device under test.
 
+---
+
+## ⚠️ CRITICAL: Python Sandboxing & Import Restrictions
+
+**Python code runs in a SANDBOXED environment for security. The `import` statement is DISABLED.**
+
+### ❌ DO NOT DO THIS (Will cause ImportError):
+
+```python
+import re          # ❌ ImportError: __import__ not found
+import json        # ❌ ImportError: __import__ not found
+import datetime    # ❌ ImportError: __import__ not found
+import math        # ❌ ImportError: __import__ not found
+import os          # ❌ ImportError: __import__ not found
+```
+
+### ✅ DO THIS INSTEAD (Modules are pre-loaded):
+
+```python
+# Modules are already available - use them directly!
+pattern = re.search(r'test', text)          # ✅ Works!
+data = json.loads(string)                   # ✅ Works!
+now = datetime.datetime.now()               # ✅ Works!
+result = math.sqrt(16)                      # ✅ Works!
+```
+
+### Available Pre-loaded Modules:
+
+- ✅ `re` - Regular expressions
+- ✅ `json` - JSON parsing
+- ✅ `datetime` - Date and time operations
+- ✅ `math` - Mathematical functions
+- ❌ `os`, `sys`, `subprocess` - NOT available (security)
+- ❌ Any other modules - NOT available
+
+**For file operations:** Use Bash scripts (`exec_code -lang bash`) instead of Python, as the `os` module is not available.
+
+---
+
 ## Context Access: Python vs Bash
 
 **IMPORTANT:** Different languages have different levels of access to the execution context:
@@ -138,6 +177,8 @@ examples/exec_code/
 
 The `example_parser.py` file contains 10 different examples showing various use cases.
 
+> **⚠️ REMINDER:** Python code runs in a **sandboxed environment**. Do NOT use `import` statements - modules `re`, `json`, `datetime`, `math` are pre-loaded. See [CRITICAL section above](#️-critical-python-sandboxing--import-restrictions) for details.
+
 ### Example 1: Basic Execution
 
 Execute entire script and return a value:
@@ -221,6 +262,27 @@ def access_context_example():
 
     return result
 ```
+
+**IMPORTANT: Sandboxed Environment**
+
+Python code runs in a **sandboxed environment** for security:
+- ✅ **Available modules** (pre-loaded, no import needed): `re`, `json`, `datetime`, `math`
+- ✅ **Safe built-ins**: `abs`, `all`, `any`, `bool`, `dict`, `enumerate`, `filter`, `float`, `int`, `len`, `list`, `map`, `max`, `min`, `range`, `str`, `sum`, `tuple`, `zip`
+- ❌ **NOT available**: `import`, `__import__`, `open`, `os`, `sys`, `subprocess`, and other potentially unsafe operations
+- ❌ **Do NOT use import statements** - they will fail with `ImportError: __import__ not found`
+
+**Use pre-loaded modules directly:**
+```python
+# CORRECT - modules are pre-loaded
+result = re.search(r'pattern', text)
+data = json.loads(string)
+now = datetime.datetime.now()
+
+# WRONG - will cause ImportError
+import re  # Don't do this!
+```
+
+**For file operations:** Use Bash scripts via `exec_code -lang bash` instead of Python, as the `os` module is not available in Python for security reasons.
 
 #### Available Context Keys:
 
@@ -715,6 +777,34 @@ exec_code -lang python -var data -file "lib/parser.py"
 
 ## Troubleshooting
 
+### ⚠️ Issue: "ImportError: __import__ not found" (MOST COMMON)
+
+**Cause:** Using `import` statements in Python code. The sandboxed environment doesn't include `import` for security.
+
+**This is THE MOST COMMON ERROR!** Python runs in a sandbox where `import` is disabled.
+
+**Solution:** Do NOT use `import` statements. Use pre-loaded modules directly:
+
+```python
+# ❌ WRONG - causes ImportError
+import re
+import json
+import datetime
+from datetime import datetime
+
+# ✅ CORRECT - modules are pre-loaded, use directly
+pattern = re.search(r'test', string)
+data = json.loads(text)
+now = datetime.datetime.now()
+result = math.sqrt(16)
+```
+
+**Available pre-loaded modules:** `re`, `json`, `datetime`, `math`
+
+**See the [CRITICAL section at top](#️-critical-python-sandboxing--import-restrictions) for more details.**
+
+---
+
 ### Issue: "File not found"
 
 **Cause:** File path is incorrect or not relative to workspace.
@@ -778,6 +868,24 @@ __result__ = len(output)
 
 ---
 
+### Issue: "NameError: name 'os' is not defined"
+
+**Cause:** Trying to use `os` module for file operations in Python.
+
+**Solution:** The `os` module is NOT available in the sandbox for security. Use Bash scripts for file operations:
+
+```bash
+# Instead of Python with os module, use Bash:
+exec_code -lang bash -var result -file "scripts/file_ops.sh"
+
+# In file_ops.sh:
+if [ -f "$WORKSPACE/config/test.conf" ]; then
+    cat "$WORKSPACE/config/test.conf"
+fi
+```
+
+---
+
 ## Context Reference
 
 This section provides comprehensive documentation for all available context keys.
@@ -785,6 +893,8 @@ This section provides comprehensive documentation for all available context keys
 ### Python Context Dictionary
 
 In Python scripts, all context is available via the `context` dictionary. Access with `context.get('key_name')`.
+
+**Sandboxing Note:** Python code runs in a sandboxed environment. Pre-loaded modules (`re`, `json`, `datetime`, `math`) are available without import. Do NOT use `import` statements - they will fail. For file operations, use Bash scripts instead.
 
 #### 1. last_output (string)
 
@@ -924,20 +1034,25 @@ set_var('status', 'completed')
 Path to the workspace directory.
 
 ```python
-import os
 workspace = context.get('workspace')
-file_path = os.path.join(workspace, 'data', 'config.json')
 
-if os.path.exists(file_path):
-    with open(file_path) as f:
-        data = f.read()
+# Build file paths manually (os module not available)
+file_path = f"{workspace}/data/config.json"
+lib_path = f"{workspace}/lib"
+examples_path = f"{workspace}/examples"
+
+logger = context.get('logger')
+if logger:
+    logger.info(f"Workspace: {workspace}")
 ```
 
 **Use cases:**
 
-- Building file paths
-- Reading/writing files in workspace
-- Accessing test data files
+- Building file paths (construct manually with f-strings)
+- Passing paths to Bash scripts for file operations
+- Logging workspace location
+
+**Note:** The `os` module is NOT available in the sandboxed Python environment for security. For actual file operations (reading, writing, listing), use Bash scripts via `exec_code -lang bash` with the `$WORKSPACE` environment variable.
 
 #### 9. logger (object)
 

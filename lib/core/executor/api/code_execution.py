@@ -97,6 +97,8 @@ def exec_code(executor, params):
 def _load_code_file(executor, filepath):
     """Load code from file with logging."""
     workspace = getattr(executor, "workspace", "")
+    if filepath.startswith(("'", '"')):
+        filepath = filepath[1:-1]
     full_path = os.path.join(workspace, filepath)
 
     logger.debug("exec_code: Resolved file path: %s", full_path)
