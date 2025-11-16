@@ -134,17 +134,37 @@ class PythonExecutor(CodeExecutor):
 
 
 class BashExecutor(CodeExecutor):
-    """Execute Bash commands with environment variable injection."""
+    """
+    Execute Bash commands with environment variable injection.
+
+    IMPORTANT: Environment variables are injected into the subprocess ONLY.
+    Changes to bash_env do NOT affect:
+        - Parent Python process
+        - System-wide environment variables
+        - Other subprocesses or exec_code calls
+        - User's shell environment
+
+    The bash_env is a COPY of os.environ that only exists during script execution.
+
+    Context items exposed as environment variables:
+        - Runtime variables: $VAR_NAME (uppercase)
+        - Config values: $SECTION__OPTION (uppercase, double underscore)
+        - Last output: $LAST_OUTPUT (device command output)
+        - Workspace: $WORKSPACE (workspace directory path)
+        - Current device: $CURRENT_DEVICE_NAME (if available)
+        - Device list: $DEVICE_NAMES (comma-separated)
+    """
 
     def run(self):
-        """Execute Bash code."""
+        """Execute Bash code with context injection."""
         start_time = time.time()
 
         try:
-            # Prepare environment
+            # SAFETY: Create a COPY of environment (does NOT modify parent process)
+            # This copy only affects the subprocess being created
             bash_env = os.environ.copy()
 
-            # Inject config variables from env.user_env (FosConfigParser)
+            # 1. Inject config variables from env.user_env (FosConfigParser)
             config = self.context.get("config")
             if config:
                 # Iterate through all sections and options
@@ -155,9 +175,30 @@ class BashExecutor(CodeExecutor):
                         value = config.get(section, option)
                         bash_env[key] = str(value)
 
-            # Also inject runtime variables
+            # 2. Inject runtime variables
             for key, value in self.context.get("variables", {}).items():
                 bash_env[key.upper()] = str(value)
+
+            # 3. Inject last device output
+            last_output = self.context.get("last_output", "")
+            if last_output:
+                bash_env["LAST_OUTPUT"] = str(last_output)
+
+            # 4. Inject workspace path
+            workspace = self.context.get("workspace")
+            if workspace:
+                bash_env["WORKSPACE"] = str(workspace)
+
+            # 5. Inject current device name (if available)
+            device = self.context.get("device")
+            if device and hasattr(device, "name"):
+                bash_env["CURRENT_DEVICE_NAME"] = str(device.name)
+
+            # 6. Inject all device names as comma-separated list
+            devices = self.context.get("devices", {})
+            if devices:
+                device_names = ",".join(devices.keys())
+                bash_env["DEVICE_NAMES"] = device_names
 
             # Execute with timeout
             result = subprocess.run(
