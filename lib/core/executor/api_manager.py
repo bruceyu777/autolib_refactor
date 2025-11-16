@@ -29,6 +29,7 @@ _CATEGORY_REGISTRY: Dict[str, list] = {}
 
 # Cache for API discovery results (for compile-time performance)
 _DISCOVERY_CACHE: Tuple[Dict, Dict] = None
+_BUILTIN_CATEGORY_PREFIX = "Built-In"
 
 
 def discover_apis(force_refresh=False):
@@ -60,7 +61,7 @@ def discover_apis(force_refresh=False):
     _CATEGORY_REGISTRY.clear()
 
     # Discover built-in APIs from package
-    _discover_from_package(api_package, "Built-In")
+    _discover_from_package(api_package, _BUILTIN_CATEGORY_PREFIX)
 
     # Discover user-defined APIs from directory
     _discover_from_directory("plugins/apis", "User-Defined")
@@ -145,6 +146,11 @@ def _discover_from_directory(directory, category_prefix):
             sys.path.remove(abs_directory)
 
 
+def is_builtin_category(api_obj):
+    category = getattr(api_obj, "category", None)
+    return category and category.startswith(_BUILTIN_CATEGORY_PREFIX)
+
+
 def _register_module_functions(module, category):
     """
     Register all public functions from a module as APIs.
@@ -163,6 +169,8 @@ def _register_module_functions(module, category):
 
         # Register the function
         _API_REGISTRY[api_endpoint] = obj
+        # record category, as later ONLY non-built-in APIs needs context preparation
+        setattr(obj, "category", category)
 
         # Register in category registry
         if category not in _CATEGORY_REGISTRY:
@@ -257,10 +265,10 @@ class ApiMixin:
         # Get from registry
         if api_endpoint in _API_REGISTRY:
             func = _API_REGISTRY[api_endpoint]
-
             # Set execution context for API access
             executor = self.executor if hasattr(self, "executor") else self
-            executor.context = build_context(executor)
+            if not is_builtin_category(func):
+                executor.context = build_context(executor)
 
             return func(executor, params)
 
