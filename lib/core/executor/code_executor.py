@@ -101,31 +101,43 @@ class PythonExecutor(CodeExecutor):
 
             # Create sandboxed global namespace
             # IMPORTANT: Modules must be in global namespace, NOT in __builtins__
+
+            # Use blocklist approach: include all builtins except dangerous ones
+            import builtins
+
+            all_builtins = {
+                name: getattr(builtins, name)
+                for name in dir(builtins)
+                if not name.startswith("_")
+            }
+
+            # Block dangerous builtins for security
+            BLOCKED_BUILTINS = {
+                "open",  # File I/O operations
+                "eval",  # Arbitrary code execution
+                "exec",  # Arbitrary code execution
+                "compile",  # Code compilation
+                "input",  # User input (could hang execution)
+                "__import__",  # We provide our own safe version
+                "globals",  # Direct namespace access
+                "locals",  # Direct namespace access
+                "vars",  # Direct namespace access
+                "breakpoint",  # Debugging hooks
+                "help",  # Interactive help system
+                "exit",  # Exit interpreter
+                "quit",  # Exit interpreter
+            }
+
+            # Create safe builtins by filtering out blocked ones
+            safe_builtins = {
+                k: v for k, v in all_builtins.items() if k not in BLOCKED_BUILTINS
+            }
+
+            # Add our custom safe import function
+            safe_builtins["__import__"] = _safe_import
+
             safe_globals = {
-                "__builtins__": {
-                    # Safe built-in functions (ONLY actual Python builtins)
-                    "abs": abs,
-                    "all": all,
-                    "any": any,
-                    "bool": bool,
-                    "dict": dict,
-                    "enumerate": enumerate,
-                    "filter": filter,
-                    "float": float,
-                    "int": int,
-                    "len": len,
-                    "list": list,
-                    "map": map,
-                    "max": max,
-                    "min": min,
-                    "range": range,
-                    "str": str,
-                    "sum": sum,
-                    "tuple": tuple,
-                    "zip": zip,
-                    # Add restricted __import__ to allow import statements
-                    "__import__": _safe_import,
-                },
+                "__builtins__": safe_builtins,
                 # Pre-loaded modules (in global namespace, not builtins)
                 "re": __import__("re"),
                 "json": __import__("json"),
@@ -144,6 +156,18 @@ class PythonExecutor(CodeExecutor):
                 or safe_globals.get("__return__")
                 or safe_globals.get("return")
             )
+
+            # DEBUG: Check for namespace pollution
+            # (Remove this after debugging)
+            import sys
+
+            print("\n[DEBUG] Checking namespace after exec...", file=sys.stderr)
+            for key in list(safe_globals.keys())[:20]:  # First 20 items
+                val = safe_globals[key]
+                val_type = type(val).__name__
+                print(f"  {key}: {val_type}", file=sys.stderr)
+            print("[DEBUG] Result type: {type(result)}", file=sys.stderr)
+            print("[DEBUG] Result value: {result}\n", file=sys.stderr)
 
             self.status = "success"
             return result

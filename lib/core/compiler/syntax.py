@@ -306,13 +306,8 @@ class ScriptSyntax:
         Returns pattern for built-in APIs defined in cli_syntax.json.
         Custom APIs are added later via refresh_patterns().
         """
-        # Only use static APIs from schema
-        all_apis = dict(self.schema["apis"])
-
-        # Generate patterns
         api_pattern_list = [
-            self._api_pattern_for_api(api_name, all_apis[api_name])
-            for api_name in all_apis
+            self._api_pattern(api_name) for api_name in self.schema["apis"]
         ]
         api_pattern_list = sorted(api_pattern_list, key=len, reverse=True)
         return r"|".join(api_pattern_list)
@@ -328,7 +323,6 @@ class ScriptSyntax:
             self._generate_statement_pattern()
         )
         ScriptSyntax.LINE_PATTERN_TABLE["api"] = self._generate_static_api_pattern()
-
         line_pattern = re.compile(
             r"|".join(
                 rf"(?P<{type}>{pattern})"
@@ -381,6 +375,7 @@ class ScriptSyntax:
             custom_count = 0
             for api_name in discovered_apis:
                 if api_name not in all_apis:
+                    logger.debug("Apply default schema for custom API: %s", api_name)
                     all_apis[api_name] = self._create_default_api_schema()
                     custom_count += 1
 
