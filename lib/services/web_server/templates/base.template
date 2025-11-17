@@ -389,23 +389,34 @@
         }
 
         /* File Controls Panel (Right Side) - Conditional */
-        .controls-panel-trigger {
+        .controls-panel-button {
             position: fixed;
-            right: 0;
-            top: 0;
-            width: 8px;
-            height: 100vh;
-            background: linear-gradient(270deg, var(--primary-color) 0%, transparent 100%);
-            z-index: 999;
+            right: 15px;
+            bottom: 5px;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+            border-radius: 50%;
+            box-shadow: var(--shadow-lg);
             cursor: pointer;
-            opacity: 0.5;
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s ease;
+            border: 3px solid white;
         }
 
-        .controls-panel-trigger:hover {
-            width: 12px;
-            opacity: 1;
-            background: var(--primary-color);
+        .controls-panel-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 20px -5px rgba(76, 175, 80, 0.4);
+        }
+
+        .controls-panel-button svg {
+            width: 24px;
+            height: 24px;
+            stroke: white;
+            fill: none;
         }
 
         .file-controls-panel {
@@ -423,8 +434,7 @@
             transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .controls-panel-trigger:hover + .file-controls-panel,
-        .file-controls-panel:hover {
+        .file-controls-panel.active {
             right: 0;
         }
 
@@ -855,9 +865,15 @@
 
     <!-- Right Side Controls Panel (Conditional for file viewing) -->
     {% if show_file_controls %}
-    <div class="controls-panel-trigger"></div>
+    <button class="controls-panel-button" id="controls-toggle" aria-label="Toggle file controls" title="File Controls">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <line x1="3" y1="6" x2="21" y2="6" stroke-width="2" stroke-linecap="round"/>
+            <line x1="3" y1="12" x2="21" y2="12" stroke-width="2" stroke-linecap="round"/>
+            <line x1="3" y1="18" x2="21" y2="18" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    </button>
 
-    <div class="file-controls-panel">
+    <div class="file-controls-panel" id="controls-panel">
         <!-- File Info -->
         <div class="file-info-banner">
             <div class="file-info-item">
@@ -907,6 +923,35 @@
         </div>
         {% endif %}
     </div>
+
+    <script>
+        // Toggle controls panel
+        const toggleButton = document.getElementById('controls-toggle');
+        const panel = document.getElementById('controls-panel');
+
+        if (toggleButton && panel) {
+            toggleButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panel.classList.toggle('active');
+            });
+
+            // Close panel when clicking outside
+            document.addEventListener('click', (e) => {
+                if (panel.classList.contains('active') &&
+                    !panel.contains(e.target) &&
+                    !toggleButton.contains(e.target)) {
+                    panel.classList.remove('active');
+                }
+            });
+
+            // Optional: Close with Escape key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && panel.classList.contains('active')) {
+                    panel.classList.remove('active');
+                }
+            });
+        }
+    </script>
     {% endif %}
 
 </body>
