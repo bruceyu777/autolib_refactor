@@ -466,6 +466,57 @@ Validate token stream against grammar rules and generate executable VM code.
    (vm_codes, devices, called_files)
 ```
 
+### Parameter Type Validation
+
+The parser validates parameter types at compile time based on a type mapping system in `syntax.py` (lines 165-175). This mapping determines which token types are acceptable for each parameter type defined in the schema.
+
+**Type Mapping (Updated in v2.3)**:
+
+```python
+type_mapping = {
+    "string": [
+        "string",      # Accept quoted strings like "admin\n"
+        "identifier",  # Accept unquoted identifiers
+        "number",      # Strings can be numeric (e.g., "801830")
+        "variable",    # Variables like $VAR
+    ],
+    "int": ["number", "identifier", "variable"],    # Updated: Config vars now allowed
+    "number": ["number", "identifier", "variable"], # Updated: Config vars now allowed
+    "bool": ["identifier"],
+}
+```
+
+**Key Behavior**:
+
+1. **String Parameters**: Most flexible - accept all token types (string, identifier, number, variable)
+2. **Int/Number Parameters**: Accept literal numbers, config variables (identifiers), and runtime variables
+   - **Literal numbers**: `sleep 10`
+   - **Config variables**: `sleep PC_01:FCT_ZTNA_RULE_SLEEP` (resolved from config at runtime)
+   - **Runtime variables**: `sleep $TIMEOUT` (resolved from env at runtime)
+3. **Bool Parameters**: Accept identifiers only (e.g., `true`, `false`, `enable`, `disable`)
+
+**Type Validation Strategy**:
+
+- **Compile-time**: Parser checks token type matches expected type(s) from mapping
+- **Runtime**: Actual value validation occurs during execution when variables are resolved
+- **Benefit**: Allows flexible use of config variables while maintaining type safety
+
+**Example Impact**:
+
+Before v2.3, this would fail at compile time:
+
+```
+[PC_01]
+sleep PC_01:FCT_ZTNA_RULE_SLEEP  # Error: Unexpected token type 'identifier' expected ['number']
+```
+
+After v2.3, this compiles successfully:
+
+```
+[PC_01]
+sleep PC_01:FCT_ZTNA_RULE_SLEEP  # ✓ Config variable accepted, resolved at runtime
+```
+
 ### Parsing Examples
 
 #### Example 1: Positional API
@@ -1529,6 +1580,254 @@ __result__ = status.get('success', False)
 
 ---
 
+## exec_code Python Sandbox Architecture
+
+### Overview
+
+The `exec_code` API executes user-provided Python, Bash, and other code in a **sandboxed environment** for security. The Python sandbox architecture has evolved significantly to balance **security** with **usability**.
+
+### Evolution: From Restrictive to Practical
+
+**Initial State (2025-11-14):**
+
+- Import statements completely disabled
+- Manual allowlist of ~40 safe builtins
+- Modules placed incorrectly in `__builtins__` (namespace pollution)
+- Users couldn't write standard Python code
+
+**Problem Identified:**
+
+- Users encountered `ImportError: __import__ not found` when using standard Python patterns
+- Missing common builtins like `hasattr`, `isinstance`, etc. caused `NameError`
+- Manual allowlist was tedious to maintain and incomplete
+- Users had existing code with `import` statements that wouldn't work
+
+**Final State (2025-11-17):**
+
+- ✅ Import statements **now supported** for whitelisted modules
+- ✅ Automatic blocklist approach (~70 safe builtins included automatically)
+- ✅ Proper namespace separation (modules in global, builtins in `__builtins__`)
+- ✅ Users can write standard Python code
+
+### Architecture: Blocklist vs Allowlist
+
+**Previous Approach (Allowlist - TEDIOUS):**
+
+```python
+# Manual listing of ~40 safe builtins
+safe_builtins = {
+    'abs': abs,
+    'all': all,
+    'any': any,
+    'bool': bool,
+    'dict': dict,
+    # ... 35 more lines
+    'zip': zip,
+}
+# Problem: Easy to forget builtins, hard to maintain
+```
+
+**Current Approach (Blocklist - AUTOMATIC):**
+
+```python
+# Get ALL builtins, block only dangerous ones
+import builtins
+all_builtins = {
+    name: getattr(builtins, name)
+    for name in dir(builtins)
+    if not name.startswith('_')
+}
+
+BLOCKED_BUILTINS = {
+    'open', 'eval', 'exec', 'compile', 'input',
+    '__import__', 'globals', 'locals', 'vars',
+    'breakpoint', 'help', 'exit', 'quit',
+}
+
+safe_builtins = {k: v for k, v in all_builtins.items() if k not in BLOCKED_BUILTINS}
+```
+
+**Benefits:**
+
+- ✅ Automatic: ~70 safe builtins included without manual listing
+- ✅ Maintainable: Only need to block ~12 dangerous functions
+- ✅ Complete: Never miss common builtins like `hasattr`, `isinstance`, `getattr`
+- ✅ Future-proof: New safe builtins automatically included
+
+### Safe Import Implementation
+
+Custom `_safe_import()` function allows controlled import statements:
+
+```python
+def _safe_import(name, globals_dict=None, locals_dict=None, fromlist=(), level=0):
+    """Restricted import that only allows whitelisted modules."""
+    ALLOWED_MODULES = ['re', 'json', 'datetime', 'math']
+    if name in ALLOWED_MODULES:
+        return __import__(name, globals_dict, locals_dict, fromlist, level)
+    raise ImportError(
+        f"Import of module '{name}' is not allowed in sandbox. "
+        f"Allowed modules: {', '.join(ALLOWED_MODULES)}"
+    )
+
+# Add to safe builtins
+safe_builtins['__import__'] = _safe_import
+```
+
+**Result:**
+
+- Users can write `import re`, `import json`, etc.
+- Whitelisted modules: `re`, `json`, `datetime`, `math`
+- Non-whitelisted modules raise clear error with list of allowed modules
+
+### Namespace Structure
+
+**Proper separation prevents pollution:**
+
+```python
+safe_globals = {
+    "__builtins__": safe_builtins,     # Only builtins here
+    "re": __import__("re"),            # Modules in global namespace
+    "json": __import__("json"),
+    "datetime": __import__("datetime"),
+    "math": __import__("math"),
+    "context": self.context,           # Execution context
+}
+
+exec(code, safe_globals)
+```
+
+**Why This Matters:**
+
+- ❌ Previous: Modules in `__builtins__` caused namespace conflicts
+- ✅ Current: Clean separation - builtins vs modules vs context
+- ✅ Standard Python patterns work correctly
+
+### Security Model
+
+**Blocked Builtins (12 dangerous functions):**
+
+- File I/O: `open`
+- Code execution: `eval`, `exec`, `compile`
+- Introspection: `globals`, `locals`, `vars`
+- Import: `__import__` (replaced with safe version)
+- Interactive: `input`, `breakpoint`, `help`, `exit`, `quit`
+
+**Allowed Builtins (~70 safe functions):**
+
+- Type functions: `int`, `str`, `bool`, `float`, `list`, `dict`, `tuple`, `set`
+- Iteration: `range`, `enumerate`, `zip`, `map`, `filter`, `iter`, `next`
+- Introspection: `hasattr`, `getattr`, `setattr`, `isinstance`, `type`, `dir`
+- Math: `abs`, `min`, `max`, `sum`, `round`, `pow`
+- Conversion: `chr`, `ord`, `hex`, `oct`, `bin`, `format`
+- Logic: `all`, `any`, `sorted`, `reversed`
+- And many more...
+
+**Whitelisted Modules (4 modules):**
+
+- `re` - Regular expressions
+- `json` - JSON parsing/serialization
+- `datetime` - Date and time operations
+- `math` - Mathematical functions
+
+### Bash Subprocess Isolation
+
+**Environment Variable Safety:**
+
+Bash scripts receive context via **subprocess-only environment variables**:
+
+```python
+# In BashExecutor (lib/core/executor/code_executor.py)
+bash_env = os.environ.copy()  # Creates a COPY, not a reference
+bash_env['LAST_OUTPUT'] = context['last_output']
+bash_env['WORKSPACE'] = context['workspace']
+bash_env['CURRENT_DEVICE_NAME'] = current_device_name
+# ... more context variables
+
+subprocess.run(code, env=bash_env, shell=True)
+# When subprocess exits, bash_env is discarded
+```
+
+**Scope Table:**
+
+| Scope                      | Affected? | Explanation                         |
+| -------------------------- | --------- | ----------------------------------- |
+| Bash script being executed | ✅ YES    | Variables available via `$VAR_NAME` |
+| Parent Python process      | ❌ NO     | Original `os.environ` unchanged     |
+| System-wide environment    | ❌ NO     | `/etc/environment` unchanged        |
+| User's shell               | ❌ NO     | Terminal environment unchanged      |
+| Other exec_code calls      | ❌ NO     | Each gets its own fresh copy        |
+
+**Result:**
+
+- ✅ Safe to experiment - Can't accidentally break system
+- ✅ No cleanup needed - Variables auto-expire with subprocess
+- ✅ Parallel execution safe - Multiple exec_code calls won't interfere
+- ✅ Reproducible - Same inputs always produce same results
+
+### User Experience Improvements
+
+**Before:**
+
+```python
+# ❌ Users' code failed with ImportError
+import re  # ImportError: __import__ not found
+result = re.search(r'pattern', text)
+
+# ❌ Users had to know modules were pre-loaded
+result = re.search(r'pattern', text)  # Worked but confusing
+
+# ❌ Missing builtins caused errors
+if hasattr(obj, 'attr'):  # NameError: name 'hasattr' is not defined
+```
+
+**After:**
+
+```python
+# ✅ Standard Python code works!
+import re                              # Now works!
+result = re.search(r'pattern', text)
+
+# ✅ OR use pre-loaded modules (both work)
+result = re.search(r'pattern', text)   # Still works!
+
+# ✅ All common builtins available
+if hasattr(obj, 'attr'):               # Works perfectly!
+```
+
+### Implementation Location
+
+**Code:** `lib/core/executor/code_executor.py`
+
+**PythonExecutor class:**
+
+- Implements blocklist approach for builtins
+- Provides `_safe_import()` function
+- Constructs safe execution namespace
+- Pre-loads whitelisted modules
+
+**BashExecutor class:**
+
+- Creates subprocess-only environment copy
+- Injects context as environment variables
+- Ensures isolation from parent process
+
+### Related APIs
+
+**exec_code API:**
+
+- Defined in: `lib/core/executor/api/code_execution.py`
+- Schema in: `static/cli_syntax.json`
+- Examples in: `examples/exec_code/`
+- Documentation: `examples/exec_code/README.md`
+
+**check_var API:**
+
+- Validates variable contents after exec_code
+- Supports exact match, regex, and substring checks
+- Complements exec_code for test validation
+
+---
+
 ## Related Files
 
 ### Core Compiler Files
@@ -1569,12 +1868,19 @@ __result__ = status.get('success', False)
 
 ---
 
-**Last Updated**: 2025-11-14
-**Version**: 2.2 (Two-Phase Initialization Fix)
+**Last Updated**: 2025-11-17
+**Version**: 2.3 (Config Variable Type Validation Fix)
 **Status**: Production Ready
 
 **Changelog**:
 
+- **v2.3** (2025-11-17): Fixed type validation for int/number parameters to support config variables
+  - Updated type_mapping in `syntax.py` (lines 172-173) to accept identifiers and variables for int/number types
+  - **Before**: `"int": ["number"]` - Only literal numbers accepted (e.g., `sleep 10`)
+  - **After**: `"int": ["number", "identifier", "variable"]` - Config variables now accepted (e.g., `sleep PC_01:FCT_ZTNA_RULE_SLEEP`)
+  - Type validation now deferred to runtime where config variables are properly resolved
+  - **Impact**: All commands with int/number parameters (sleep, expect -t, etc.) now support config variables
+  - **Fixed Error**: "Unexpected token type 'identifier' expected ['number']" no longer occurs
 - **v2.2** (2025-11-14): Fixed circular import with two-phase pattern initialization
   - Custom APIs now properly discovered at compile-time (not module load)
   - Added `Compiler._ensure_patterns_refreshed()` for one-time pattern refresh

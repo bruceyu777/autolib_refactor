@@ -169,8 +169,16 @@ class ScriptSyntax:
                 "number",  # Strings can be numeric (e.g., "801830")
                 "variable",
             ],
-            "int": ["number"],
-            "number": ["number"],
+            "int": [
+                "number",
+                "identifier",
+                "variable",
+            ],  # Allow config vars at compile time
+            "number": [
+                "number",
+                "identifier",
+                "variable",
+            ],  # Allow config vars at compile time
             "bool": ["identifier"],
         }
 

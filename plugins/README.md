@@ -122,16 +122,66 @@ exec_code -lang python -var formatted -file "plugins/lib/format.py" -func "forma
 exec_code -lang bash -var ip -file "scripts/get_ip.sh"
 ```
 
+### Python Import Statements (NOW SUPPORTED!)
+
+**Important:** Python code runs in a **sandboxed environment** for security. Import statements are **NOW SUPPORTED** for whitelisted modules!
+
+**✅ You can use import statements:**
+
+```python
+import re          # ✅ Works!
+import json        # ✅ Works!
+import datetime    # ✅ Works!
+import math        # ✅ Works!
+```
+
+**✅ OR use pre-loaded modules (both patterns work):**
+
+```python
+# Without import - modules are pre-loaded
+result = re.search(r'pattern', text)    # ✅ Works!
+data = json.loads(string)               # ✅ Works!
+```
+
+**Whitelisted modules:** `re`, `json`, `datetime`, `math`
+
+**❌ Non-whitelisted modules are blocked for security:**
+
+```python
+import os          # ❌ ImportError: Module 'os' is not allowed
+import sys         # ❌ ImportError: Module 'sys' is not allowed
+import subprocess  # ❌ ImportError: Module 'subprocess' is not allowed
+```
+
+**For file operations:** Use Bash scripts (`exec_code -lang bash`) instead of Python, as the `os` module is not available for security.
+
 **Example code file** (`scripts/extract_hostname.py`):
 
 ```python
 """Extract hostname from device output."""
-import re
+import re  # ✅ Import statements now work for whitelisted modules!
 
 # Access device output from context
 output = context['last_output']
 
 # Extract hostname using regex
+match = re.search(r'Hostname:\s+(\w+)', output)
+hostname = match.group(1) if match else 'unknown'
+
+# Return value (stored in specified variable)
+__result__ = hostname
+```
+
+**Alternative style (without import - also works):**
+
+```python
+"""Extract hostname - using pre-loaded modules."""
+# No import needed - modules are pre-loaded
+
+# Access device output from context
+output = context['last_output']
+
+# Extract hostname using regex (re module already available)
 match = re.search(r'Hostname:\s+(\w+)', output)
 hostname = match.group(1) if match else 'unknown'
 
