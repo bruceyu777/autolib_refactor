@@ -9,21 +9,31 @@ from lib.utilities import ScriptSyntaxError
 
 from .syntax import script_syntax
 
+
+def _prepare_deprecated_prefix_pattern():
+    prefix_pattern = {}
+    _prefix_stop_pattern = {".", "\\", "(", "["}
+    for (
+        pattern,
+        replacement,
+    ) in script_syntax.get_deprecated_cmd_replace_patterns().items():
+        if pattern.startswith("^"):
+            # Extract static prefix from regex pattern (e.g., "^myexe" → "myexe")
+            index = 1
+            while index < len(pattern):
+                if pattern[index] in _prefix_stop_pattern:
+                    break
+                index += 1
+            index = min(len(pattern) - 1, index)
+            prefix_pattern[pattern[1:index]] = (re.compile(pattern), replacement)
+    return prefix_pattern
+
+
 # PERFORMANCE: Cache deprecated patterns to avoid schema lookup + compilation overhead
 # This optimization eliminates ~1,300 function calls per 100 scripts (28-32% speedup)
-DEPRECATED_PATTERNS = [
-    (re.compile(pattern), replacement)
-    for pattern, replacement in script_syntax.get_deprecated_cmd_replace_patterns().items()
-]
-
 # PERFORMANCE: Extract prefixes for fast early exit (most lines don't use deprecated commands)
-DEPRECATED_PREFIXES = set()
-for pattern in script_syntax.get_deprecated_cmd_replace_patterns().keys():
-    if pattern.startswith("^"):
-        # Extract static prefix from regex pattern (e.g., "^myexe" → "myexe")
-        prefix = pattern[1:].split("[")[0].split("\\")[0].split("(")[0]
-        if prefix and not prefix.startswith("("):
-            DEPRECATED_PREFIXES.add(prefix)
+# DICT prefix: (pattern, replacement)
+DEPRECATED_PREFIX_AND_PATTERNS = _prepare_deprecated_prefix_pattern()
 
 
 class Token(dict):
@@ -265,17 +275,12 @@ class Lexer:
         """Update deprecated commands and log warnings (OPTIMIZED)."""
         # PERFORMANCE: Fast path - early exit if no deprecated prefix matches
         # This avoids regex matching for 95%+ of lines that don't use deprecated commands
-        if DEPRECATED_PREFIXES and not any(
-            cmd.startswith(prefix) for prefix in DEPRECATED_PREFIXES
-        ):
-            return cmd
-
-        # Slow path: Check patterns only if prefix matched (use pre-compiled patterns)
-        for dep_pattern, replacement in DEPRECATED_PATTERNS:
-            updated_cmd = dep_pattern.sub(replacement, cmd)
-            if updated_cmd != cmd:
-                self._log_deprecation_warning(cmd, updated_cmd)
-                return updated_cmd
+        for prefix, (pattern, replacement) in DEPRECATED_PREFIX_AND_PATTERNS.items():
+            if cmd.startswith(prefix):
+                updated_cmd = pattern.sub(replacement, cmd)
+                if updated_cmd != cmd:
+                    self._log_deprecation_warning(cmd, updated_cmd)
+                    return updated_cmd
         return cmd
 
     def _log_deprecation_warning(self, old_cmd, new_cmd):

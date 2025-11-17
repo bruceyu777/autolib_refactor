@@ -577,18 +577,6 @@
       "parse_mode": "positional",
       "parameters": []
     },
-    "clearbuff": {
-      "description": "Clear device buffer",
-      "category": "buffer",
-      "parse_mode": "positional",
-      "parameters": []
-    },
-    "clean_buffer": {
-      "description": "Clear device buffer (alias)",
-      "category": "buffer",
-      "parse_mode": "positional",
-      "parameters": []
-    },
     "clear_buffer": {
       "description": "Clear device buffer (alias)",
       "category": "buffer",
@@ -925,7 +913,6 @@
     "ctrl_c",
     "nan_enter",
     "sleep",
-    "clean_buffer",
     "expect_ctrl_c",
     "restore_image",
     "confirm_with_newline",
@@ -944,12 +931,14 @@
   ],
   "deprecated_commands": {
     "^myexe[^\\s]*\\s+(.*)$": "execute \\1",
-    "^mynext(.*?)": "next",
+    "^mynext.*?$": "next",
     "^myset[^\\s]*\\s+(.*)$": "set \\1",
     "^mydel[^\\s]*\\s+(.*)$": "delete \\1",
-    "^myend": "end",
+    "^myend.*?$": "end",
     "^pcsend[^\\s]*\\s+(.*)$": "send_literal \"\\1\"",
-    "^sendraw[^\\s]*\\s+(.*)$": "send_literal \"\\1\""
+    "^sendraw[^\\s]*\\s+(.*)$": "send_literal \"\\1\"",
+    "^clear_buffer\\s.*?$": "clear_buffer",
+    "^clean_buffer.*?$": "clear_buffer"
   },
   "keywords": {
     "if": {
