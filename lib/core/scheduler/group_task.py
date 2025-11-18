@@ -34,5 +34,5 @@ class GroupTask(Task):
         t1 = perf_counter()
         self.compile()
         t2 = perf_counter()
-        logger.debug("Compile scripts used %.1f s", t2 - t1)
+        logger.info("Compile scripts used %.1f s", t2 - t1)
         super().run(args)

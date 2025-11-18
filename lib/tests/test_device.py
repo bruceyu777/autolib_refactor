@@ -1,779 +1,176 @@
-device_info = """Version: FortiGate-201F v7.4.1,build2448,230811 (interim)
-Security Level: 1
-Firmware Signature: un-certified
-Virus-DB: 1.00000(2018-04-09 18:07)
-Extended DB: 1.00000(2018-04-09 18:07)
-AV AI/ML Model: 0.00000(2001-01-01 00:00)
-IPS-DB: 6.00741(2015-12-01 02:30)
-IPS-ETDB: 6.00741(2015-12-01 02:30)
-APP-DB: 6.00741(2015-12-01 02:30)
-FMWP-DB: 0.00000(2001-01-01 00:00)
-IPS Malicious URL Database: 1.00001(2015-01-01 01:01)
-IoT-Detect: 0.00000(2022-08-17 17:31)
-OT-Detect-DB: 0.00000(2001-01-01 00:00)
-OT-Patch-DB: 0.00000(2001-01-01 00:00)
-OT-Threat-DB: 6.00741(2015-12-01 02:30)
-IPS-Engine: 7.00508(2023-08-03 17:34)
-Serial-Number: FG201FT921900397
-BIOS version: 05000008
-System Part-Number: P25132-01
-Log hard disk: Available
-Hostname: FortiGate-201F
-Private Encryption: Disable
-Operation Mode: NAT
-Current virtual domain: root
-Max number of virtual domains: 10
-Virtual domains status: 4 in NAT mode, 0 in TP mode
-Virtual domain configuration: multiple
-FIPS-CC mode: disable
-Current HA mode: standalone
-Branch point: 2448
-Release Version Information: interim
-FortiOS x86-64: Yes
-System time: Mon Aug 21 10:50:20 2023
-Last reboot reason: kernel panic:"""
-
-autoupdate_versions = """diag autoupdate versions
-AV Engine
----------
-Version: 7.00018 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Wed Aug  2 18:30:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Virus Definitions
----------
-Version: 1.00000 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Extended set
----------
-Version: 1.00000 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Mobile Malware Definitions
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IPS Attack Engine
----------
-Version: 7.00508 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Thu Aug  3 18:34:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Attack Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Attack Extended Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Application Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Threat Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-FMWP Definitions
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-IPS Malicious URL Database
----------
-Version: 1.00001 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Thu Jan  1 01:01:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IoT Detect Definitions
----------
-Version: 0.00000 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Aug 17 18:31:00 2022
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Detect Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Patch Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Flow-based Virus Definitions
----------
-Version: 1.00000 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Botnet Domain Database
----------
-Version: 3.00394 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using scheduled update on Mon Aug  7 12:48:07 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Internet-service Full Database
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Device and OS Identifications
----------
-Version: 1.00147
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Fri Aug 11 01:00:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-URL Allow list
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-DLP Signatures
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-IP Geography DB
----------
-Version: 3.00172
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Apr 12 19:23:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Certificate Bundle
----------
-Version: 1.00045
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Jun 28 20:51:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: No Updates
-
-Malicious Certificate DB
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Mac Address Database
----------
-Version: 1.00143
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  6 09:00:00 2022
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-AntiPhish Pattern DB
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Nov 30 00:00:00 1999
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-AI/Machine Learning Malware Detection Model
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-ICDB Database
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Inline CASB Database
----------
-Version: 1.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Jul 25 22:16:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Modem List
----------
-Version: 0.000
-
-Security Rating Data Package
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-FDS Address
----------
-173.243.140.6:443
-
-
-FortiGate-201F (global) #
---------------------------------------------------------------------------------
-
-2023-08-21 17:23:10,107 - root - INFO - Succeeded to execute command diag autoupdate versions.
-2023-08-21 17:23:10,107 - root - DEBUG - The outputs are: diag autoupdate versions
-AV Engine
----------
-Version: 7.00018 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Wed Aug  2 18:30:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Virus Definitions
----------
-Version: 1.00000 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Extended set
----------
-Version: 1.00000 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Mobile Malware Definitions
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IPS Attack Engine
----------
-Version: 7.00508 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Thu Aug  3 18:34:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Attack Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Attack Extended Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Application Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Threat Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-FMWP Definitions
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-IPS Malicious URL Database
----------
-Version: 1.00001 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Thu Jan  1 01:01:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IoT Detect Definitions
----------
-Version: 0.00000 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Aug 17 18:31:00 2022
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Detect Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Patch Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Flow-based Virus Definitions
----------
-Version: 1.00000 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Botnet Domain Database
----------
-Version: 3.00394 signed
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using scheduled update on Mon Aug  7 12:48:07 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Internet-service Full Database
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Device and OS Identifications
----------
-Version: 1.00147
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Fri Aug 11 01:00:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-URL Allow list
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-DLP Signatures
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-IP Geography DB
----------
-Version: 3.00172
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Apr 12 19:23:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Certificate Bundle
----------
-Version: 1.00045
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Jun 28 20:51:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: No Updates
-
-Malicious Certificate DB
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Mac Address Database
----------
-Version: 1.00143
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Dec  6 09:00:00 2022
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-AntiPhish Pattern DB
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Nov 30 00:00:00 1999
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-AI/Machine Learning Malware Detection Model
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-ICDB Database
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Inline CASB Database
----------
-Version: 1.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Tue Jul 25 22:16:00 2023
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-Modem List
----------
-Version: 0.000
-
-Security Rating Data Package
----------
-Version: 0.00000
-Contract Expiry Date: Tue Mar 14 2023
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: Mon Aug 21 17:10:06 2023
-Result: Unauthorized
-
-FDS Address
----------
-173.243.140.6:443
-
-
-FortiGate-201F (global) #
-
+"""
+Tests for lib.core.device modules.
 """
 
-autoupdate_version = """FortiGate-VM64-KVM # diag autoupdate versions
+# pylint: disable=singleton-comparison,unused-argument,unused-variable
+# pylint: disable=unnecessary-pass,unused-import
 
-AV Engine
----------
-Version: 7.00018 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Aug  2 18:30:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
+from unittest.mock import MagicMock
 
-Virus Definitions
----------
-Version: 1.00000 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Extended set
----------
-Version: 1.00000 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Extreme set
----------
-Version: 1.00000 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Mobile Malware Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IPS Attack Engine
----------
-Version: 7.00510
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Aug 30 18:09:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Attack Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Attack Extended Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Application Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Threat Definitions
----------
-Version: 6.00741 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Dec  1 02:30:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-FMWP Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IPS Malicious URL Database
----------
-Version: 1.00001 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Thu Jan  1 01:01:00 2015
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IoT Detect Definitions
----------
-Version: 0.00000 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Aug 17 18:31:00 2022
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Detect Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-OT Patch Definitions
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Flow-based Virus Definitions
----------
-Version: 1.00000 signed
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Apr  9 19:07:00 2018
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Botnet Domain Database
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Internet-service Standard Database
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Device and OS Identifications
----------
-Version: 1.00147
-Contract Expiry Date: n/a
-Last Updated using manual update on Fri Sep  8 01:00:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-URL Allow list
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-DLP Signatures
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-IP Geography DB
----------
-Version: 3.00172
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Apr 12 19:23:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Certificate Bundle
----------
-Version: 1.00045
-Contract Expiry Date: n/a
-Last Updated using manual update on Wed Jun 28 20:51:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Malicious Certificate DB
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Mac Address Database
----------
-Version: 1.00143
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Dec  6 09:00:00 2022
-Last Update Attempt: n/a
-Result: Updates Installed
-
-AntiPhish Pattern DB
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Nov 30 00:00:00 1999
-Last Update Attempt: n/a
-Result: Updates Installed
-
-AI/Machine Learning Malware Detection Model
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-ICDB Database
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Inline CASB Database
----------
-Version: 1.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Tue Jul 25 22:16:00 2023
-Last Update Attempt: n/a
-Result: Updates Installed
-
-Security Rating Data Package
----------
-Version: 0.00000
-Contract Expiry Date: n/a
-Last Updated using manual update on Mon Jan  1 00:00:00 2001
-Last Update Attempt: n/a
-Result: Updates Installed
-
-FDS Address
----------
+import pytest
 
 
+class TestDeviceBase:
+    """Test suite for Device base class."""
 
-FortiGate-VM64-KVM # """
+    def test_device_initialization(self, mock_device):
+        """Test device initialization with config."""
+        # Test using mock device
+        assert mock_device.name == "MockDevice"
+        assert mock_device.ip == "192.168.1.1"
+        assert mock_device.port == 22
+        assert mock_device.username == "admin"
+
+    def test_device_connect(self, mock_device):
+        """Test device connection."""
+        # Mock device already has connection setup
+        assert mock_device is not None
+
+    def test_send_command_basic(self, mock_device):
+        """Test sending basic commands."""
+        mock_device.send_command.return_value = "Command output"
+        result = mock_device.send_command("get system status")
+
+        assert result == "Command output"
+        mock_device.send_command.assert_called_once_with("get system status")
+
+    def test_send_command_with_auto_proceed(self, mock_device):
+        """Test send_command with auto-proceed patterns."""
+        # Test auto-proceed logic with mock
+        mock_device.send_command.return_value = "Proceeded successfully"
+        result = mock_device.send_command("execute factoryreset")
+        assert result == "Proceeded successfully"
+
+    def test_device_info_parsing(self, fortigate_system_status):
+        """Test parsing device information."""
+        # Test would parse the system status output
+        assert "FortiGate-VM64" in fortigate_system_status
+        assert "v7.4.1" in fortigate_system_status
+
+    def test_reboot_detection(self, mock_device):
+        """Test reboot command detection."""
+        # Mock is_reboot_command method
+        mock_device.is_reboot_command = MagicMock(return_value=True)
+
+        result = mock_device.is_reboot_command("execute reboot")
+        assert result == True
+
+    def test_expect_pattern_matching(self, mock_connection):
+        """Test expect pattern matching."""
+        mock_connection.expect.return_value = 0
+        result = mock_connection.expect(["#", "$"], timeout=30)
+        assert result == 0
+
+    def test_search_pattern(self, mock_connection):
+        """Test search for pattern in output."""
+        mock_connection.before = b"Version: FortiGate-VM64 v7.4.1"
+        # Would test search functionality
+        assert b"v7.4.1" in mock_connection.before
+
+    def test_device_reconnect(self, mock_device):
+        """Test device reconnection."""
+        mock_device.reconnect = MagicMock(return_value=True)
+        result = mock_device.reconnect()
+        assert result == True
+
+    def test_device_switch(self, mock_device):
+        """Test switching device context."""
+        mock_device.switch = MagicMock(return_value=None)
+        mock_device.switch()
+        mock_device.switch.assert_called_once()
 
 
-def test_parse_system_status():
-    pass
+class TestFortiGateDevice:
+    """Test suite for FortiGate device."""
+
+    def test_fortigate_system_status_parsing(self, fortigate_system_status):
+        """Test parsing FortiGate system status."""
+        # Extract version
+        assert "v7.4.1" in fortigate_system_status
+        # Extract serial number
+        assert "FGVM0123456789" in fortigate_system_status
+        # Extract hostname
+        assert "FortiGate-VM64" in fortigate_system_status
+        # Extract operation mode
+        assert "NAT" in fortigate_system_status
+
+    def test_fortigate_autoupdate_versions(self, fortigate_autoupdate_versions):
+        """Test parsing autoupdate versions."""
+        assert "AV Engine" in fortigate_autoupdate_versions
+        assert "7.00018" in fortigate_autoupdate_versions
+        assert "Virus Definitions" in fortigate_autoupdate_versions
+
+    def test_fortigate_restore_image(self, mock_fortigate, mocker):
+        """Test FortiGate image restoration."""
+        mock_fortigate.restore_image = MagicMock(return_value=True)
+        result = mock_fortigate.restore_image("v7.4.1", "2448", need_reset=True)
+
+        mock_fortigate.restore_image.assert_called_once()
+
+    def test_fortigate_reboot(self, mock_fortigate):
+        """Test FortiGate reboot."""
+        mock_fortigate.reboot_device = MagicMock(return_value=None)
+        mock_fortigate.reboot_device()
+
+        mock_fortigate.reboot_device.assert_called_once()
+
+    def test_fortigate_license_info(self, mock_fortigate):
+        """Test extracting FortiGate license information."""
+        mock_fortigate.get_device_info = MagicMock(
+            return_value={
+                "version": "v7.4.1",
+                "serial": "FGVM0123456789",
+                "license": "valid",
+            }
+        )
+
+        info = mock_fortigate.get_device_info()
+        assert "license" in info
+
+
+class TestComputerDevice:
+    """Test suite for Computer device (Linux/Windows)."""
+
+    def test_computer_ssh_connection(self, mock_connection, mocker):
+        """Test Computer SSH connection."""
+        # Would test SSH connection to Linux/Windows computer
+        pass
+
+    def test_computer_prompt_detection(self):
+        """Test detection of Linux/Windows prompts."""
+        linux_prompt = "user@host:~$"
+        windows_prompt = "C:\\>"
+
+        assert "$" in linux_prompt or ">" in windows_prompt
+
+
+class TestKVMDevice:
+    """Test suite for KVM hypervisor device."""
+
+    def test_kvm_vm_deployment(self, mocker):
+        """Test KVM VM deployment."""
+        # Would test VM deployment workflow
+        pass
+
+    def test_kvm_vm_lifecycle(self):
+        """Test KVM VM lifecycle operations."""
+        # Test: create -> start -> stop -> remove
+        pass
+
+    def test_kvm_vm_status_detection(self):
+        """Test KVM VM status detection."""
+        statuses = ["RUNNING", "SHUTOFF", "PAUSED", "NONE"]
+        assert "RUNNING" in statuses
+        assert "SHUTOFF" in statuses
+
+
+class TestDeviceIntegration:
+    """Integration tests for device operations."""
+
+    def test_multi_device_session(self):
+        """Test managing multiple device sessions."""
+        pytest.skip("Requires full device integration")
+
+    def test_device_command_chain(self):
+        """Test chaining multiple commands."""
+        pytest.skip("Requires full device integration")

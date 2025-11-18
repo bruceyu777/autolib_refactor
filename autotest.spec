@@ -55,7 +55,7 @@ a = Analysis(
         ("version", "."),
         ("lib/services/fos/static/pltrev.csv", "lib/services/fos/static/"),
         ("lib/core/compiler/static/cli_syntax.json", "lib/core/compiler/static/"),
-    ] + tree_datas("lib/services/static", "lib/services/static") + tree_datas("lib/core/device/ems/metadata/", "lib/core/device/ems/metadata"),
+    ] + tree_datas("lib/services/web_server/templates", "lib/services/web_server/templates") + tree_datas("lib/core/device/ems/metadata/", "lib/core/device/ems/metadata"),
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

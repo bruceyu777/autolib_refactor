@@ -11,10 +11,7 @@ from rich.table import Table
 
 from .environment import env
 from .output import output
-from .template_env import web_server_env
-
-TEMPLATE_FILENAME = "summary.template"
-LOADED_SUMMARY_TEMPLATE = web_server_env.get_template(TEMPLATE_FILENAME)
+from .template_env import LOADED_SUMMARY_TEMPLATE
 
 
 class OutputFileType(IntEnum):

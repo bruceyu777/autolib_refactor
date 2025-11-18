@@ -16,6 +16,8 @@ psutil
 ptyprocess
 Pygments
 pytest
+pytest-cov
+pytest-mock
 regex
 requests
 rich

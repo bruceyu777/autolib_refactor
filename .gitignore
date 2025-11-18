@@ -10,7 +10,7 @@ __pycache__/*
 
 *.pyc
 
-.vscode/settings.json
+.vscode
 out/*
 .VSCodeCounter/*
 testcase/*
@@ -23,7 +23,7 @@ artifacts/*
 svn_testcases/*
 v720/*
 lib/tests/v720/
-output
+outputs
 output.txt
 test.txt
 vm_codes.txt
@@ -57,3 +57,10 @@ testcase_backup2
 env.501E.conf.local4.temp
 .DS_Store
 version.bak
+
+.claude
+node_modules
+autotest
+htmlcov
+.claudeignore
+.coverage

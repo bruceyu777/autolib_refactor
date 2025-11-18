@@ -7,24 +7,6 @@ from .output import output
 logger = logging.getLogger()
 
 
-def add_logging_level(levelName, levelNum, methodName=None):
-    methodName = levelName.lower()
-
-    def logForLevel(self, message, *args, **kwargs):
-        if self.isEnabledFor(levelNum):
-            self._log(  # pylint: disable= protected-access
-                levelNum, message, args, **kwargs
-            )
-
-    def logToRoot(message, *args, **kwargs):
-        logging.log(levelNum, message, *args, **kwargs)
-
-    logging.addLevelName(levelNum, levelName)
-    setattr(logging, levelName, levelNum)
-    setattr(logging.getLoggerClass(), methodName, logForLevel)
-    setattr(logging, methodName, logToRoot)
-
-
 def add_logger_handler(handler, level, formatter):
     handler.setLevel(level)
     handler.setFormatter(formatter)
@@ -34,7 +16,7 @@ def add_logger_handler(handler, level, formatter):
 def add_stdout_stream():
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("%(message)s")
-    add_logger_handler(handler, logging.NOTICE, formatter)  # pylint: disable= no-member
+    add_logger_handler(handler, logging.INFO, formatter)
 
 
 def add_file_stream(in_debug_mode):
@@ -67,7 +49,6 @@ def setup_logger(in_debug_mode, is_group_test, env_config_filename, sub_command=
 
 def enable_log_for_autotest(log_level, is_group_test, env_config_filename):
     update_output_subfolder(is_group_test, env_config_filename)
-    add_logging_level("NOTICE", logging.INFO + 10)
     logger.setLevel(log_level)
     setattr(logger, "in_debug_mode", log_level is logging.DEBUG)
     add_stdout_stream()

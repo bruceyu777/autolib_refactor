@@ -2,7 +2,7 @@ import os
 import sys
 import webbrowser
 
-from lib.services import env, launch_webserver_on, logger, oriole, output, summary
+from lib.services import env, logger, oriole, output, summary, webserver_main
 
 from .group_task import GroupTask
 from .task import Task as ScriptTask
@@ -15,10 +15,10 @@ class Job:
 
     def log_job_start_info(self):
         if self.args.script:
-            logger.notice("Test Script: %s", self.args.script)
+            logger.info("Test Script: %s", self.args.script)
             test_file = self.args.script
         else:
-            logger.notice("Test Group: %s", self.args.group)
+            logger.info("Test Group: %s", self.args.group)
             test_file = self.args.group
 
         summary.dump_str_to_brief_summary(
@@ -41,7 +41,7 @@ class Job:
     def start_http_server(self):
         ip, port = env.get_local_http_server_conf()
         if ip and port:
-            launch_webserver_on(ip, port)
+            webserver_main(ip, port)
         else:
             sys.exit(0)
 
@@ -56,7 +56,7 @@ class Job:
             host, port = "127.0.0.1", 8080
             logger.warning("Use default IP and PORT: %s:%s", host, port)
         summary_url = f"http://{host}:{port}/{output.get_current_output_dir()}/summary"
-        logger.notice(f"Summary: {summary_url}/summary.html")
+        logger.info("Summary: %s/summary.html", summary_url)
         if self.args.portal:
             webbrowser.open_new(summary_url)
 
