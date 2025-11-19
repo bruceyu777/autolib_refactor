@@ -32,13 +32,13 @@ def get_linux_version():
             ["cat", "/etc/lsb-release"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True
+            universal_newlines=True,
         )
         print("*" * 70)
         print(result.stdout)
         print("*" * 70)
         if result.returncode == 0:
-            matched = re.search(r'DISTRIB_RELEASE=([\d.]+)', result.stdout)
+            matched = re.search(r"DISTRIB_RELEASE=([\d.]+)", result.stdout)
             if matched:
                 version = matched.group(1)
                 return version.replace(".", "")
@@ -48,14 +48,19 @@ def get_linux_version():
 
 
 a = Analysis(
-    ['autotest.py'],
-    pathex=['lib'],
+    ["autotest.py"],
+    pathex=["lib"],
     binaries=[],
     datas=[
         ("version", "."),
         ("lib/services/fos/static/pltrev.csv", "lib/services/fos/static/"),
         ("lib/core/compiler/static/cli_syntax.json", "lib/core/compiler/static/"),
-    ] + tree_datas("lib/services/web_server/templates", "lib/services/web_server/templates") + tree_datas("lib/core/device/ems/metadata/", "lib/core/device/ems/metadata"),
+    ]
+    + tree_datas(
+        "lib/services/web_server/templates", "lib/services/web_server/templates"
+    )
+    + tree_datas("lib/core/device/ems/metadata/", "lib/core/device/ems/metadata")
+    + tree_datas("lib/services/static", "lib/services/static"),
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -64,7 +69,7 @@ a = Analysis(
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
-    noarchive=False
+    noarchive=False,
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
@@ -80,7 +85,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name=f'autotest{version_suffix}',
+    name=f"autotest{version_suffix}",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -92,5 +97,5 @@ exe = EXE(
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
-    entitlements_file=None
+    entitlements_file=None,
 )
