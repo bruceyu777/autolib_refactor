@@ -164,13 +164,16 @@ class Group(Script):
                 for line_number, source_file in all_scripts.items()
             }
 
-            # Collect results
-            self.included_scripts = {}
+            # Collect results, but the ORDER will be changed
+            included_scripts = {}
             for future in as_completed(future_to_line):
                 line_number = future_to_line[future]
                 script = self._process_compilation_result(future.result())
-                self.included_scripts[line_number] = script
+                included_scripts[line_number] = script
 
+        # 1. Sort by line_number, ascending order
+        order = sorted(included_scripts)
+        self.included_scripts = {i: included_scripts[i] for i in order}
         logger.info("Parallel compilation completed for %d scripts!", total_scripts)
 
     def _compile_sequential(self, all_scripts, num_scripts):
