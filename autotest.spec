@@ -144,7 +144,11 @@ a = Analysis(
     + bundle_tree("lib/services/web_server/templates")
     + bundle_tree("lib/core/device/ems/metadata")
     + bundle_tree("lib/services/static")
-    + bundle_tree("plugins/apis"),
+    + bundle_tree("plugins/apis")
+    # Bundle built-in API modules as data files for filesystem discovery
+    # This extracts .py files to _MEIPASS, enabling unified filesystem scanning
+    # at runtime (same approach as plugins/apis user-defined APIs)
+    + bundle_tree("lib/core/executor/api"),
     # Dynamic hiddenimports discovery - see discover_hiddenimports() function above
     # This auto-includes API modules and critical services without manual maintenance
     hiddenimports=discover_hiddenimports(),

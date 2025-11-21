@@ -514,6 +514,79 @@ Create standalone executable:
 
 Output: `autotest` (standalone binary)
 
+### PyInstaller Technical Details
+
+When building with PyInstaller, the framework uses specific techniques to ensure API discovery and template loading work correctly in the compiled binary.
+
+#### The Dual-Bundle Approach for API Discovery
+
+Built-in API modules in `lib/core/executor/api/` require **both** mechanisms in `autotest.spec`:
+
+| Mechanism               | Purpose                                                  |
+| ----------------------- | -------------------------------------------------------- |
+| `hiddenimports`         | Compiles modules into binary so Python can import them   |
+| `bundle_tree()` (datas) | Extracts `.py` files to `_MEIPASS` for runtime discovery |
+
+**Why both are needed:**
+
+- `hiddenimports` alone: Modules are compiled but NOT extracted as files → filesystem discovery fails
+- `bundle_tree()` alone: Files are extracted but NOT compiled → `importlib.import_module()` fails
+
+#### Zero-Maintenance API Discovery
+
+When adding a new built-in API module:
+
+1. Create the file in `lib/core/executor/api/` (e.g., `new_module.py`)
+2. Done! Both build-time and runtime auto-discover it.
+
+For user-defined APIs:
+
+1. Create the file in `plugins/apis/`
+2. Done! Already bundled via `bundle_tree("plugins/apis")`
+
+**Key functions in `autotest.spec`:**
+
+- `discover_hiddenimports()`: Auto-discovers API modules at build time by scanning `lib/core/executor/api/*.py`
+- `bundle_tree(path)`: Helper to bundle directory trees with 1:1 source→dest mapping
+
+#### Web Server Template Loading (Daemon Process)
+
+The web server runs as a daemon process via `os.fork()`, which creates a unique challenge with PyInstaller's `onefile` mode.
+
+**The Problem:**
+
+- PyInstaller extracts files to a temporary `_MEIPASS` directory
+- When `os.fork()` creates the daemon, parent and child processes may get **different** `_MEIPASS` directories
+- Template paths resolved in the parent become invalid in the child daemon
+
+**The Solution:**
+
+- Use Jinja2 `DictLoader` instead of `FileSystemLoader`
+- Pre-load all templates into memory **before** the fork occurs
+- Templates are stored in a Python dict, eliminating filesystem path dependencies
+
+**Key file:** `lib/services/web_server/templates_loader.py`
+
+```python
+# Templates are loaded into memory at module import time
+_TEMPLATES = _load_templates_from_disk()
+web_server_template_env = Environment(loader=DictLoader(_TEMPLATES))
+```
+
+#### Discovery and Loading Summary
+
+| Mode        | API Discovery                         | Template Loading         |
+| ----------- | ------------------------------------- | ------------------------ |
+| Development | Filesystem scan (`.py` files)         | `FileSystemLoader`       |
+| PyInstaller | Filesystem scan (`.py` in `_MEIPASS`) | `DictLoader` (in-memory) |
+
+**Related files:**
+
+- `autotest.spec` - PyInstaller build configuration
+- `lib/core/executor/api_manager.py` - API discovery implementation
+- `lib/core/executor/api/__init__.py` - API package documentation
+- `lib/services/web_server/templates_loader.py` - Template loading for daemon
+
 ### Docker Usage
 
 ```bash

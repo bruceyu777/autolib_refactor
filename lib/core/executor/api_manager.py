@@ -112,43 +112,30 @@ def discover_apis(force_refresh=False):
 
 def _discover_modules_from_filesystem(package):
     """
-    Discover module names by scanning package directory (UNIFIED approach).
+    Discover module names by scanning package directory.
 
-    SIMPLIFIED DISCOVERY - WORKS IN BOTH MODES:
-    ===========================================
-    This function uses filesystem scanning with pathlib, which works in:
-    - Development mode: Scans source .py files
-    - PyInstaller frozen mode: Scans extracted files in _MEIPASS
+    UNIFIED DISCOVERY - WORKS IN BOTH DEV AND FROZEN MODES:
+    =======================================================
+    This function scans the package directory for .py files using pathlib.
+    It works in both development and PyInstaller frozen mode because:
 
-    WHY THIS IS BETTER THAN DUAL-MODE APPROACH:
-    ===========================================
-    Previous implementation had 3 different discovery methods:
-    1. pkgutil.iter_modules() for dev mode
-    2. sys.modules scanning for frozen mode
-    3. Filesystem glob in autotest.spec at build time
+    - Development: Scans source .py files from the project directory
+    - PyInstaller: Scans .py files extracted to _MEIPASS via bundle_tree()
 
-    New implementation: Single method works everywhere!
-    - Same logic at build time (autotest.spec) and runtime
-    - Simpler to understand and maintain
-    - No sync issues between different discovery methods
+    WHY THIS WORKS IN FROZEN MODE:
+    ==============================
+    In autotest.spec, built-in APIs are bundled BOTH as:
+    1. hiddenimports: Allows Python to import them (compiled into binary)
+    2. datas via bundle_tree(): Extracts .py files to _MEIPASS for discovery
 
-    HOW IT WORKS:
-    =============
-    In both dev and frozen modes, package.__file__ points to __init__.py(c):
-    - Dev: /path/to/lib/core/executor/api/__init__.py
-    - Frozen: /tmp/_MEIxxxxxx/lib/core/executor/api/__init__.pyc
+    This dual approach enables:
+    - Filesystem scanning to discover module names (from extracted .py files)
+    - importlib.import_module() to actually load them (from compiled code)
 
-    We get the parent directory and glob for .py files. Even in frozen mode,
-    PyInstaller extracts .py files (or .pyc) to _MEIPASS, so glob finds them!
-
-    RELATIONSHIP WITH HIDDENIMPORTS:
-    ================================
-    This discovers module NAMES from the filesystem, but Python still needs
-    to IMPORT them. PyInstaller won't bundle modules unless they're in
-    autotest.spec's hiddenimports list.
-
-    - hiddenimports: Tells PyInstaller WHAT to bundle
-    - This function: Discovers WHAT got bundled (at runtime)
+    ZERO MAINTENANCE:
+    =================
+    When adding a new API module, just create the file. Both build-time
+    (hiddenimports) and runtime (this function) auto-discover it.
 
     Args:
         package: Python package object to scan
@@ -157,25 +144,15 @@ def _discover_modules_from_filesystem(package):
         list: Module names (file stems without .py extension)
     """
     try:
-        # Get package directory from package.__file__
         package_file = Path(package.__file__)
         package_dir = package_file.parent
 
-        logger.debug(
-            "Discovering modules from filesystem: %s (frozen=%s)",
-            package_dir,
-            hasattr(sys, "_MEIPASS"),
-        )
-
-        # Scan for Python module files
-        module_files = list(package_dir.glob("*.py*"))  # .py or .pyc
+        module_files = list(package_dir.glob("*.py"))
         module_names = [
             p.stem
             for p in module_files
             if p.stem != "__init__" and not p.stem.startswith("_")
         ]
-
-        logger.debug("Discovered %d modules: %s", len(module_names), module_names)
         return module_names
 
     except Exception as e:
@@ -187,38 +164,22 @@ def _discover_from_package(package, category_prefix):
     """
     Discover and register APIs from an installed package.
 
-    UNIFIED DISCOVERY APPROACH:
-    ===========================
-    Uses filesystem scanning (pathlib.glob) in BOTH dev and frozen modes.
-    This is simpler and more reliable than the previous dual-mode approach.
+    UNIFIED FILESYSTEM DISCOVERY:
+    =============================
+    Uses filesystem scanning (pathlib.glob for .py files) in BOTH modes:
+    - Development: Scans source .py files from project directory
+    - PyInstaller frozen: Scans .py files extracted to _MEIPASS
 
-    Previous approach (REMOVED):
-    - Dev mode: pkgutil.iter_modules()
-    - Frozen mode: sys.modules scanning
-    - Problem: Two different methods that could get out of sync
+    WHY THIS WORKS:
+    ===============
+    In autotest.spec, built-in APIs are bundled as BOTH:
+    1. hiddenimports: Compiled into binary for Python imports
+    2. datas via bundle_tree(): Extracted to _MEIPASS for discovery
 
-    New approach (CURRENT):
-    - Both modes: Filesystem scanning via pathlib
-    - Works because PyInstaller extracts files to _MEIPASS
-    - Same logic as autotest.spec's discover_hiddenimports()
-    - Single source of truth: the filesystem
-
-    RELATIONSHIP WITH autotest.spec:
-    ================================
-    - BUILD TIME (autotest.spec): Scans filesystem → creates hiddenimports list
-    - RUN TIME (this function): Scans filesystem → discovers what got bundled
-    - Both use pathlib.glob() → guaranteed to stay in sync!
-
-    WHY HIDDENIMPORTS ARE STILL NEEDED:
-    ===================================
-    Even though we discover modules via filesystem, PyInstaller still needs
-    hiddenimports to know WHAT to bundle. This function discovers WHAT got
-    bundled after PyInstaller did its work.
-
-    - Without hiddenimports: Modules not bundled → filesystem scan finds nothing
-    - With hiddenimports: Modules bundled → filesystem scan finds them
-
-    See discover_hiddenimports() in autotest.spec for build-time discovery.
+    This unified approach means:
+    - Same discovery logic works everywhere
+    - No hardcoded module lists to maintain
+    - Adding a new API module requires only creating the file
 
     Args:
         package: Python package to scan
@@ -226,11 +187,11 @@ def _discover_from_package(package, category_prefix):
     """
     api_package_name = package.__name__
 
-    # Discover modules via unified filesystem scanning
+    # Unified filesystem discovery - works in both dev and frozen modes
     module_names = _discover_modules_from_filesystem(package)
 
     if not module_names:
-        logger.debug("No API modules discovered in package: %s", api_package_name)
+        logger.info("No API modules discovered in package: %s", api_package_name)
         return
 
     # Import and register each discovered module
