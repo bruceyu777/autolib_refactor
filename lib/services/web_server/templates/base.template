@@ -155,6 +155,8 @@
         }
 
         body {
+            scrollbar-color: #45a049 #e0f2f1;
+            scrollbar-width: auto;
             display: flex;
             flex-direction: column;
             height: 100vh;
