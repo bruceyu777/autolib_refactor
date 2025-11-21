@@ -487,7 +487,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
             # Regular file serving
             safe_path = self.translate_path(self.path)
             if CustomHandler._is_viewable(safe_path):
-                if safe_path.endswith(".html"):
+                if safe_path.endswith((".html", ".htm")):
                     self._load_response_for_html_file(safe_path)
                 else:
                     self._load_response_with_file_content(safe_path)

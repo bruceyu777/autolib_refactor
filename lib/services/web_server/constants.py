@@ -17,6 +17,8 @@ VIEWABLE_TESTFILE_EXTENSION = (
     ".vm",
     "",
     ".conf",
+    ".full",
+    ".crit",
     ".grp",
     ".html",
     ".py",
@@ -24,4 +26,8 @@ VIEWABLE_TESTFILE_EXTENSION = (
     ".json",
     ".yaml",
     ".sh",
+    ".spec",
+    ".yml",
+    ".yaml",
+    ".toml",
 )

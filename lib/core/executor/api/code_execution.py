@@ -64,7 +64,7 @@ def exec_code(executor, params):
 
         # Build execution context
         logger.debug("exec_code: Building execution context")
-        context = build_context(executor)
+        context = _build_context(executor)
         logger.debug("exec_code: Built execution context with %d keys", len(context))
 
         # Get code executor for language
@@ -114,9 +114,9 @@ def _wrap_function_call(code, func_name, args):
     return f"{code}\n\n__result__ = {func_name}({args_str})"
 
 
-def build_context(executor):
+def _build_context(executor):
     """
-    Build execution context for API and code execution.
+    Build execution context for API and code execution (private helper).
 
     This context is available to both plugin APIs and code files executed
     via exec_code. Access via executor.context['key_name'].

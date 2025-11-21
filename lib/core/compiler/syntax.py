@@ -20,6 +20,8 @@ from lib.services import logger
 from .schema_loader import get_schema_registry
 from .settings import SYNTAX_DEFINITION_FILEPATH
 
+# pytlint: disable=protected-access
+
 
 class ScriptSyntax:
     """
@@ -387,7 +389,7 @@ class ScriptSyntax:
                     all_apis[api_name] = self._create_default_api_schema()
                     custom_count += 1
 
-            logger.info(
+            logger.debug(
                 "Pattern refresh: %d total APIs (%d custom)",
                 len(all_apis),
                 custom_count,

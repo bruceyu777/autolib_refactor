@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import time
+from pathlib import Path
 
 
 def tree_datas(source, dest_prefix):
@@ -24,6 +25,26 @@ def tree_datas(source, dest_prefix):
             dest_folder = os.path.join(dest_prefix, relative_path)
             data_files.append((file_src, dest_folder))
     return data_files
+
+
+def bundle_tree(path):
+    """
+    Bundle entire directory tree with 1:1 source→dest mapping.
+
+    Simplified helper for the common case where source path equals destination path.
+    Eliminates repetitive tree_datas(path, path) calls.
+
+    Args:
+        path: Directory path to bundle (used as both source and destination)
+
+    Returns:
+        list: PyInstaller datas tuples
+
+    Example:
+        bundle_tree("lib/services/static")
+        # Equivalent to: tree_datas("lib/services/static", "lib/services/static")
+    """
+    return tree_datas(path, path)
 
 
 def get_linux_version():
@@ -47,6 +68,69 @@ def get_linux_version():
     return ""
 
 
+def discover_hiddenimports():
+    """
+    Dynamically discover modules to include as hiddenimports.
+
+    WHY HIDDENIMPORTS ARE NEEDED:
+    ==============================
+    PyInstaller's static analysis can miss modules that are:
+    1. Imported dynamically using importlib.import_module()
+    2. Imported conditionally (if/else blocks, try/except)
+    3. Discovered at runtime via pkgutil or sys.modules scanning
+    4. Imported via __import__() or exec()
+
+    In this project, API modules are discovered at runtime via:
+    - pkgutil.iter_modules() in development mode
+    - sys.modules scanning in frozen mode (after this spec imports them)
+
+    Without hiddenimports, these modules won't be bundled, causing:
+    - ImportError when trying to load them
+    - Missing API functionality (e.g., 'comment' API not found)
+    - Template loading failures (missing path_utils)
+
+    WHY DYNAMIC DISCOVERY:
+    ======================
+    Instead of manually maintaining a list like:
+        hiddenimports=["lib.core.executor.api.buffer", "lib.core.executor.api.device", ...]
+
+    We auto-discover by scanning the filesystem at BUILD TIME:
+    - Add a new API module → automatically included
+    - Remove an API module → automatically excluded
+    - No manual updates needed
+    - Single source of truth (the filesystem)
+
+    Returns:
+        list: Module paths for PyInstaller's hiddenimports
+    """
+    imports = []
+
+    # Auto-discover all API modules from lib/core/executor/api/
+    # These are loaded dynamically at runtime via api_manager.py's discover_apis()
+    api_dir = Path("lib/core/executor/api")
+    if api_dir.exists():
+        api_modules = [
+            f"lib.core.executor.api.{p.stem}"
+            for p in api_dir.glob("*.py")
+            if p.stem != "__init__"
+        ]
+        imports.extend(api_modules)
+        print(f"Discovered {len(api_modules)} API modules: {api_modules}")
+
+    # Critical service modules that are imported conditionally or dynamically
+    critical_services = [
+        # path_utils: Imported by templates_loader.py and template_env.py
+        # Provides PyInstaller-aware path resolution for Jinja2 templates
+        # Without this, template loading fails with "TemplateNotFound" errors
+        "lib.services.path_utils",
+    ]
+    imports.extend(critical_services)
+    print(f"Added {len(critical_services)} critical service modules")
+
+    print(f"Total hiddenimports: {len(imports)}")
+    return imports
+
+
 a = Analysis(
     ["autotest.py"],
     pathex=["lib"],
@@ -56,12 +140,14 @@ a = Analysis(
         ("lib/services/fos/static/pltrev.csv", "lib/services/fos/static/"),
         ("lib/core/compiler/static/cli_syntax.json", "lib/core/compiler/static/"),
     ]
-    + tree_datas(
-        "lib/services/web_server/templates", "lib/services/web_server/templates"
-    )
-    + tree_datas("lib/core/device/ems/metadata/", "lib/core/device/ems/metadata")
-    + tree_datas("lib/services/static", "lib/services/static"),
-    hiddenimports=[],
+    # Bundle directory trees with 1:1 source→dest mapping
+    + bundle_tree("lib/services/web_server/templates")
+    + bundle_tree("lib/core/device/ems/metadata")
+    + bundle_tree("lib/services/static")
+    + bundle_tree("plugins/apis"),
+    # Dynamic hiddenimports discovery - see discover_hiddenimports() function above
+    # This auto-includes API modules and critical services without manual maintenance
+    hiddenimports=discover_hiddenimports(),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

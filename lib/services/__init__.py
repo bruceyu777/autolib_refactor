@@ -5,5 +5,6 @@ from .image_server import IMAGE_SERVER_IP, Image, image_server, imageservice_ope
 from .log import add_logger_handler, logger, setup_logger
 from .oriole import oriole
 from .output import output
+from .path_utils import get_base_path
 from .result_manager import ScriptResultManager
 from .web_server import webserver_main

@@ -4,21 +4,55 @@ Base module for executor APIs with inspect-based auto-discovery.
 This module provides automatic API discovery using the inspect module.
 All public functions (not starting with _) in API modules are automatically
 registered as APIs, with the module name serving as the category.
+
+API DISCOVERY APPROACH:
+=======================
+This module uses UNIFIED FILESYSTEM DISCOVERY that works in both:
+- Development mode: Running from source (.py files)
+- PyInstaller frozen mode: Running from compiled binary
+
+DISCOVERY FLOW:
+===============
+1. BUILD TIME (autotest.spec):
+   - discover_hiddenimports() scans lib/core/executor/api/*.py
+   - Creates list of modules to bundle
+   - PyInstaller includes these modules in the binary
+
+2. RUN TIME (this module):
+   - _discover_modules_from_filesystem() scans the same directory
+   - Uses pathlib.glob() to find .py/.pyc files
+   - Works in both dev (source files) and frozen (extracted files in _MEIPASS)
+   - Registers discovered modules as APIs
+
+KEY INSIGHT: Both use filesystem scanning, guaranteed to stay in sync!
+
+WHY HIDDENIMPORTS ARE STILL NEEDED:
+===================================
+Even though runtime discovery uses filesystem scanning, PyInstaller still
+needs hiddenimports to know WHAT to bundle. Without hiddenimports:
+- Modules won't be in the binary
+- Filesystem scan finds nothing
+- No APIs registered
+
+With hiddenimports:
+- Modules bundled in binary and extracted to _MEIPASS
+- Filesystem scan finds them
+- APIs registered successfully
+
+See autotest.spec's discover_hiddenimports() for build-time discovery.
 """
 
-import glob
 import importlib
 import importlib.util
 import inspect
-import os
-import pkgutil
 import sys
+from pathlib import Path
 from typing import Callable, Dict, Tuple
 
 from lib.core.compiler.schema_loader import get_schema
-from lib.core.executor.api.code_execution import build_context
+from lib.core.executor.api.code_execution import _build_context
 from lib.core.executor.api_params import ApiParams
-from lib.services import logger
+from lib.services import get_base_path, logger
 from lib.settings import PARAGRAPH_SEP
 
 from . import api as api_package
@@ -30,6 +64,8 @@ _CATEGORY_REGISTRY: Dict[str, list] = {}
 # Cache for API discovery results (for compile-time performance)
 _DISCOVERY_CACHE: Tuple[Dict, Dict] = None
 _BUILTIN_CATEGORY_PREFIX = "Built-In"
+
+# pylint: disable=global-statement
 
 
 def discover_apis(force_refresh=False):
@@ -64,7 +100,9 @@ def discover_apis(force_refresh=False):
     _discover_from_package(api_package, _BUILTIN_CATEGORY_PREFIX)
 
     # Discover user-defined APIs from directory
-    _discover_from_directory("plugins/apis", "User-Defined")
+    base_path = get_base_path()
+    plugins_dir = base_path / "plugins" / "apis"
+    _discover_from_directory(str(plugins_dir), "User-Defined")
 
     # Cache the results
     _DISCOVERY_CACHE = (_API_REGISTRY.copy(), _CATEGORY_REGISTRY.copy())
@@ -72,22 +110,131 @@ def discover_apis(force_refresh=False):
     return _API_REGISTRY, _CATEGORY_REGISTRY
 
 
+def _discover_modules_from_filesystem(package):
+    """
+    Discover module names by scanning package directory (UNIFIED approach).
+
+    SIMPLIFIED DISCOVERY - WORKS IN BOTH MODES:
+    ===========================================
+    This function uses filesystem scanning with pathlib, which works in:
+    - Development mode: Scans source .py files
+    - PyInstaller frozen mode: Scans extracted files in _MEIPASS
+
+    WHY THIS IS BETTER THAN DUAL-MODE APPROACH:
+    ===========================================
+    Previous implementation had 3 different discovery methods:
+    1. pkgutil.iter_modules() for dev mode
+    2. sys.modules scanning for frozen mode
+    3. Filesystem glob in autotest.spec at build time
+
+    New implementation: Single method works everywhere!
+    - Same logic at build time (autotest.spec) and runtime
+    - Simpler to understand and maintain
+    - No sync issues between different discovery methods
+
+    HOW IT WORKS:
+    =============
+    In both dev and frozen modes, package.__file__ points to __init__.py(c):
+    - Dev: /path/to/lib/core/executor/api/__init__.py
+    - Frozen: /tmp/_MEIxxxxxx/lib/core/executor/api/__init__.pyc
+
+    We get the parent directory and glob for .py files. Even in frozen mode,
+    PyInstaller extracts .py files (or .pyc) to _MEIPASS, so glob finds them!
+
+    RELATIONSHIP WITH HIDDENIMPORTS:
+    ================================
+    This discovers module NAMES from the filesystem, but Python still needs
+    to IMPORT them. PyInstaller won't bundle modules unless they're in
+    autotest.spec's hiddenimports list.
+
+    - hiddenimports: Tells PyInstaller WHAT to bundle
+    - This function: Discovers WHAT got bundled (at runtime)
+
+    Args:
+        package: Python package object to scan
+
+    Returns:
+        list: Module names (file stems without .py extension)
+    """
+    try:
+        # Get package directory from package.__file__
+        package_file = Path(package.__file__)
+        package_dir = package_file.parent
+
+        logger.debug(
+            "Discovering modules from filesystem: %s (frozen=%s)",
+            package_dir,
+            hasattr(sys, "_MEIPASS"),
+        )
+
+        # Scan for Python module files
+        module_files = list(package_dir.glob("*.py*"))  # .py or .pyc
+        module_names = [
+            p.stem
+            for p in module_files
+            if p.stem != "__init__" and not p.stem.startswith("_")
+        ]
+
+        logger.debug("Discovered %d modules: %s", len(module_names), module_names)
+        return module_names
+
+    except Exception as e:
+        logger.error("Failed to discover modules from filesystem: %s", e)
+        return []
+
+
 def _discover_from_package(package, category_prefix):
     """
-    Discover APIs from an installed package.
+    Discover and register APIs from an installed package.
+
+    UNIFIED DISCOVERY APPROACH:
+    ===========================
+    Uses filesystem scanning (pathlib.glob) in BOTH dev and frozen modes.
+    This is simpler and more reliable than the previous dual-mode approach.
+
+    Previous approach (REMOVED):
+    - Dev mode: pkgutil.iter_modules()
+    - Frozen mode: sys.modules scanning
+    - Problem: Two different methods that could get out of sync
+
+    New approach (CURRENT):
+    - Both modes: Filesystem scanning via pathlib
+    - Works because PyInstaller extracts files to _MEIPASS
+    - Same logic as autotest.spec's discover_hiddenimports()
+    - Single source of truth: the filesystem
+
+    RELATIONSHIP WITH autotest.spec:
+    ================================
+    - BUILD TIME (autotest.spec): Scans filesystem → creates hiddenimports list
+    - RUN TIME (this function): Scans filesystem → discovers what got bundled
+    - Both use pathlib.glob() → guaranteed to stay in sync!
+
+    WHY HIDDENIMPORTS ARE STILL NEEDED:
+    ===================================
+    Even though we discover modules via filesystem, PyInstaller still needs
+    hiddenimports to know WHAT to bundle. This function discovers WHAT got
+    bundled after PyInstaller did its work.
+
+    - Without hiddenimports: Modules not bundled → filesystem scan finds nothing
+    - With hiddenimports: Modules bundled → filesystem scan finds them
+
+    See discover_hiddenimports() in autotest.spec for build-time discovery.
 
     Args:
         package: Python package to scan
-        category_prefix: Prefix for category names
+        category_prefix: Prefix for category names (e.g., "Built-In")
     """
-    api_path = package.__path__
     api_package_name = package.__name__
 
-    for _, module_name, ispkg in pkgutil.iter_modules(api_path):
-        if ispkg:
-            continue  # Skip sub-packages
+    # Discover modules via unified filesystem scanning
+    module_names = _discover_modules_from_filesystem(package)
 
-        # Import the module
+    if not module_names:
+        logger.debug("No API modules discovered in package: %s", api_package_name)
+        return
+
+    # Import and register each discovered module
+    for module_name in module_names:
         full_module_name = f"{api_package_name}.{module_name}"
         module = importlib.import_module(full_module_name)
 
@@ -103,27 +250,30 @@ def _discover_from_directory(directory, category_prefix):
     Discover APIs from a filesystem directory.
 
     Args:
-        directory: Directory path to scan for .py files
+        directory: Directory path to scan for .py files (string or Path)
         category_prefix: Prefix for category names
     """
-    if not os.path.exists(directory):
-        logger.info("User API directory not found: %s", directory)
+    # Convert to Path for consistent handling
+    dir_path = Path(directory)
+
+    if not dir_path.exists():
+        logger.info("User API directory not found: %s", dir_path)
         return
 
     # Add directory to path temporarily for imports
-    abs_directory = os.path.abspath(directory)
+    abs_directory = str(dir_path.resolve())
     if abs_directory not in sys.path:
         sys.path.insert(0, abs_directory)
 
     try:
-        # Find all .py files
-        for py_file in glob.glob(f"{directory}/**/*.py", recursive=True):
-            if py_file.endswith("__init__.py"):
+        # Find all .py files using pathlib
+        for py_file in dir_path.rglob("*.py"):
+            if py_file.name == "__init__.py":
                 continue
 
             # Import module dynamically
-            module_name = os.path.splitext(os.path.basename(py_file))[0]
-            spec = importlib.util.spec_from_file_location(module_name, py_file)
+            module_name = py_file.stem  # File name without extension
+            spec = importlib.util.spec_from_file_location(module_name, str(py_file))
             if spec and spec.loader:
                 module = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(module)
@@ -136,7 +286,7 @@ def _discover_from_directory(directory, category_prefix):
                 # Register all public functions from this module
                 _register_module_functions(module, category)
 
-                logger.info(
+                logger.debug(
                     "Discovered user API module: %s from %s", module_name, py_file
                 )
 
@@ -268,7 +418,7 @@ class ApiMixin:
             # Set execution context for API access
             executor = self.executor if hasattr(self, "executor") else self
             if not is_builtin_category(func):
-                executor.context = build_context(executor)
+                executor.context = _build_context(executor)
 
             return func(executor, params)
 
