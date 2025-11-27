@@ -1,0 +1,52 @@
+[FGT_A]
+config vdom
+edit vdom1
+config firewall proxy-policy
+    edit 1
+        set status enable
+        set utm-status disable
+        set utm-status enable
+        set profile-protocol-options "default"
+        set ssl-ssh-profile "deep-custom"
+        set av-profile "av"
+    next
+end
+		execute log delete-all
+		diag sys session clear
+
+		sleep 20
+
+next
+end
+
+
+
+[PC_01]
+
+
+curl -x PC_01:PROXY_ADDRESS --http1.1 -kv https://httpbin.org/ -H "Host: google.com" -4
+
+
+expect -e "403 domain fronting blocked" -for 1155080  -t 10
+
+
+[FGT_A]
+config vdom
+edit vdom1
+
+		diag sys session clear
+		sleep 5
+		execute log  filter category 0
+		execute log  filter field srcip 10.1.100.11
+		execute log  display
+		expect -e "utmaction=\"block\" countweb=1 msg=\"Traffic denied because of domain fronting\" utmref" -for 1155080  -t 10
+		execute log  filter category 3
+		execute log  display
+		expect -e "eventtype=\"domain-fronting\"(.*?)profile=\"default\" action=\"blocked\"(.*?)msg=\"Domain fronting detected\" rawdata=\"HTTP Host <google.com> does not match SNI <httpbin.org>\"" -for 1155080  -t 10
+
+next
+end
+
+
+
+report 1155080

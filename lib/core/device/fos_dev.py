@@ -366,7 +366,7 @@ class FosDev(Device):
 
     def _restore_image_via_url(self, image):
         image_url = image_server.get_image_http_url(image)
-        command = f"exe restore image url {image_url}"
+        command = f"exec restore image url {image_url}"
         output = self._handle_yes_no_util_pattern_matched(
             command, "system is going down NOW", wait_for_y_timer=60
         )
@@ -390,10 +390,16 @@ class FosDev(Device):
             self.reset_config("exe factoryreset")
         logger.debug("Succeeded configuring output mode to be standard.")
         logger.debug("Start configuring mgmt settings.")
-        self.setup_management_access()
-        logger.debug("Finished configuring mgmt settings.")
-        if self.is_vdom_enabled:
-            self._goto_global_view()
+        if need_reset:
+            self.setup_management_access()
+            logger.debug("Finished configuring mgmt settings.")
+        else:
+            logger.debug(
+                "Skip configuring mgmt settings as user specified not to reset."
+            )
+            self.update_vdom_status()
+            if self.is_vdom_enabled:
+                self._goto_global_view()
         image = Image(self.model, release, build, self.image_file_ext)
         upgrade_done_properly = self._restore_image_via_url(image)
         if not upgrade_done_properly:

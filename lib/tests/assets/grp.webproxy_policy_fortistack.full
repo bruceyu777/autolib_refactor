@@ -1,0 +1,145 @@
+#-SETeWritten By     : Zach Wang
+##        Modified Date    : Spec 27, 2024
+##        Test Case ID       : grp.webproxy.full
+##        Objective         : Robot Group for webproxy Test Cases
+##        Robot Category  : Critical
+##        Crashlog Check :  703231
+
+
+#-SETUP WEBPROXY-
+**setupNAT	testcase/v760/webproxy/setup_env_NAT_webproxy_fortistack.fgt	Setup NAT test environment
+**setup_fgtB	testcase/v760/webproxy/setup_FGT-B_webproxy_fortistack.fgt         Setup FGT_B NAT test environment
+
+#-POLICY CONTROL-
+**1155080	testcase/v760/webproxy/14-policy-control/1155080	In explicit proxy, verify request SNI  and  host header are domain, but not match, FGT can block traffic for HTTP1.1.
+**1155081	testcase/v760/webproxy/14-policy-control/1155081	In explicit proxy, verify request SNI  and  host header are domain, but not match, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155082	testcase/v760/webproxy/14-policy-control/1155082	In explicit proxy, verify request SNI  and  host header are domain, but not match, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155083	testcase/v760/webproxy/14-policy-control/1155083	In explicit proxy, verify request host is ip, header host is domain, FGT can pass traffic, not check domain-fronting option.
+**1155084	testcase/v760/webproxy/14-policy-control/1155084	In explicit proxy, verify request host is domain, header host is ip, FGT can block traffic for HTTP1.1.
+**1155085	testcase/v760/webproxy/14-policy-control/1155085	In explicit proxy, request host is domain, header host is ip, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155086	testcase/v760/webproxy/14-policy-control/1155086	In explicit proxy, request host is domain, header host is ip, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155087	testcase/v760/webproxy/14-policy-control/1155087	In explicit proxy, verify request  and  host header are IP but not match, FGT can block traffic for HTTP1.1.
+**1155088	testcase/v760/webproxy/14-policy-control/1155088	In explicit proxy, verify request  and  host header are IP but not match, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155089	testcase/v760/webproxy/14-policy-control/1155089	In explicit proxy, verify request  and  host header are IP but not match, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155090	testcase/v760/webproxy/14-policy-control/1155090	In transparent proxy, verify request SNI  and  host header are domain, but not match, FGT can block traffic for HTTP1.1.
+**1155091	testcase/v760/webproxy/14-policy-control/1155091	In transparent proxy, verify request SNI  and  host header are domain, but not match, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155092	testcase/v760/webproxy/14-policy-control/1155092	In transparent proxy, verify request SNI  and  host header are domain, but not match, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155093	testcase/v760/webproxy/14-policy-control/1155093	In transparent proxy, verify request host is ip, header host is domain, FGT can pass traffic, not check domain-fronting option.
+**1155094	testcase/v760/webproxy/14-policy-control/1155094	In transparent proxy, verify request host is domain, header host is ip, FGT can block traffic for HTTP1.1.
+**1155095	testcase/v760/webproxy/14-policy-control/1155095	In transparent proxy, request host is domain, header host is ip, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155096	testcase/v760/webproxy/14-policy-control/1155096	In transparent proxy, request host is domain, header host is ip, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155097	testcase/v760/webproxy/14-policy-control/1155097	In transparent proxy, verify request  and  host header are IP but not match, FGT can block traffic for HTTP1.1.
+**1155098	testcase/v760/webproxy/14-policy-control/1155098	In transparent proxy, verify request  and  host header are IP but not match, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155099	testcase/v760/webproxy/14-policy-control/1155099	In transparent proxy, verify request  and  host header are IP but not match, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155100	testcase/v760/webproxy/14-policy-control/1155100	In proxy-based firewall policy, verify request SNI  and  host header are domain, but not match, FGT can block traffic for HTTP1.1.
+**1155101	testcase/v760/webproxy/14-policy-control/1155101	In proxy-based firewall policy, verify request SNI  and  host header are domain, but not match, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155102	testcase/v760/webproxy/14-policy-control/1155102	In proxy-based firewall policy, verify request SNI  and  host header are domain, but not match, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155103	testcase/v760/webproxy/14-policy-control/1155103	In proxy-based firewall policy, verify request host is ip, header host is domain, FGT can pass traffic, not check domain-fronting option.
+**1155104	testcase/v760/webproxy/14-policy-control/1155104	In proxy-based firewall policy, verify request host is domain, header host is ip, FGT can block traffic for HTTP1.1.
+**1155105	testcase/v760/webproxy/14-policy-control/1155105	In proxy-based firewall policy, request host is domain, header host is ip, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155106	testcase/v760/webproxy/14-policy-control/1155106	In proxy-based firewall policy, request host is domain, header host is ip, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155107	testcase/v760/webproxy/14-policy-control/1155107	In proxy-based firewall policy, verify request  and  host header are IP but not match, FGT can block traffic for HTTP1.1.
+**1155108	testcase/v760/webproxy/14-policy-control/1155108	In proxy-based firewall policy, verify request  and  host header are IP but not match, FGT can pass traffic for HTTP1.1, and generate monitor log.
+**1155109	testcase/v760/webproxy/14-policy-control/1155109	In proxy-based firewall policy, verify request  and  host header are IP but not match, FGT can pass traffic for HTTP1.1, but no monitor log.
+**1155110	testcase/v760/webproxy/14-policy-control/1155110	In explicit proxy, verify request SNI  and  host header are domain, but not match, FGT cannot block traffic for HTTP2.
+**1155111	testcase/v760/webproxy/14-policy-control/1155111	In explicit proxy, verify request host and connect header host is an IP, but SNI host is another IP, FGT can block traffic for HTTP1.1.
+**1155112	testcase/v760/webproxy/14-policy-control/1155112	In explicit proxy, verify request host and connect header host is an IP, but SNI host is a domain, FGT cannot block traffic for HTTP1.1.
+**1155113	testcase/v760/webproxy/14-policy-control/1155113	In explicit proxy, verify connect header host is an IP, but SNI domain does not match header host domain, FGT can block traffic for HTTP1.1.
+**1157370	testcase/v760/webproxy/14-policy-control/1157370	Verify external resource address can be used in explicit proxy policy as source and destination address.
+**1157194	testcase/v760/webproxy/14-policy-control/1157194	Verify FGT can learn client IP and re-match policy for every request from XFF
+**setupNAT	testcase/v760/webproxy/14-policy-control/setup_methods.txt	Setup methods
+**852036    testcase/v760/webproxy/14-policy-control/852036                     Verify adv_dst proxy address works for transparent web proxy
+**851573    testcase/v760/webproxy/14-policy-control/851573                     Verify category proxy address works for transparent web proxy
+**996493    testcase/v760/webproxy/14-policy-control/996493		   	Verify address excluded in address group can work for explicit proxy policy
+**996494    testcase/v760/webproxy/14-policy-control/996494		   	Verify address excluded in address group can work for transparent proxy policy
+**996495    testcase/v760/webproxy/14-policy-control/996495		   	Verify address excluded in address group can work for authentication rule
+**948381    testcase/v760/webproxy/14-policy-control/948381                     Verify address 0.0.0.0/32 can be matched
+**801119    testcase/v760/webproxy/14-policy-control/801119		   	Verify explicit-proxy-address URL
+**801120    testcase/v760/webproxy/14-policy-control/801120		   	Verify explicit-proxy-address HOST-regexp
+**801124    testcase/v760/webproxy/14-policy-control/801124		   	Verify explicit-proxy-address GET method
+**801125    testcase/v760/webproxy/14-policy-control/801125		   	Verify explicit-proxy-address POST Method
+**801126    testcase/v760/webproxy/14-policy-control/801126		   	Verify explicit-proxy-address Connect Method
+**801127    testcase/v760/webproxy/14-policy-control/801127		   	Verify explicit-proxy-address HEAD Method
+**801128    testcase/v760/webproxy/14-policy-control/801128		   	Verify explicit-proxy-address PUT Method
+**801129    testcase/v760/webproxy/14-policy-control/801129		   	Verify explicit-proxy-address OPTION Method
+**801130    testcase/v760/webproxy/14-policy-control/801130		   	Verify explicit-proxy-address Trace Method
+**801131    testcase/v760/webproxy/14-policy-control/801131		   	Delete methods
+**801132    testcase/v760/webproxy/14-policy-control/801132		   	UA Chrome
+**801133    testcase/v760/webproxy/14-policy-control/801133		   	UA IE
+**801134    testcase/v760/webproxy/14-policy-control/801134		   	UA Firefox
+**801135    testcase/v760/webproxy/14-policy-control/801135		   	UA Safari
+**801137    testcase/v760/webproxy/14-policy-control/801137		   	UA other
+**801543    testcase/v760/webproxy/14-policy-control/801543		   	UA Negtive
+**801138    testcase/v760/webproxy/14-policy-control/801138		   	Header-Name Method
+**812471    testcase/v760/webproxy/14-policy-control/812471		   	Webproxy works with Header X-Authenticated-Groups.
+**812472    testcase/v760/webproxy/14-policy-control/812472		   	Webproxy works with Header X-Authenticated-User.
+**801140    testcase/v760/webproxy/14-policy-control/801140		   	"Method Case-sensitivity"
+**801121    testcase/v760/webproxy/14-policy-control/801121		   	"Verify explicit-proxy-address URL_category"
+**801122    testcase/v760/webproxy/14-policy-control/801122		   	"Verify explicit-proxy-address Advanced-DST"
+**847483    testcase/v760/webproxy/14-policy-control/847483		   	Verify Referer can be matched to proxy policy
+**849572    testcase/v760/webproxy/14-policy-control/849572		   	Verify query string can be matched to proxy policy
+**801141    testcase/v760/webproxy/14-policy-control/801141            Verify the explicit-proxy-address-group of  src works well-Noble
+**801143    testcase/v760/webproxy/14-policy-control/801143            Verify the explicit-proxy-address-group of  dst works well-Noble
+**935409    testcase/v760/webproxy/14-policy-control/935409            Verify fast-policy-match table is ready in wad worker
+**852072    testcase/v760/webproxy/14-policy-control/852072	Verify web-proxy can learn real client IP from appropriate HTTP headers and apply it for proxy policy matching
+
+#-Special_Group_2-
+**setupNAT	testcase/v760/webproxy/setup_env_NAT_webproxy_fortistack.fgt	Setup NAT test environment
+**setup.pac-policy	testcase/v760/webproxy/14-policy-control/setup.pac-policy.txt	"PAC Setup"
+**862413	testcase/v760/webproxy/14-policy-control/862413	"PAC File"
+
+#-POLICY CONTROL LOCAL REMOTE CATEGORY-
+**setupNAT	testcase/v760/webproxy/setup_env_NAT_webproxy_fortistack.fgt  Setup NAT test environment
+**setupNAT	testcase/v760/webproxy/14-policy-control/setup_methods.txt	Setup methods
+**980211    testcase/v760/webproxy/14-policy-control/980211	Verify remove/add ip in ext resrouce file should or should not affect proxy policy match
+**947890    testcase/v760/webproxy/14-policy-control/947890	Verify local and remote category proxy address
+
+#-Proxy_inline_IPS-
+**setupNAT	testcase/v760/webproxy/setup_env_NAT_webproxy_fortistack.fgt  Setup NAT test environment
+**setupNAT	testcase/v760/webproxy/setup_FGT-B_webproxy_fortistack.fgt  	Setup NAT test environment
+**1104165	testcase/v760/webproxy/34-proxy-inline-ips/1104165	In explicit-web proxy policy, WAD handle HTTPS inspect-all cert-inspection traffic.
+**1104166	testcase/v760/webproxy/34-proxy-inline-ips/1104166	In explicit-web proxy policy, WAD handle HTTPS inspect-all deep-inspection traffic.
+**1104168	testcase/v760/webproxy/34-proxy-inline-ips/1104168	In transparent-web proxy policy, IPS handle HTTPS inspect-all cert-inspection traffic.
+**1104169	testcase/v760/webproxy/34-proxy-inline-ips/1104169	In transparent-web proxy policy, IPS handle HTTPS inspect-all deep-inspection traffic.
+**1104180	testcase/v760/webproxy/34-proxy-inline-ips/1104180	In explicit-web policy, when enable proxy-inline-ips and only apply APPctl, IPS can block mp3 file against HTTPS.
+**1104182	testcase/v760/webproxy/34-proxy-inline-ips/1104182	In explicit-web policy, when enable proxy-inline-ips and apply IPS and AV, WAD can block virus file against HTTPS.
+**1104188	testcase/v760/webproxy/34-proxy-inline-ips/1104188	In transparent-web policy, when enable proxy-inline-ips and only apply APPctl, IPS can block mp3 file against HTTPS.
+**1104190	testcase/v760/webproxy/34-proxy-inline-ips/1104190	In transparent-web policy, when enable proxy-inline-ips and apply IPS and AV, WAD can block virus file against HTTPS.
+**1104198	testcase/v760/webproxy/34-proxy-inline-ips/1104198	In ZTNA firewall policy, when enable proxy-inline-ips and only apply IPS, WAD can block virus file against HTTPS for SSL half mode.
+**1104199	testcase/v760/webproxy/34-proxy-inline-ips/1104199	In ZTNA firewall policy, when enable proxy-inline-ips and only apply IPS, WAD can block virus file against HTTPS for SSL full mode.
+**1104200	testcase/v760/webproxy/34-proxy-inline-ips/1104200	In ZTNA firewall policy, when enable proxy-inline-ips and apply IPS and AV, WAD can block virus file against HTTPS for SSL half mode.
+**1104201	testcase/v760/webproxy/34-proxy-inline-ips/1104201	In ZTNA firewall policy, when enable proxy-inline-ips and apply IPS and AV, WAD can block virus file against HTTPS for SSL full mode.
+**1104181	testcase/v760/webproxy/34-proxy-inline-ips/1104181	In explicit-web policy, when disable proxy-inline-ips and only apply APPctl, IPS can block mp3 file against HTTPS.
+**1104183	testcase/v760/webproxy/34-proxy-inline-ips/1104183	In explicit-web policy, when disable proxy-inline-ips and apply IPS and AV, WAD can block virus file against HTTPS.
+**1104189	testcase/v760/webproxy/34-proxy-inline-ips/1104189	In transparent-web policy, when disable proxy-inline-ips and only apply APPctl, IPS can block mp3 file against HTTPS.
+**1104191	testcase/v760/webproxy/34-proxy-inline-ips/1104191	In transparent-web policy, when disable proxy-inline-ips and apply IPS and AV, WAD can block virus file against HTTPS.
+
+#-Socks_Proxy-
+**setupNAT	testcase/v760/webproxy/setup_env_NAT_webproxy_fortistack.fgt  Setup NAT test environment
+**setupNAT	testcase/v760/webproxy/setup_FGT-B_webproxy_fortistack.fgt  	Setup NAT test environment
+**1155766	testcase/v760/webproxy/35-Socks-proxy/1155766			Verify in socks proxy, FGT can block expired server certificate.
+**1155767	testcase/v760/webproxy/35-Socks-proxy/1155767			Verify in socks proxy, FGT can exempt IT category website.
+**1155768	testcase/v760/webproxy/35-Socks-proxy/1155768			Verify in socks proxy, FGT can block traffic when HTTP header and SNI does not match.
+**1155769	testcase/v760/webproxy/35-Socks-proxy/1155769			Verify in socks proxy, FGT can block virus file.
+**1155770	testcase/v760/webproxy/35-Socks-proxy/1155770			Verify in socks proxy, FGT upload and download 2GB file.
+**1155771	testcase/v760/webproxy/35-Socks-proxy/1155771			Verify in socks proxy, FGT can block a special website.
+**1155772	testcase/v760/webproxy/35-Socks-proxy/1155772			Verify in socks proxy, FGT can block a content in website.
+**1155773	testcase/v760/webproxy/35-Socks-proxy/1155773			Verify in socks proxy, FGT blocks file with blocked file pattern.
+**1155774	testcase/v760/webproxy/35-Socks-proxy/1155774			Verify in socks proxy, FGT blocks file when action set to block in HTTP GET & POST under file filter.
+**1155775	testcase/v760/webproxy/35-Socks-proxy/1155775			Verify in socks proxy, FGT can block virus file with IPS.
+**1155776	testcase/v760/webproxy/35-Socks-proxy/1155776			Verify in socks proxy, FGT can block mp3 file with appctl.
+**1155777	testcase/v760/webproxy/35-Socks-proxy/1155777			Verify in socks proxy, FGT can block a Youtube channel.
+**1155778	testcase/v760/webproxy/35-Socks-proxy/1155778			Verify in socks proxy, FGT can block virus file for non http port.
+**1155779	testcase/v760/webproxy/35-Socks-proxy/1155779			Verify in socks proxy, FGT can block virus file for non https port.
+**1155780	testcase/v760/webproxy/35-Socks-proxy/1155780			Verify in socks proxy, FGT passes IT category proxy address, block others.
+**1155781	testcase/v760/webproxy/35-Socks-proxy/1155781			Verify in socks proxy, FGT passes traffic send from curl, block others.
+**1155782	testcase/v760/webproxy/35-Socks-proxy/1155782			Verify in socks proxy, FGT can download 2GB file against IPv6.
+**1155783	testcase/v760/webproxy/35-Socks-proxy/1155783			Verify in socks proxy, FGT can block virus file against IPv6.
+**1155784	testcase/v760/webproxy/35-Socks-proxy/1155784			Verify for socks auth rule, FGT will ask user information even not apply user in policy.
+#**1155785	testcase/v760/webproxy/35-Socks-proxy/1155785.local		Verify FGT with socks proxy krb auth, can receive GSS-API encryption response.
+**1155786	testcase/v760/webproxy/35-Socks-proxy/1155786			Verify HTTP traffic pass through socks forward server.
+**1155787	testcase/v760/webproxy/35-Socks-proxy/1155787			Verify HTTPS traffic pass through socks forward server.
+**1155788	testcase/v760/webproxy/35-Socks-proxy/1155788			Verify FGT blocks virus file through socks forward server.
+**1155789	testcase/v760/webproxy/35-Socks-proxy/1155789			Verify HTTP forward server cannot forward socks traffic.
+**1155790	testcase/v760/webproxy/35-Socks-proxy/1155790			Verify FGT blocks virus file through socks4 proxy.
+**1155791	testcase/v760/webproxy/35-Socks-proxy/1155791			Verify in socks4 proxy, FGT does not support authentication.

@@ -31,12 +31,12 @@ class TestTask:
         mock_env = mocker.patch("lib.core.scheduler.task.env")
         mock_env.is_fos_device.return_value = True
 
-        task = Task("dummy_script.conf")
-        task.devices = {"FGT1": mock_device}
+        task = Task("lib/tests/assets/1155080")
+        task.devices = {"FGT_A": mock_device}
 
         # Test that device is set up
-        assert "FGT1" in task.devices
-        assert task.devices["FGT1"] == mock_device
+        assert "FGT_A" in task.devices
+        assert task.devices["FGT_A"] == mock_device
 
     def test_device_composition(self, mocker):
         """Test discovering required devices from script."""
@@ -50,11 +50,11 @@ class TestTask:
         mock_env.get_dut.return_value = "FGT1"
         mock_env.get_fap_controller.return_value = None
 
-        task = Task("dummy_script.conf")
+        task = Task("lib/tests/assets/env.fortistack.webproxy.conf")
         devices = task.get_all_devices()
 
-        assert "FGT1" in devices
-        assert "FGT2" in devices
+        assert "FGT_A" in devices
+        assert "FGT_B" in devices
 
     def test_image_restoration(self, mocker):
         """Test device image restoration."""
@@ -67,8 +67,8 @@ class TestTask:
         mock_env.is_fos_device.return_value = True
         mock_env.need_deploy_vm.return_value = False
 
-        task = Task("dummy_script.conf")
-        task.devices = {"FGT1": mock_device}
+        task = Task("lib/tests/assets/env.fortistack.webproxy.conf")
+        task.devices = {"FGT_A": mock_device}
 
         task.restore_image()
 
@@ -100,7 +100,7 @@ class TestTask:
         mock_env = mocker.patch("lib.core.scheduler.task.env")
         mock_env.need_activate_license.return_value = True
 
-        task = Task("dummy_script.conf")
+        task = Task("lib/tests/assets/env.fortistack.webproxy.conf")
         task.devices = {"FGT1": mock_device}
 
         # Simulate license activation
@@ -117,7 +117,7 @@ class TestTask:
         mocker.patch("lib.core.scheduler.task.Script", return_value=mock_script)
         mocker.patch("lib.core.scheduler.task.Executor")
 
-        task = Task("dummy_script.conf")
+        task = Task("lib/tests/assets/env.fortistack.webproxy.conf")
 
         # Test that task has script attribute
         assert task.script == mock_script
@@ -129,7 +129,7 @@ class TestTask:
         mocker.patch("lib.core.scheduler.task.Script")
         mock_summary = mocker.patch("lib.core.scheduler.task.summary")
 
-        task = Task("dummy_script.conf")
+        task = Task("lib/tests/assets/env.fortistack.webproxy.conf")
 
         # Simulate result submission
         mock_summary.dump_brief_summary()
@@ -297,7 +297,7 @@ class TestGroupTask:
         mock_group.scripts = ["script1.conf", "script2.conf", "script3.conf"]
         mocker.patch("lib.core.scheduler.group_task.Group", return_value=mock_group)
 
-        group_task = GroupTask("group_file.txt")
+        group_task = GroupTask("lib/tests/assets/grp.webproxy_policy_fortistack.full")
 
         assert len(mock_group.scripts) == 3
 
@@ -308,7 +308,10 @@ class TestGroupTask:
         mock_group = MagicMock()
         mocker.patch("lib.core.scheduler.group_task.Group", return_value=mock_group)
 
-        group_task = GroupTask("group_file.txt", non_strict_mode=False)
+        group_task = GroupTask(
+            "lib/tests/assets/grp.webproxy_policy_fortistack.full",
+            non_strict_mode=False,
+        )
 
         # In strict mode, non_strict_mode should be False
         assert group_task.non_strict_mode is False
@@ -320,7 +323,9 @@ class TestGroupTask:
         mock_group = MagicMock()
         mocker.patch("lib.core.scheduler.group_task.Group", return_value=mock_group)
 
-        group_task = GroupTask("group_file.txt", non_strict_mode=True)
+        group_task = GroupTask(
+            "lib/tests/assets/grp.webproxy_policy_fortistack.full", non_strict_mode=True
+        )
 
         # In non-strict mode, non_strict_mode should be True
         assert group_task.non_strict_mode is True
@@ -333,7 +338,7 @@ class TestGroupTask:
         mock_group = MagicMock()
         mocker.patch("lib.core.scheduler.group_task.Group", return_value=mock_group)
 
-        group_task = GroupTask("group_file.txt")
+        group_task = GroupTask("lib/tests/assets/grp.webproxy_policy_fortistack.full")
 
         # Test that BlockingException would be raised if encountered
         with pytest.raises(Exception):

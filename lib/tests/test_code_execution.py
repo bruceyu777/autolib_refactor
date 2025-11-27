@@ -12,9 +12,9 @@ from unittest.mock import MagicMock, call
 import pytest
 
 from lib.core.executor.api.code_execution import (
+    _build_context,
     _load_code_file,
     _wrap_function_call,
-    build_context,
     exec_code,
 )
 from lib.core.executor.code_executor import BashExecutor, CodeExecutor, PythonExecutor
@@ -650,7 +650,7 @@ class TestCodeFileHelpers:
         # Verify
         assert "__result__ = bar()" in result
 
-    def test_build_context(self, mocker):
+    def test__build_context(self, mocker):
         """Test building execution context."""
         # Mock dependencies
         mock_executor = MagicMock()
@@ -663,7 +663,7 @@ class TestCodeFileHelpers:
         mock_env.user_env = {"config_key": "config_value"}
 
         # Build context
-        context = build_context(mock_executor)
+        context = _build_context(mock_executor)
 
         # Verify context structure
         assert context["last_output"] == "output"
@@ -676,7 +676,7 @@ class TestCodeFileHelpers:
         assert callable(context["get_variable"])
         assert callable(context["set_variable"])
 
-    def test_build_context_helper_functions(self, mocker):
+    def test__build_context_helper_functions(self, mocker):
         """Test that context helper functions work correctly."""
         # Mock dependencies
         mock_executor = MagicMock()
@@ -690,7 +690,7 @@ class TestCodeFileHelpers:
         mock_env.add_var = MagicMock()
 
         # Build context
-        context = build_context(mock_executor)
+        context = _build_context(mock_executor)
 
         # Test get_variable
         result = context["get_variable"]("test_var")
