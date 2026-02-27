@@ -963,7 +963,7 @@ def pytest_addoption(parser):
 
 def pytest_collection_modifyitems(config, items):
     """
-    Reorder tests based on group file order
+    Reorder tests based on group file order and filter out tests not in group
     Reads .pytest-order.txt to determine test execution sequence
     """
     # Check if order file exists
