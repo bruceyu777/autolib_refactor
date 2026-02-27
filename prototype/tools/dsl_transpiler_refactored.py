@@ -29,15 +29,21 @@ class DSLTranspiler:
     using specialized components for each concern.
     """
     
-    def __init__(self, registry: ConversionRegistry):
+    def __init__(self, registry: ConversionRegistry, env_file: Optional[Path] = None):
         """
         Initialize transpiler with component dependencies
         
         Args:
             registry: Conversion registry for tracking include usage
+            env_file: Optional environment configuration file to load VERSION
         """
         self.registry = registry
-        self.converter = IncludeConverter(registry)
+        self.env_file = env_file
+        
+        # Load VERSION from env config
+        env_version = IncludeConverter.load_version_from_env_config(env_file)
+        self.converter = IncludeConverter(registry, env_version=env_version)
+        
         self.parser = DSLParser()
         self.test_gen = TestGenerator()
         self.conftest_gen = ConftestGenerator()
@@ -62,6 +68,11 @@ class DSLTranspiler:
         Returns:
             dict with conversion results and statistics
         """
+        # Update converter if env_file is provided (may override default)
+        if env_file:
+            env_version = IncludeConverter.load_version_from_env_config(env_file)
+            self.converter.env_version = env_version
+        
         print("\n" + "="*60)
         print(f"TRANSPILING: {test_file.name}")
         print("="*60)
@@ -181,7 +192,11 @@ class DSLTranspiler:
         print("\n[4/5] Updating registry...")
         for include in parsed['includes']:
             sanitized_used_by = self.test_gen.sanitize_identifier(f"test_{parsed['qaid']}")
-            self.registry.mark_usage(include['path'], sanitized_used_by)
+            # Normalize path using same logic as converter (GLOBAL:VERSION → VERSION only)
+            include_path = include['path']
+            normalized_path = include_path.replace('GLOBAL:VERSION', self.converter.env_version)
+            normalized_path = normalized_path.replace('GLOBAL/', f'{self.converter.env_version}/')
+            self.registry.mark_usage(normalized_path, sanitized_used_by)
     
     def _generate_test_file(self, parsed: dict, original_file: Path, 
                            output_dir: Path, helper_names: List[str]) -> Path:

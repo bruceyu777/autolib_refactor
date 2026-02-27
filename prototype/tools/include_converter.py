@@ -13,9 +13,35 @@ from conversion_registry import ConversionRegistry
 class IncludeConverter:
     """Convert include files to pytest helper functions"""
     
-    def __init__(self, registry: ConversionRegistry) -> None:
+    def __init__(self, registry: ConversionRegistry, env_version: str = 'trunk') -> None:
         self.registry = registry
         self.logger = logging.getLogger(__name__)
+        self.env_version = env_version  # VERSION from env config
+    
+    @staticmethod
+    def load_version_from_env_config(env_file: Optional[Path]) -> str:
+        """
+        Load VERSION from environment configuration file.
+        
+        Args:
+            env_file: Path to env config file (e.g., env.fortistack.ips.conf)
+        
+        Returns:
+            VERSION value or 'trunk' as default
+        """
+        if not env_file or not env_file.exists():
+            return 'trunk'
+        
+        try:
+            content = env_file.read_text()
+            for line in content.split('\n'):
+                line = line.strip()
+                if line.startswith('VERSION:'):
+                    return line.split(':', 1)[1].strip()
+        except Exception:
+            pass
+        
+        return 'trunk'
 
     @staticmethod
     def _sanitize_identifier(name: str) -> str:
@@ -40,8 +66,81 @@ class IncludeConverter:
         # govdom1 → helper_govdom1
         # outvdom → helper_outvdom
         return f'helper_{filename}'
+
+    def _normalize_include_path(self, include_path: str) -> str:
+        """
+        Normalize include path to canonical form using VERSION from environment.
+        
+        Args:
+            include_path: Raw include path (e.g., testcase/GLOBAL:VERSION/ips/topology1/goroot.txt)
+        
+        Returns:
+            Normalized path with GLOBAL:VERSION replaced by VERSION value only
+            (e.g., testcase/trunk/ips/topology1/goroot.txt)
+        """
+        # Replace GLOBAL:VERSION with just the VERSION value (e.g., 'trunk')
+        normalized = include_path.replace('GLOBAL:VERSION', self.env_version)
+        # Also handle plain GLOBAL/ references
+        normalized = normalized.replace('GLOBAL/', f'{self.env_version}/')
+        return normalized.strip()
+
+    def _extract_include_commands(self, content: str) -> List[str]:
+        """Extract include paths from DSL content."""
+        include_paths: List[str] = []
+        for raw_line in content.split('\n'):
+            line = raw_line.strip()
+            if not line or line.startswith('#'):
+                continue
+            include_match = re.match(r'^include\s+(.+)$', line, re.IGNORECASE)
+            if include_match:
+                include_paths.append(include_match.group(1).strip())
+        return include_paths
+
+    def _resolve_nested_include_path(self, include_path: str, parent_include_file: Path) -> Optional[Path]:
+        """
+        Resolve nested include path relative to testcase tree and parent file.
+        
+        Handles GLOBAL:VERSION → {VERSION} path resolution with fallbacks.
+        """
+        normalized_path = self._normalize_include_path(include_path)
+
+        candidate_paths: List[Path] = []
+
+        # Relative include from current folder
+        candidate_paths.append((parent_include_file.parent / normalized_path).resolve())
+        candidate_paths.append((parent_include_file.parent / Path(normalized_path).name).resolve())
+
+        # testcase-prefixed path resolution
+        testcase_anchor = '/testcase/'
+        parent_posix = parent_include_file.resolve().as_posix()
+        if testcase_anchor in parent_posix:
+            testcase_root_str = parent_posix.split(testcase_anchor, 1)[0] + testcase_anchor.rstrip('/')
+            testcase_root = Path(testcase_root_str)
+
+            testcase_relative = normalized_path
+            if testcase_relative.startswith('testcase/'):
+                testcase_relative = testcase_relative[len('testcase/'):]
+            candidate_paths.append((testcase_root / testcase_relative).resolve())
+            
+            # If normalized path has VERSION prefix, also try without version prefix
+            # This handles cases where files aren't in version-specific directories
+            # Example: testcase/trunk/ips/... → try testcase/ips/... as fallback
+            if self.env_version and testcase_relative.startswith(self.env_version + '/'):
+                stripped_path = testcase_relative[len(self.env_version) + 1:]
+                if stripped_path != testcase_relative:
+                    candidate_paths.append((testcase_root / stripped_path).resolve())
+
+        for candidate in candidate_paths:
+            if candidate.exists():
+                return candidate
+        return None
     
-    def convert_to_helper(self, include_file: Path, helper_name: str) -> str:
+    def convert_to_helper(
+        self,
+        include_file: Path,
+        helper_name: str,
+        include_to_helper_map: Optional[Dict[str, str]] = None,
+    ) -> str:
         """Convert include file to helper function."""
         content = include_file.read_text().strip()
 
@@ -68,12 +167,21 @@ def {helper_name}({param_list}):
         helper_code += '    """\n'
 
         blocks = self._parse_blocks(content.split('\n'))
-        helper_code += self._render_blocks(
+        required_helper_imports: set[str] = set()
+        body_code = self._render_blocks(
             blocks,
             indent="    ",
             param_vars=set(param_vars),
             dynamic_vars=dynamic_vars,
+            include_to_helper_map=include_to_helper_map or {},
+            required_helper_imports=required_helper_imports,
         )
+
+        if required_helper_imports:
+            for nested_helper_name in sorted(required_helper_imports):
+                helper_code += f"    from .{nested_helper_name} import {nested_helper_name}\n"
+
+        helper_code += body_code
 
         return helper_code
     
@@ -293,11 +401,26 @@ def {helper_name}({param_list}):
         indent: str,
         param_vars: set[str],
         dynamic_vars: set[str],
+        include_to_helper_map: Dict[str, str],
+        required_helper_imports: set[str],
     ) -> str:
         """Render parsed blocks into helper function code."""
         code = ""
         for block in blocks:
             if block['type'] == 'command':
+                include_match = re.match(r'^include\s+(.+)$', block['command'], re.IGNORECASE)
+                if include_match:
+                    raw_include_path = include_match.group(1).strip()
+                    normalized_include_path = self._normalize_include_path(raw_include_path)
+                    nested_helper_name = (
+                        include_to_helper_map.get(raw_include_path)
+                        or include_to_helper_map.get(normalized_include_path)
+                    )
+                    if nested_helper_name:
+                        required_helper_imports.add(nested_helper_name)
+                        code += f"{indent}{nested_helper_name}(fgt)\n"
+                        continue
+
                 command = self._render_command(block['command'], param_vars, dynamic_vars)
                 code += f"{indent}fgt.execute({command})\n"
             elif block['type'] == 'if_chain':
@@ -308,12 +431,26 @@ def {helper_name}({param_list}):
                     condition = self._translate_condition(branch['condition'], param_vars, dynamic_vars)
                     keyword = 'if' if idx == 0 else 'elif'
                     code += f"{indent}{keyword} {condition}:\n"
-                    body_code = self._render_blocks(branch['body'], indent + '    ', param_vars, dynamic_vars)
+                    body_code = self._render_blocks(
+                        branch['body'],
+                        indent + '    ',
+                        param_vars,
+                        dynamic_vars,
+                        include_to_helper_map,
+                        required_helper_imports,
+                    )
                     code += body_code if body_code.strip() else f"{indent}    pass\n"
 
                 if else_body:
                     code += f"{indent}else:\n"
-                    body_code = self._render_blocks(else_body, indent + '    ', param_vars, dynamic_vars)
+                    body_code = self._render_blocks(
+                        else_body,
+                        indent + '    ',
+                        param_vars,
+                        dynamic_vars,
+                        include_to_helper_map,
+                        required_helper_imports,
+                    )
                     code += body_code if body_code.strip() else f"{indent}    pass\n"
         return code
 
@@ -338,7 +475,14 @@ def {helper_name}({param_list}):
             return f'f"{replaced}"'
         return f'"{replaced}"'
     
-    def convert_include(self, include_path: str, include_file: Path, output_dir: Path, force: bool = False) -> dict:
+    def convert_include(
+        self,
+        include_path: str,
+        include_file: Path,
+        output_dir: Path,
+        force: bool = False,
+        conversion_stack: Optional[set[str]] = None,
+    ) -> dict:
         """
         Convert include file to helper function
         
@@ -350,16 +494,79 @@ def {helper_name}({param_list}):
         Returns:
             dict: Conversion information
         """
-        # Check if already converted
-        if self.registry.is_converted(include_path) and not force:
+        if conversion_stack is None:
+            conversion_stack = set()
+
+        # NORMALIZE PATH EARLY: Use only one canonical form in registry
+        # This prevents duplicate entries for GLOBAL:VERSION vs GLOBAL variants
+        normalized_include_path = self._normalize_include_path(include_path)
+
+        if normalized_include_path in conversion_stack:
+            self.logger.warning("Detected cyclic include chain at %s", include_path)
+            conversion = self.registry.get_conversion(normalized_include_path)
+            if conversion:
+                return conversion
+            helper_name = self.generate_helper_name(include_path, include_file)
+            return {
+                'type': 'helper',
+                'helper_name': helper_name,
+                'helper_file': '',
+                'hash': '',
+                'dependencies': [],
+                'used_by': []
+            }
+
+        # Check if already converted (use normalized path only)
+        if self.registry.is_converted(normalized_include_path) and not force:
             print(f"  ✓ Already converted: {include_path}")
-            return self.registry.get_conversion(include_path)
+            return self.registry.get_conversion(normalized_include_path)
         
         # Generate helper name
         helper_name = self.generate_helper_name(include_path, include_file)
+
+        content = include_file.read_text().strip()
+        nested_include_paths = self._extract_include_commands(content)
+        include_to_helper_map: Dict[str, str] = {}
+        dependencies: List[str] = []
+
+        child_stack = set(conversion_stack)
+        child_stack.add(normalized_include_path)
+
+        for nested_include_path in nested_include_paths:
+            nested_normalized_include_path = self._normalize_include_path(nested_include_path)
+            if nested_normalized_include_path == normalized_include_path:
+                continue
+
+            nested_include_file = self._resolve_nested_include_path(nested_include_path, include_file)
+            if not nested_include_file:
+                self.logger.warning(
+                    "Nested include not found for %s in %s",
+                    nested_include_path,
+                    include_file,
+                )
+                continue
+
+            nested_conversion = self.convert_include(
+                nested_include_path,
+                nested_include_file,
+                output_dir,
+                force=force,
+                conversion_stack=child_stack,
+            )
+            nested_helper_name = nested_conversion.get('helper_name')
+            if nested_helper_name:
+                # Map normalized path to helper (only canonical form)
+                include_to_helper_map[nested_normalized_include_path] = nested_helper_name
+                # Track dependency using normalized path for consistency
+                if nested_normalized_include_path not in dependencies:
+                    dependencies.append(nested_normalized_include_path)
         
         # Generate helper code
-        helper_code = self.convert_to_helper(include_file, helper_name)
+        helper_code = self.convert_to_helper(
+            include_file,
+            helper_name,
+            include_to_helper_map=include_to_helper_map,
+        )
         
         # Write helper to dedicated helpers directory
         helpers_dir = output_dir / 'testcases' / 'helpers'
@@ -376,12 +583,14 @@ def {helper_name}({param_list}):
             'helper_name': helper_name,
             'helper_file': str(helper_file),
             'hash': self.registry.calculate_hash(include_file),
-            'dependencies': [],
+            'dependencies': dependencies,
             'used_by': []
         }
         
-        # Record conversion
-        self.registry.add_conversion(include_path, conversion_info)
+        # Record conversion ONLY under normalized path
+        # This prevents duplicate registry entries for GLOBAL:VERSION vs GLOBAL variants
+        # Both paths resolve to the same physical file, so only one entry is needed
+        self.registry.add_conversion(normalized_include_path, conversion_info)
         
         print(f"  ✓ Converted helper: {include_path} → {helper_name}")
         
