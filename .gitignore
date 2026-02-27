@@ -64,3 +64,4 @@ autotest
 htmlcov
 .claudeignore
 .coverage
+prototype/output_refactored_test/
