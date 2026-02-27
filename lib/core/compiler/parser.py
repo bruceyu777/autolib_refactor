@@ -239,13 +239,81 @@ class Parser:
         )
 
     def _if(self, _):
+        """
+        Handle <if> keyword - creates if_not_goto VM code.
+        
+        The jump target is NOT known yet - it will be added later when
+        elseif/else/fi is encountered.
+        
+        Example DSL:
+            Line 98: <if {$platform_type} eq FortiGate-VM64>
+            Line 99:     comment Branch A
+            Line 103: <elseif {$platform_type} eq FortiGate-VM64-KVM>
+        
+        Step 1 (at line 98): Create VMCode(98, "if_not_goto", ())
+        Step 2: Expression parser adds condition params
+        Step 3 (at line 103): _elseif() adds jump target → VMCode(98, "if_not_goto", (..., 103))
+        
+        Returns:
+            VMCode object that will be passed as prev_vm_code to next block
+        """
         return self._add_vm_code(self._cur_token.line_number, "if_not_goto", ())
 
     def _elseif(self, prev_vm_code):
+        """
+        Handle <elseif> keyword - links previous block and creates new elseif VM code.
+        
+        This method does TWO things:
+        1. Adds current line number to previous block (if/elseif) as jump target
+        2. Creates new elseif VM code for next linking
+        
+        Example DSL:
+            Line 98: <if {$platform_type} eq FortiGate-VM64>
+            Line 99:     comment Branch A
+            Line 103: <elseif {$platform_type} eq FortiGate-VM64-KVM>  ← We are here
+            Line 104:     comment Branch B
+            Line 107: <else>
+        
+        Execution at line 103:
+            prev_vm_code = VMCode(98, "if_not_goto", ("platform_type", "eq", "FortiGate-VM64"))
+            prev_vm_code.add_parameter(103)  # Add jump target from self._cur_token.line_number
+            → prev_vm_code becomes: VMCode(98, "if_not_goto", (..., 103))
+            
+            Create new VMCode(103, "elseif", ()) for next linking
+        
+        Args:
+            prev_vm_code: Previous if or elseif VM code to link
+        
+        Returns:
+            New elseif VMCode that will be passed as prev_vm_code to next block
+        """
         prev_vm_code.add_parameter(self._cur_token.line_number)
         return self._add_vm_code(self._cur_token.line_number, "elseif", ())
 
     def _else(self, prev_vm_code):
+        """
+        Handle <else> keyword - links previous block and creates else VM code.
+        
+        Example DSL:
+            Line 103: <elseif {$platform_type} eq FortiGate-VM64-KVM>
+            Line 104:     comment Branch B
+            Line 107: <else>  ← We are here
+            Line 108:     comment Branch C
+            Line 110: <fi>
+        
+        Execution at line 107:
+            prev_vm_code = VMCode(103, "elseif", ("platform_type", "eq", "FortiGate-VM64-KVM"))
+            prev_vm_code.add_parameter(107)  # Jump target = current token's line number
+            → prev_vm_code becomes: VMCode(103, "elseif", (..., 107))
+            
+            Create new VMCode(107, "else", ()) for fi to link
+        
+        Args:
+            prev_vm_code: Previous if or elseif VM code to link
+        
+        Returns:
+            else VMCode that will be passed to fi
+        """
         if prev_vm_code is None:
             self._raise_syntax_error(
                 f"else without if {self.file_name}:{self._cur_token.line_number}"
@@ -254,26 +322,133 @@ class Parser:
         return self._add_vm_code(self._cur_token.line_number, "else", ())
 
     def _fi(self, prev_vm_code):
+        """
+        Handle <fi> keyword - links previous block and creates endif VM code.
+        
+        Example DSL:
+            Line 107: <else>
+            Line 108:     comment Branch C
+            Line 110: <fi>  ← We are here
+        
+        Execution at line 110:
+            prev_vm_code = VMCode(107, "else", ())
+            prev_vm_code.add_parameter(110)  # Jump target = current token's line number
+            → prev_vm_code becomes: VMCode(107, "else", (110,))
+            
+            Create VMCode(110, "endif", ()) to pop if_stack
+        
+        Final jump chain:
+            98  if_not_goto ... 103  ← if false, jump to line 103
+            103 elseif ... 107       ← if matched or failed, jump to line 107
+            107 else 110             ← jump to line 110
+            110 endif                ← pop if_stack
+        
+        Args:
+            prev_vm_code: Previous if/elseif/else VM code to link
+        
+        Returns:
+            endif VMCode (end of control flow block)
+        """
         if prev_vm_code is None:
             self._raise_syntax_error("fi without if")
         prev_vm_code.add_parameter(self._cur_token.line_number)
         return self._add_vm_code(self._cur_token.line_number, "endif", ())
 
     def _loop(self, _):
+        """
+        Handle <loop> keyword - creates loop marker VM code.
+        
+        Example DSL:
+            Line 44: <loop {$retry_count} < {$max_retries}>
+            Line 45:     <intchange {$retry_count} + 1>
+            Line 59: <until {$retry_count} eq {$max_retries}>
+        
+        Step 1 (at line 44): Create VMCode(44, "loop", ())
+        Step 2: Expression parser adds condition
+        Step 3 (at line 59): _until() uses prev_vm_code.line_number (44) for jump-back
+        
+        Returns:
+            loop VMCode with line_number=44 for until to reference
+        """
         return self._add_vm_code(self._cur_token.line_number, "loop", ())
 
     def _intchange(self, _):
         return self._add_vm_code(self._cur_token.line_number, "intchange", ())
 
     def _until(self, prev_vm_code):
+        """
+        Handle <until> keyword - creates until VM code with loop start line.
+        
+        Unlike if/elseif/else which use CURRENT line number for forward jumps,
+        until uses PREVIOUS line number (from prev_vm_code) for backward jumps.
+        
+        Example DSL:
+            Line 44: <loop {$retry_count} < {$max_retries}>
+            Line 45:     <intchange {$retry_count} + 1>
+            Line 46:     comment Attempt...
+            Line 59: <until {$retry_count} eq {$max_retries}>  ← We are here
+        
+        Execution at line 59:
+            prev_vm_code = VMCode(44, "loop", ("retry_count", "<", "max_retries"))
+            loop_start_line = prev_vm_code.line_number  # = 44
+            
+            Create VMCode(59, "until", (44, ...))
+            #                           ^^^ Jump back to line 44 if condition false
+        
+        At runtime:
+            If exit condition (retry_count == max_retries) is FALSE:
+                executor.jump_backward(44)  # Loop continues
+            Else:
+                program_counter += 1  # Exit loop
+        
+        Args:
+            prev_vm_code: loop VM code containing the loop start line number
+        
+        Returns:
+            until VMCode with loop start line as first parameter
+        """
         return self._add_vm_code(
             self._cur_token.line_number, "until", (prev_vm_code.line_number,)
         )
 
     def _while(self, _):
+        """
+        Handle <while> keyword - creates loop marker (same as <loop>).
+        
+        Example DSL:
+            Line 44: <while {$retry_count} < {$max_retries}>
+            Line 45:     <intchange {$retry_count} + 1>
+            Line 59: <endwhile {$retry_count} eq {$max_retries}>
+        
+        Internally <while> = <loop>, both create loop marker VM codes.
+        
+        Returns:
+            loop VMCode for endwhile to reference
+        """
         return self._add_vm_code(self._cur_token.line_number, "loop", ())
 
     def _endwhile(self, prev_vm_code):
+        """
+        Handle <endwhile> keyword - creates until VM code (same as <until>).
+        
+        Example DSL:
+            Line 44: <while {$retry_count} < {$max_retries}>
+            Line 45:     <intchange {$retry_count} + 1>
+            Line 59: <endwhile {$retry_count} eq {$max_retries}>  ← We are here
+        
+        Execution at line 59:
+            prev_vm_code = VMCode(44, "loop", (...))
+            Create VMCode(59, "until", (44, ...))
+            #                           ^^^ Jump back to line 44
+        
+        Internally <endwhile> = <until>, both create until VM codes with loop start line.
+        
+        Args:
+            prev_vm_code: while/loop VM code containing the loop start line number
+        
+        Returns:
+            until VMCode with loop start line as first parameter
+        """
         return self._add_vm_code(
             self._cur_token.line_number, "until", (prev_vm_code.line_number,)
         )

@@ -30,9 +30,12 @@ class FortiVM(FosDev):
     def is_serial_connection_used(self):
         # for FVM we support telnet is serial connection
         # but currently, telnet was not in CONNECTION
+        connection = self.dev_cfg.get("CONNECTION", "")
+        if not connection:
+            raise ValueError(f"Device {self.dev_name}: CONNECTION not defined in environment file. Please add [{self.dev_name}] section with CONNECTION field.")
         return (
-            "telnet" in self.dev_cfg["CONNECTION"]
-            or len(self.dev_cfg["CONNECTION"].split()) == 2
+            "telnet" in connection
+            or len(connection.split()) == 2
         )
 
     def reset_config(self, cmd):

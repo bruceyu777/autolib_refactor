@@ -1,0 +1,4 @@
+# Exit VDOM context
+# Common teardown file for IPS tests
+
+end

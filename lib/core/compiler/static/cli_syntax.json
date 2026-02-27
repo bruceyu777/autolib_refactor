@@ -19,8 +19,9 @@
           "alias": "qaid",
           "type": "string",
           "position": 1,
-          "required": true,
-          "description": "Test case ID for result reporting"
+          "required": false,
+          "default": "NO_QAID",
+          "description": "Test case ID for result reporting (optional)"
         },
         "-t": {
           "alias": "wait_seconds",

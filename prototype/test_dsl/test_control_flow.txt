@@ -1,0 +1,40 @@
+# Test control flow in DSL transpiler
+# QAID: 999001
+# Title: Control Flow Test
+
+[FGT_A]
+    comment ========================================
+    comment Testing Control Flow Support    comment ========================================
+    
+    # Test variable declaration
+    <intset retry_count 0>
+    <intset max_retries 3>
+    <strset platform FortiGate-VM64>
+    
+    # Test while loop
+    comment Starting retry loop...
+    <while {$retry_count} < {$max_retries}>
+        <intchange {$retry_count} + 1>
+        comment Attempt {$retry_count} of {$max_retries}
+        
+        get system status
+        expect -e "Version: FortiGate" -for 999001 -t 5
+    <endwhile {$retry_count} eq {$max_retries}>
+    
+    comment Retry loop completed
+    
+    # Test if statement
+    <if {$retry_count} eq 3>
+        comment Took all 3 retries
+        get system status
+        expect -e "FortiGate" -for 999001
+    <fi>
+    
+    # Test another if with different condition
+    <if {$platform} eq FortiGate-VM64>
+        comment Detected VM platform
+        get system status
+        setvar -e "Version: (FortiGate-[\w-]+)" -to platform_type
+    <fi>
+    
+    comment Test complete

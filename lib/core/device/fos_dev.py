@@ -48,7 +48,10 @@ class FosDev(Device):
         return system_status
 
     def is_serial_connection_used(self):
-        if "telnet" not in self.dev_cfg["CONNECTION"]:
+        connection = self.dev_cfg.get("CONNECTION", "")
+        if not connection:
+            raise ValueError(f"Device {self.dev_name}: CONNECTION not defined in environment file. Please add [{self.dev_name}] section with CONNECTION field.")
+        if "telnet" not in connection:
             return False
         return any(
             k in self.dev_cfg for k in ("CISCOPASSWORD", "TERMINAL_SERVER_PASSWORD")
@@ -130,6 +133,10 @@ class FosDev(Device):
     def _force_login_non_serial(self):
         self.conn.close()
         self.connect()
+        if "ssh" in self.dev_cfg["CONNECTION"]:
+            self.login_for_ssh()
+        else:
+            self.login()
 
     def force_login(self):
         # for non-serial connection, this will cause connection killed

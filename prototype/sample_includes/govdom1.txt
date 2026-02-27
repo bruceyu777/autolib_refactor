@@ -1,0 +1,5 @@
+# Enter government VDOM (vd1)
+# This is a common setup file used by many IPS tests
+
+config vdom
+    edit vd1
