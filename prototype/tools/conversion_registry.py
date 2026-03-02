@@ -5,10 +5,22 @@ Tracks include → fixture/helper conversions to enable reuse
 
 import json
 import hashlib
+import logging
 import re
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, List
+
+# Set up unified logging to prototype/logs/
+_PROTOTYPE_DIR = Path(__file__).resolve().parent.parent
+if str(_PROTOTYPE_DIR) not in sys.path:
+    sys.path.insert(0, str(_PROTOTYPE_DIR))
+try:
+    from common.common_logging import setup_script_logging
+    logger = setup_script_logging(__file__, log_dir=_PROTOTYPE_DIR / 'logs')
+except ImportError:
+    logger = logging.getLogger(__name__)
 
 
 class ConversionRegistry:

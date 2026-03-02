@@ -25,13 +25,24 @@ Note: Some tests may require mocker updates (mock_device.py) to handle
       specific command patterns or output formats.
 """
 
+import logging
 import sys
 import argparse
 from pathlib import Path
 from typing import List, Dict
 
+# Set up unified logging to prototype/logs/ before any module imports
+_PROTOTYPE_DIR = Path(__file__).resolve().parent
+if str(_PROTOTYPE_DIR) not in sys.path:
+    sys.path.insert(0, str(_PROTOTYPE_DIR))
+try:
+    from common.common_logging import setup_script_logging
+    logger = setup_script_logging(__file__, log_dir=_PROTOTYPE_DIR / 'logs')
+except ImportError:
+    logger = logging.getLogger(__name__)
+
 # Add tools to path
-sys.path.insert(0, str(Path(__file__).parent / 'tools'))
+sys.path.insert(0, str(_PROTOTYPE_DIR / 'tools'))
 
 from conversion_registry import ConversionRegistry
 from dsl_transpiler import DSLTranspiler
@@ -41,20 +52,24 @@ from grp_parser import GrpFileParser
 def convert_file(test_file: Path, output_dir: Path, registry: ConversionRegistry, 
                  transpiler: DSLTranspiler, env_file: Path = None) -> Dict:
     """Convert a single DSL test file to pytest"""
+    logger.info("[run] Converting: '%s'  env_file=%s", test_file, env_file)
     print(f"\n📄 Converting: {test_file.name}")
     print(f"   Source: {test_file}")
     if env_file:
         print(f"   Env:    {env_file}")
     
     if not test_file.exists():
+        logger.error("[run] File not found: '%s'", test_file)
         print(f"   ❌ Error: File not found")
         return None
     
     try:
         result = transpiler.transpile(test_file, output_dir, env_file=env_file)
+        logger.info("[run] Success: test_%s.py", result['qaid'])
         print(f"   ✅ Generated: test_{result['qaid']}.py")
         return result
     except Exception as e:
+        logger.exception("[run] Failed to convert '%s': %s", test_file.name, e)
         print(f"   ❌ Error: {e}")
         import traceback
         traceback.print_exc()

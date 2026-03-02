@@ -5,9 +5,20 @@ Converts reusable DSL scripts to callable helper functions
 
 import logging
 import re
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from conversion_registry import ConversionRegistry
+
+# Set up unified logging to prototype/logs/
+_PROTOTYPE_DIR = Path(__file__).resolve().parent.parent
+if str(_PROTOTYPE_DIR) not in sys.path:
+    sys.path.insert(0, str(_PROTOTYPE_DIR))
+try:
+    from common.common_logging import setup_script_logging
+    logger = setup_script_logging(__file__, log_dir=_PROTOTYPE_DIR / 'logs')
+except ImportError:
+    logger = logging.getLogger(__name__)
 
 
 class IncludeConverter:
@@ -15,8 +26,8 @@ class IncludeConverter:
     
     def __init__(self, registry: ConversionRegistry, env_version: str = 'trunk') -> None:
         self.registry = registry
-        self.logger = logging.getLogger(__name__)
-        self.env_version = env_version  # VERSION from env config
+        self.env_version = env_version  # VERSION from env config (affects path normalization)
+        logger.info("[IncludeConverter] Initialized | env_version=%s | cwd=%s", env_version, Path.cwd())
     
     @staticmethod
     def load_version_from_env_config(env_file: Optional[Path]) -> str:
@@ -29,17 +40,26 @@ class IncludeConverter:
         Returns:
             VERSION value or 'trunk' as default
         """
-        if not env_file or not env_file.exists():
+        if not env_file:
+            logger.warning("[load_version] No env_file provided, using default VERSION='trunk'")
             return 'trunk'
         
+        if not env_file.exists():
+            logger.warning("[load_version] Env file not found: %s, using default VERSION='trunk'", env_file)
+            return 'trunk'
+        
+        logger.info("[load_version] Reading env config: %s", env_file.resolve())
         try:
             content = env_file.read_text()
             for line in content.split('\n'):
                 line = line.strip()
                 if line.startswith('VERSION:'):
-                    return line.split(':', 1)[1].strip()
-        except Exception:
-            pass
+                    version = line.split(':', 1)[1].strip()
+                    logger.info("[load_version] Found VERSION=%s in %s", version, env_file.name)
+                    return version
+            logger.warning("[load_version] VERSION key not found in %s, using 'trunk'", env_file.name)
+        except Exception as exc:
+            logger.error("[load_version] Failed to read env file %s: %s", env_file, exc)
         
         return 'trunk'
 
@@ -71,18 +91,16 @@ class IncludeConverter:
         """
         Normalize include path to canonical form using VERSION from environment.
         
-        Args:
-            include_path: Raw include path (e.g., testcase/GLOBAL:VERSION/ips/topology1/goroot.txt)
-        
-        Returns:
-            Normalized path with GLOBAL:VERSION replaced by VERSION value only
-            (e.g., testcase/trunk/ips/topology1/goroot.txt)
+        GLOBAL:VERSION  →  {VERSION}  (e.g., 'trunk')
+        GLOBAL/         →  {VERSION}/
         """
-        # Replace GLOBAL:VERSION with just the VERSION value (e.g., 'trunk')
         normalized = include_path.replace('GLOBAL:VERSION', self.env_version)
-        # Also handle plain GLOBAL/ references
         normalized = normalized.replace('GLOBAL/', f'{self.env_version}/')
-        return normalized.strip()
+        normalized = normalized.strip()
+        if normalized != include_path.strip():
+            logger.debug("[normalize_path] '%s' → '%s' (env_version=%s)",
+                         include_path.strip(), normalized, self.env_version)
+        return normalized
 
     def _extract_include_commands(self, content: str) -> List[str]:
         """Extract include paths from DSL content."""
@@ -101,8 +119,11 @@ class IncludeConverter:
         Resolve nested include path relative to testcase tree and parent file.
         
         Handles GLOBAL:VERSION → {VERSION} path resolution with fallbacks.
+        Logs all candidate paths tried and their existence to aid environment debugging.
         """
         normalized_path = self._normalize_include_path(include_path)
+        logger.debug("[resolve_nested] include_path='%s' normalized='%s'", include_path, normalized_path)
+        logger.debug("[resolve_nested] parent_file='%s'", parent_include_file.resolve())
 
         candidate_paths: List[Path] = []
 
@@ -116,23 +137,37 @@ class IncludeConverter:
         if testcase_anchor in parent_posix:
             testcase_root_str = parent_posix.split(testcase_anchor, 1)[0] + testcase_anchor.rstrip('/')
             testcase_root = Path(testcase_root_str)
+            logger.debug("[resolve_nested] testcase_root='%s'", testcase_root)
 
             testcase_relative = normalized_path
             if testcase_relative.startswith('testcase/'):
                 testcase_relative = testcase_relative[len('testcase/'):]
             candidate_paths.append((testcase_root / testcase_relative).resolve())
             
-            # If normalized path has VERSION prefix, also try without version prefix
-            # This handles cases where files aren't in version-specific directories
-            # Example: testcase/trunk/ips/... → try testcase/ips/... as fallback
+            # Fallback: strip VERSION prefix
+            # Handles environments where files sit directly under testcase/ips/... (no version dir)
             if self.env_version and testcase_relative.startswith(self.env_version + '/'):
                 stripped_path = testcase_relative[len(self.env_version) + 1:]
                 if stripped_path != testcase_relative:
                     candidate_paths.append((testcase_root / stripped_path).resolve())
+                    logger.debug("[resolve_nested] Added fallback without VERSION prefix: '%s'",
+                                 testcase_root / stripped_path)
 
-        for candidate in candidate_paths:
-            if candidate.exists():
+        # Log all candidates with existence status for environment diagnostics
+        for i, candidate in enumerate(candidate_paths):
+            exists = candidate.exists()
+            status = "EXISTS" if exists else "not found"
+            logger.debug("[resolve_nested] candidate[%d] %s: '%s'", i, status, candidate)
+            if exists:
+                logger.info("[resolve_nested] RESOLVED '%s' → '%s'", include_path, candidate)
                 return candidate
+
+        logger.error(
+            "[resolve_nested] FAILED to resolve '%s' (normalized='%s'). "
+            "Tried %d candidates. env_version='%s'. parent='%s'",
+            include_path, normalized_path, len(candidate_paths),
+            self.env_version, parent_include_file.resolve()
+        )
         return None
     
     def convert_to_helper(
@@ -497,12 +532,15 @@ def {helper_name}({param_list}):
         if conversion_stack is None:
             conversion_stack = set()
 
+        logger.info("[convert_include] include_path='%s' | file='%s'", include_path, include_file)
+
         # NORMALIZE PATH EARLY: Use only one canonical form in registry
         # This prevents duplicate entries for GLOBAL:VERSION vs GLOBAL variants
         normalized_include_path = self._normalize_include_path(include_path)
+        logger.debug("[convert_include] normalized='%s' | stack_depth=%d", normalized_include_path, len(conversion_stack))
 
         if normalized_include_path in conversion_stack:
-            self.logger.warning("Detected cyclic include chain at %s", include_path)
+            logger.warning("[convert_include] Cyclic include chain detected at '%s'", include_path)
             conversion = self.registry.get_conversion(normalized_include_path)
             if conversion:
                 return conversion
@@ -518,7 +556,7 @@ def {helper_name}({param_list}):
 
         # Check if already converted (use normalized path only)
         if self.registry.is_converted(normalized_include_path) and not force:
-            print(f"  ✓ Already converted: {include_path}")
+            logger.debug("[convert_include] Cache hit (already converted): '%s'", normalized_include_path)
             return self.registry.get_conversion(normalized_include_path)
         
         # Generate helper name
@@ -539,8 +577,8 @@ def {helper_name}({param_list}):
 
             nested_include_file = self._resolve_nested_include_path(nested_include_path, include_file)
             if not nested_include_file:
-                self.logger.warning(
-                    "Nested include not found for %s in %s",
+                logger.warning(
+                    "[convert_include] Nested include NOT FOUND: '%s' (referenced from '%s')",
                     nested_include_path,
                     include_file,
                 )
@@ -592,7 +630,10 @@ def {helper_name}({param_list}):
         # Both paths resolve to the same physical file, so only one entry is needed
         self.registry.add_conversion(normalized_include_path, conversion_info)
         
-        print(f"  ✓ Converted helper: {include_path} → {helper_name}")
+        logger.info(
+            "[convert_include] DONE '%s' → helper='%s' | deps=%d | file='%s'",
+            normalized_include_path, helper_name, len(dependencies), helper_file
+        )
         
         return conversion_info
 

@@ -1,0 +1,147 @@
+{
+  "version": "1.0",
+  "created": "2026-02-27T17:17:01.211948",
+  "conversions": {
+    "testcase/trunk/ips/topology1/purge.txt": {
+      "type": "helper",
+      "helper_name": "helper_purge",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_purge.py",
+      "hash": "111ecde7fcf93913",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.222032"
+    },
+    "testcase/trunk/ips/topology1/enable.txt": {
+      "type": "helper",
+      "helper_name": "helper_enable",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_enable.py",
+      "hash": "4eff3e48fb31da6e",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.222628"
+    },
+    "testcase/trunk/ips/topology1/goroot.txt": {
+      "type": "helper",
+      "helper_name": "helper_goroot",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_goroot.py",
+      "hash": "b21a2e6ca20d5632",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.233274"
+    },
+    "testcase/trunk/ips/topology1/outvdom.txt": {
+      "type": "helper",
+      "helper_name": "helper_outvdom",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_outvdom.py",
+      "hash": "48332fe667bc51ac",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.239861"
+    },
+    "testcase/trunk/ips/topology1/govdom1.txt": {
+      "type": "helper",
+      "helper_name": "helper_govdom1",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_govdom1.py",
+      "hash": "77265a663161d22f",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.238963"
+    },
+    "testcase/trunk/ips/topology1/goglobal.txt": {
+      "type": "helper",
+      "helper_name": "helper_goglobal",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_goglobal.py",
+      "hash": "22b4c771e0e4ebf6",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.237097"
+    },
+    "testcase/trunk/ips/topology1/setupA-nat.txt": {
+      "type": "helper",
+      "helper_name": "helper_setupA_nat",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_setupA_nat.py",
+      "hash": "4dba3eba0799f791",
+      "dependencies": [
+        "testcase/trunk/ips/topology1/goroot.txt",
+        "testcase/trunk/ips/topology1/outvdom.txt",
+        "testcase/trunk/ips/topology1/govdom1.txt",
+        "testcase/trunk/ips/topology1/goglobal.txt"
+      ],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.229921"
+    },
+    "testcase/trunk/ips/topology1/initializeA-nat.txt": {
+      "type": "helper",
+      "helper_name": "helper_initializeA_nat",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_initializeA_nat.py",
+      "hash": "b52bc843bc49691f",
+      "dependencies": [
+        "testcase/trunk/ips/topology1/govdom1.txt",
+        "testcase/trunk/ips/topology1/outvdom.txt",
+        "testcase/trunk/ips/topology1/goroot.txt",
+        "testcase/trunk/ips/topology1/goglobal.txt"
+      ],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.243430"
+    },
+    "testcase/trunk/ips/topology1/setupC.txt": {
+      "type": "helper",
+      "helper_name": "helper_setupC",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_setupC.py",
+      "hash": "711dc9ced87195b5",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.247368"
+    },
+    "testcase/trunk/ips/topology1/downPort.txt": {
+      "type": "helper",
+      "helper_name": "helper_downPort",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_downPort.py",
+      "hash": "e47cd1744bb397c6",
+      "dependencies": [],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.327735"
+    },
+    "testcase/trunk/ips/topology1/setupA-tp.txt": {
+      "type": "helper",
+      "helper_name": "helper_setupA_tp",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_setupA_tp.py",
+      "hash": "5c4f7a04a30ce5da",
+      "dependencies": [
+        "testcase/trunk/ips/topology1/goroot.txt",
+        "testcase/trunk/ips/topology1/outvdom.txt",
+        "testcase/trunk/ips/topology1/govdom1.txt",
+        "testcase/trunk/ips/topology1/goglobal.txt"
+      ],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.331273"
+    },
+    "testcase/trunk/ips/topology1/initializeA-tp.txt": {
+      "type": "helper",
+      "helper_name": "helper_initializeA_tp",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_initializeA_tp.py",
+      "hash": "403a8b2ae99a69f2",
+      "dependencies": [
+        "testcase/trunk/ips/topology1/govdom1.txt",
+        "testcase/trunk/ips/topology1/outvdom.txt",
+        "testcase/trunk/ips/topology1/goroot.txt",
+        "testcase/trunk/ips/topology1/goglobal.txt"
+      ],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.337593"
+    },
+    "testcase/trunk/ips/topology1/enLongVD.txt": {
+      "type": "helper",
+      "helper_name": "helper_enLongVD",
+      "helper_file": "output_full_retest_v3/testcases/helpers/helper_enLongVD.py",
+      "hash": "022f785600893ecd",
+      "dependencies": [
+        "testcase/trunk/ips/topology1/goglobal.txt",
+        "testcase/trunk/ips/topology1/outvdom.txt"
+      ],
+      "used_by": [],
+      "converted_date": "2026-02-27T17:17:01.349747"
+    }
+  },
+  "last_updated": "2026-02-27T17:17:01.349770"
+}

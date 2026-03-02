@@ -3,9 +3,21 @@ DSL Parser Module
 Handles parsing of DSLtest files and include extraction
 """
 
+import logging
 import re
+import sys
 from pathlib import Path
 from typing import List, Dict
+
+# Set up unified logging to prototype/logs/
+_PROTOTYPE_DIR = Path(__file__).resolve().parent.parent
+if str(_PROTOTYPE_DIR) not in sys.path:
+    sys.path.insert(0, str(_PROTOTYPE_DIR))
+try:
+    from common.common_logging import setup_script_logging
+    logger = setup_script_logging(__file__, log_dir=_PROTOTYPE_DIR / 'logs')
+except ImportError:
+    logger = logging.getLogger(__name__)
 
 
 class DSLParser:
@@ -30,6 +42,7 @@ class DSLParser:
                 - includes: List of include paths
         """
         content = test_file.read_text()
+        logger.info("[parse_test_file] Parsing: '%s'", test_file.resolve())
         
         # Extract QAID from filename or content
         qaid = test_file.stem
@@ -43,6 +56,11 @@ class DSLParser:
         
         # Extract include directives
         includes = self.extract_includes(content)
+        
+        logger.info("[parse_test_file] qaid=%s | title='%s' | sections=%d | includes=%d",
+                    qaid, title, len(sections), len(includes))
+        for inc in includes:
+            logger.debug("[parse_test_file]   include: '%s' device=%s", inc['path'], inc['device'])
         
         return {
             'qaid': qaid,
@@ -121,12 +139,16 @@ class DSLParser:
             include_match = re.match(include_pattern, line)
             if include_match:
                 include_path = include_match.group(1).strip()
-                includes.append({
+                entry = {
                     'path': include_path,
                     'device': current_device or 'GLOBAL',
                     'line': line.strip()
-                })
+                }
+                includes.append(entry)
+                logger.debug("[extract_includes] found include: '%s' (device=%s)",
+                             include_path, entry['device'])
         
+        logger.info("[extract_includes] Total includes found: %d", len(includes))
         return includes
     
     def resolve_include_path(self, include_path: str, base_path: Path = None) -> Path:
@@ -150,6 +172,9 @@ class DSLParser:
         
         # Create Path object
         if base_path:
-            return base_path / resolved_path
+            result = base_path / resolved_path
         else:
-            return Path(resolved_path)
+            result = Path(resolved_path)
+        
+        logger.debug("[resolve_include_path] '%s' → '%s' (base=%s)", include_path, result, base_path)
+        return result

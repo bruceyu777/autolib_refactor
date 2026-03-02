@@ -10,8 +10,19 @@ This module coordinates the transpilation process using specialized components:
 """
 
 import logging
+import sys
 from pathlib import Path
 from typing import List, Dict, Optional
+
+# Set up unified logging to prototype/logs/
+_PROTOTYPE_DIR = Path(__file__).resolve().parent.parent
+if str(_PROTOTYPE_DIR) not in sys.path:
+    sys.path.insert(0, str(_PROTOTYPE_DIR))
+try:
+    from common.common_logging import setup_script_logging
+    logger = setup_script_logging(__file__, log_dir=_PROTOTYPE_DIR / 'logs')
+except ImportError:
+    logger = logging.getLogger(__name__)
 
 # Import refactored modules
 from conversion_registry import ConversionRegistry
@@ -47,7 +58,7 @@ class DSLTranspiler:
         self.parser = DSLParser()
         self.test_gen = TestGenerator()
         self.conftest_gen = ConftestGenerator()
-        self.logger = logging.getLogger(__name__)
+        logger.info("[DSLTranspiler] Initialized | env_file=%s | env_version=%s", env_file, env_version)
     
     def transpile(self, test_file: Path, output_dir: Path, env_file: Optional[Path] = None) -> dict:
         """
@@ -68,22 +79,19 @@ class DSLTranspiler:
         Returns:
             dict with conversion results and statistics
         """
+        logger.info("[transpile] START: '%s'", test_file)
+        logger.debug("[transpile] output_dir='%s' env_file='%s'", output_dir, env_file)
         # Update converter if env_file is provided (may override default)
         if env_file:
             env_version = IncludeConverter.load_version_from_env_config(env_file)
             self.converter.env_version = env_version
-        
-        print("\n" + "="*60)
-        print(f"TRANSPILING: {test_file.name}")
-        print("="*60)
+            logger.debug("[transpile] Overriding env_version=%s from env_file=%s", env_version, env_file)
         
         # Step 1: Parse DSL test
-        print("\n[1/5] Parsing DSL test...")
+        logger.info("[transpile][1/5] Parsing DSL test: '%s'", test_file.name)
         parsed = self.parser.parse_test_file(test_file)
-        print(f"  ✓ QAID: {parsed['qaid']}")
-        print(f"  ✓ Title: {parsed['title']}")
-        print(f"  ✓ Sections: {len(parsed['sections'])}")
-        print(f"  ✓ Includes: {len(parsed['includes'])}")
+        logger.info("[transpile][1/5] qaid=%s | title='%s' | sections=%d | includes=%d",
+                    parsed['qaid'], parsed['title'], len(parsed['sections']), len(parsed['includes']))
         
         # Step 2: Initialize conftest.py
         self._initialize_conftest(output_dir, env_file)
@@ -106,7 +114,8 @@ class DSLTranspiler:
             'includes': len(parsed['includes'])
         }
         
-        self._print_summary(test_output, result)
+        logger.info("[transpile] COMPLETE: '%s' | test='%s' | helpers=%d sections=%d",
+                    test_file.name, test_output, result['helpers'], result['sections'])
         
         return result
     
@@ -118,7 +127,7 @@ class DSLTranspiler:
             output_dir: Output directory where conftest.py should be
             env_file: Optional environment configuration file
         """
-        print("\n[2/5] Initializing conftest.py...")
+        logger.info("[transpile][2/5] Initializing conftest.py...")
         output_dir.mkdir(parents=True, exist_ok=True)
         conftest_file = output_dir / 'conftest.py'
         conftest_needs_header = (not conftest_file.exists()) or conftest_file.stat().st_size == 0
@@ -126,11 +135,21 @@ class DSLTranspiler:
         if conftest_needs_header:
             conftest_content = self.conftest_gen.generate_header(env_file)
             conftest_file.write_text(conftest_content)
-            print(f"  ✓ Created: {conftest_file}")
-            if env_file:
-                print(f"    Using env config: {env_file}")
+            logger.info("[transpile][2/5] Created conftest.py: '%s' (env_file=%s)", conftest_file, env_file)
         else:
-            print(f"  ✓ Using existing: {conftest_file}")
+            logger.debug("[transpile][2/5] Using existing conftest.py: '%s'", conftest_file)
+
+        # Scaffold pytest.ini if missing
+        pytest_ini = output_dir / 'pytest.ini'
+        if not pytest_ini.exists():
+            pytest_ini.write_text(self.conftest_gen.generate_pytest_ini())
+            logger.info("[transpile][2/5] Created pytest.ini: '%s'", pytest_ini)
+
+        # Scaffold Makefile if missing
+        makefile = output_dir / 'Makefile'
+        if not makefile.exists():
+            makefile.write_text(self.conftest_gen.generate_makefile())
+            logger.info("[transpile][2/5] Created Makefile: '%s'", makefile)
     
     def _convert_dependencies(self, includes: List[dict], output_dir: Path) -> List[str]:
         """
@@ -143,7 +162,7 @@ class DSLTranspiler:
         Returns:
             List of helper function names
         """
-        print("\n[3/5] Converting include dependencies...")
+        logger.info("[convert_deps][3/5] Converting %d includes...", len(includes))
         
         # Resolve include paths
         for include in includes:
@@ -157,7 +176,7 @@ class DSLTranspiler:
             resolved_path = include['resolved_path']
             
             if resolved_path.exists():
-                print(f"\n→ Converting dependency: {include_path}")
+                logger.info("[convert_deps] Converting: '%s'", include_path)
                 try:
                     self.converter.convert_include(
                         include_path,
@@ -166,8 +185,10 @@ class DSLTranspiler:
                         force=False
                     )
                 except Exception:
-                    self.logger.exception("Failed to convert include: %s", include_path)
-                    print(f"  ⚠️  Failed to convert include, continuing: {include_path}")
+                    logger.exception("[convert_deps] Failed to convert include: '%s'", include_path)
+            else:
+                logger.warning("[convert_deps] Resolved path does not exist: '%s' (from '%s')",
+                               resolved_path, include_path)
         
         # Collect unique helper names
         helper_names = []
@@ -178,7 +199,8 @@ class DSLTranspiler:
             if helper_name not in helper_names:
                 helper_names.append(helper_name)
         
-        print(f"  ✓ Helpers generated: {len(includes)} includes converted")
+        logger.info("[convert_deps][3/5] Done. %d includes → %d helpers",
+                    len(includes), len(helper_names))
         return helper_names
     
     def _update_registry(self, parsed: dict, helper_names: List[str]) -> None:
@@ -189,7 +211,8 @@ class DSLTranspiler:
             parsed: Parsed DSL structure
             helper_names: List of helper names used
         """
-        print("\n[4/5] Updating registry...")
+        logger.info("[update_registry][4/5] Updating registry for qaid=%s (%d includes)",
+                    parsed['qaid'], len(parsed['includes']))
         for include in parsed['includes']:
             sanitized_used_by = self.test_gen.sanitize_identifier(f"test_{parsed['qaid']}")
             # Normalize path using same logic as converter (GLOBAL:VERSION → VERSION only)
@@ -234,49 +257,45 @@ class DSLTranspiler:
     
     def _resolve_include_path(self, include_path: str) -> Path:
         """
-        Resolve include path to physical file
-        
-        Handles variable expansion and path resolution:
-        - GLOBAL:VERSION → current version/branch
-        - Searches in sample_includes and testcase directories
-        
-        Args:
-            include_path: Include path from DSL
-            
-        Returns:
-            Resolved Path object
+        Resolve include path to physical file.
+
+        Logs every candidate path tried and their existence, to aid
+        diagnosis of environment-specific missing helpers.
         """
         # Replace variables
         resolved = include_path.replace('GLOBAL:VERSION', 'current')
         resolved = resolved.replace('GLOBAL:Version', 'current')
         resolved = resolved.replace('testcase/', '')
-        
+
         filename = Path(resolved).name
-        
-        # Try sample includes first (for prototyping)
+
         tools_dir = Path(__file__).parent
         prototype_dir = tools_dir.parent
-        sample_path = prototype_dir / 'sample_includes' / filename
-        
-        if sample_path.exists():
-            return sample_path
-        
-        # Try actual testcase directory
+
+        candidates: list[tuple[str, Path]] = [
+            ('sample_includes', prototype_dir / 'sample_includes' / filename),
+        ]
+
         testcase_dir = prototype_dir.parent / 'testcase'
         parts = Path(resolved).parts
-        
         if len(parts) >= 2 and parts[0] == 'current':
-            # Reconstruct path: testcase/ips/topology1/filename
-            actual_path = testcase_dir / '/'.join(parts[1:])
-            if actual_path.exists():
-                return actual_path
-        
-        # Last resort: try direct path from testcase root
-        direct_path = testcase_dir / resolved
-        if direct_path.exists():
-            return direct_path
-        
-        # If nothing found, return original
+            candidates.append(('testcase/current-stripped', testcase_dir / '/'.join(parts[1:])))
+        candidates.append(('testcase/direct', testcase_dir / resolved))
+
+        logger.debug("[resolve_include] include_path='%s'", include_path)
+        logger.debug("[resolve_include] resolved='%s' | testcase_dir='%s'", resolved, testcase_dir)
+
+        for label, candidate in candidates:
+            exists = candidate.exists()
+            logger.debug("[resolve_include] %s: '%s'  exists=%s", label, candidate, exists)
+            if exists:
+                logger.info("[resolve_include] FOUND via %s: '%s'", label, candidate)
+                return candidate
+
+        logger.warning(
+            "[resolve_include] NOT FOUND: '%s' (resolved='%s'). Tried %d candidates. cwd='%s'",
+            include_path, resolved, len(candidates), Path.cwd()
+        )
         return Path(resolved)
     
     def _print_summary(self, test_output: Path, result: dict) -> None:

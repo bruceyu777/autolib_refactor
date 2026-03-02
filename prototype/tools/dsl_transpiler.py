@@ -1166,7 +1166,140 @@ def logger(request):
 '''
         
         return header
-    
+
+    def generate_pytest_ini(self) -> str:
+        """Generate pytest.ini for the output folder with HTML, XML and log reports."""
+        return '''\
+[pytest]
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+testpaths = testcases
+
+junit_family = legacy
+addopts =
+    --verbose
+    --tb=long
+    --strict-markers
+    --html=reports/test_report.html
+    --self-contained-html
+    --junitxml=reports/test_report.xml
+
+# Live console logging
+log_cli = True
+log_cli_level = INFO
+log_cli_format = %(asctime)s [%(levelname)-8s] %(name)s: %(message)s
+log_cli_date_format = %Y-%m-%d %H:%M:%S
+
+# Persistent DEBUG log file
+log_file = reports/test_execution.log
+log_file_level = DEBUG
+log_file_format = %(asctime)s.%(msecs)03d [%(levelname)-8s] [%(name)s] %(message)s (%(filename)s:%(lineno)s)
+log_file_date_format = %Y-%m-%d %H:%M:%S
+
+filterwarnings =
+    ignore::DeprecationWarning
+    ignore::pytest.PytestCollectionWarning
+
+markers =
+    slow: marks tests as slow
+    regression: regression tests
+    smoke: smoke tests
+    integration: integration tests
+    qaid(id): QAID identifier
+
+minversion = 6.0
+'''
+
+    def generate_makefile(self) -> str:
+        """Generate Makefile for the output folder."""
+        return '''\
+.PHONY: test test-verbose test-debug test-failed test-x clean clean-all report list info help
+
+SHELL := /bin/bash
+
+TESTCASES_DIR := testcases
+REPORTS_DIR   := reports
+VENV_DIR      := ../../venv
+
+ifeq ($(shell test -d $(VENV_DIR) && echo yes),yes)
+    PYTHON := $(VENV_DIR)/bin/python
+    PYTEST := $(VENV_DIR)/bin/pytest
+else
+    PYTHON := python3
+    PYTEST := python3 -m pytest
+endif
+
+QAID   ?=
+MARKER ?=
+K      ?=
+
+.DEFAULT_GOAL := help
+
+help: ## Show available targets
+\t@grep -E \'\^[a-zA-Z_-]+:.*?##\' $(MAKEFILE_LIST) | \\
+\t  awk \'BEGIN {FS=":.*?##"}; {printf "  \\033[32m%-18s\\033[0m %s\\n", $$1, $$2}\'
+
+test: _prep ## Run all tests (HTML + XML + log)
+\t@echo "Running tests…"
+ifdef QAID
+\t-$(PYTEST) $(TESTCASES_DIR)/test__$(QAID).py
+else ifdef MARKER
+\t-$(PYTEST) -m $(MARKER) $(TESTCASES_DIR)/
+else ifdef K
+\t-$(PYTEST) -k "$(K)" $(TESTCASES_DIR)/
+else
+\t-$(PYTEST) $(TESTCASES_DIR)/
+endif
+\t@echo ""
+\t@echo "Done — reports:"
+\t@echo "   HTML : $(REPORTS_DIR)/test_report.html"
+\t@echo "   XML  : $(REPORTS_DIR)/test_report.xml"
+\t@echo "   LOG  : $(REPORTS_DIR)/test_execution.log"
+
+test-verbose: _prep ## Run with extra verbosity (-vv -s)
+\t-$(PYTEST) -vv -s $(TESTCASES_DIR)/
+
+test-debug: _prep ## Run with DEBUG log level
+\t-$(PYTEST) -vv -s --log-cli-level=DEBUG $(TESTCASES_DIR)/
+
+test-failed: _prep ## Re-run previously failed tests
+\t-$(PYTEST) --lf $(TESTCASES_DIR)/
+
+test-x: _prep ## Stop on first failure
+\t-$(PYTEST) -x $(TESTCASES_DIR)/
+
+report: ## Open HTML report in browser
+\t@if [ -f $(REPORTS_DIR)/test_report.html ]; then \\
+\t  xdg-open $(REPORTS_DIR)/test_report.html 2>/dev/null || \\
+\t  open    $(REPORTS_DIR)/test_report.html 2>/dev/null || \\
+\t  echo "Report: $(REPORTS_DIR)/test_report.html"; \\
+\telse \\
+\t  echo "No report yet — run: make test"; \\
+\tfi
+
+clean: ## Remove reports and pytest cache
+\t@rm -rf $(REPORTS_DIR) .pytest_cache
+\t@find . -name "__pycache__" -exec rm -rf {} + 2>/dev/null; true
+\t@echo "Cleaned"
+
+clean-all: clean ## Remove reports + all generated test files
+\t@rm -f .conversion_registry.json conftest.py pytest.ini .pytest-order.txt
+\t@rm -rf $(TESTCASES_DIR)/test_*.py $(TESTCASES_DIR)/helpers
+\t@echo "Full clean done"
+
+list: ## List all test files
+\t@find $(TESTCASES_DIR) -name "test_*.py" | sort | sed "s|$(TESTCASES_DIR)/||"
+
+info: ## Show environment info
+\t@echo "Python : $(shell $(PYTHON) --version)"
+\t@echo "Pytest : $(shell $(PYTEST) --version)"
+\t@echo "Tests  : $(shell find $(TESTCASES_DIR) -name \'test_*.py\' | wc -l) files"
+
+_prep:
+\t@mkdir -p $(REPORTS_DIR)
+'''
+
     def generate_test_header(self, qaid: str, original_file: Path, helper_names: List[str] = None) -> str:
         """Generate test file header with helper imports"""
         header = f'''"""
@@ -1235,7 +1368,19 @@ from fluent import TestBed
                 print(f"    Using env config: {env_file}")
         else:
             print(f"  ✓ Using existing: {conftest_file}")
-        
+
+        # Scaffold pytest.ini if missing
+        pytest_ini = output_dir / 'pytest.ini'
+        if not pytest_ini.exists():
+            pytest_ini.write_text(self.generate_pytest_ini())
+            print(f"  ✓ Created: {pytest_ini}")
+
+        # Scaffold Makefile if missing
+        makefile = output_dir / 'Makefile'
+        if not makefile.exists():
+            makefile.write_text(self.generate_makefile())
+            print(f"  ✓ Created: {makefile}")
+
         # 3. Convert dependencies (includes → helpers)
         print("\n[3/5] Converting include dependencies...")
         self.convert_dependencies(parsed['includes'], output_dir, force=conftest_needs_header)
